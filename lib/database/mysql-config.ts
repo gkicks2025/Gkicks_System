@@ -15,8 +15,6 @@ export interface DatabaseConfig {
   password: string;
   database: string;
   connectionLimit?: number;
-  acquireTimeout?: number;
-  timeout?: number;
   reconnect?: boolean;
 }
 
@@ -28,8 +26,6 @@ const defaultConfig: DatabaseConfig = {
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'gkicks',
   connectionLimit: 10,
-  acquireTimeout: 60000,
-  timeout: 60000,
   reconnect: true,
 };
 
@@ -66,9 +62,6 @@ export function getConnectionPool(): mysql.Pool {
       waitForConnections: true,
       connectionLimit: config.connectionLimit,
       queueLimit: 0,
-      acquireTimeout: config.acquireTimeout,
-      timeout: config.timeout,
-      reconnect: config.reconnect,
       // Additional MySQL 8.0+ settings
       ssl: false,
       charset: 'utf8mb4',
