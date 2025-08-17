@@ -101,11 +101,11 @@ export default function CartPage() {
     loadUserProfileAndAddress()
   }, [user])
 
-  const handleQuantityChange = (cartId: string, newQuantity: number) => {
+  const handleQuantityChange = (id: string, size: string, newQuantity: number) => {
     if (newQuantity < 1) {
-      removeFromCart(cartId)
+      removeFromCart(id, size)
     } else {
-      updateQuantity(cartId, newQuantity)
+      updateQuantity(id, size, newQuantity)
     }
   }
 
@@ -244,13 +244,13 @@ export default function CartPage() {
         },
         body: JSON.stringify({
           items: items.map(item => ({
-            product_id: item.product_id,
-            product_name: item.product_name,
+            product_id: item.id,
+            product_name: item.name,
             quantity: item.quantity,
             price: item.price,
             color: item.color,
             size: item.size,
-            image_url: item.image_url,
+            image_url: item.image,
           })),
           total: total,
           customer_email: customerEmail,
@@ -298,8 +298,9 @@ export default function CartPage() {
   }
 
   const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+  const vat = subtotal * 0.12 // 12% VAT in Philippines
   const shipping = subtotal > 2000 ? 0 : 150 // Free shipping over ₱2000
-  const total = subtotal + shipping
+  const total = subtotal + vat + shipping
 
   if (items.length === 0 && !showOrderSuccess) {
     return (
@@ -349,14 +350,14 @@ export default function CartPage() {
         <div className="grid lg:grid-cols-3 gap-6 sm:gap-8">
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
-            {items.map((item) => (
-              <Card key={item.cart_id} className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            {items.map((item, index) => (
+              <Card key={`${item.id}-${item.size}-${index}`} className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                     <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center flex-shrink-0">
                       <Image
-                        src={item.image_url || "/placeholder.svg"}
-                        alt={item.product_name}
+                        src={item.image || "/placeholder.svg"}
+                        alt={item.name}
                         width={80}
                         height={80}
                         className="object-cover rounded-lg"
@@ -364,7 +365,7 @@ export default function CartPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-medium text-gray-900 dark:text-white text-sm sm:text-base truncate">
-                        {item.product_name}
+                        {item.name}
                       </h3>
                       <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">{item.brand}</p>
                       {(item.color || item.size) && (
@@ -385,7 +386,7 @@ export default function CartPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleQuantityChange(item.cart_id, item.quantity - 1)}
+                          onClick={() => handleQuantityChange(item.id, item.size, item.quantity - 1)}
                           className="h-8 w-8 p-0 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-yellow-400"
                         >
                           <Minus className="h-3 w-3" />
@@ -396,7 +397,7 @@ export default function CartPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleQuantityChange(item.cart_id, item.quantity + 1)}
+                          onClick={() => handleQuantityChange(item.id, item.size, item.quantity + 1)}
                           className="h-8 w-8 p-0 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-yellow-400"
                         >
                           <Plus className="h-3 w-3" />
@@ -405,7 +406,7 @@ export default function CartPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => removeFromCart(item.cart_id)}
+                        onClick={() => removeFromCart(item.id, item.size)}
                         className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -428,6 +429,10 @@ export default function CartPage() {
                 <div className="flex justify-between text-sm sm:text-base">
                   <span className="text-gray-600 dark:text-gray-400">Subtotal:</span>
                   <span className="text-gray-900 dark:text-white">₱{subtotal.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-sm sm:text-base">
+                  <span className="text-gray-600 dark:text-gray-400">VAT (12%):</span>
+                  <span className="text-gray-900 dark:text-white">₱{vat.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm sm:text-base">
                   <span className="text-gray-600 dark:text-gray-400">Shipping:</span>

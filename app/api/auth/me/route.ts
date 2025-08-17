@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
-import pool from '@/lib/database/mysql'
+import { executeQuery } from '@/lib/database/mysql'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret'
 
@@ -28,12 +28,10 @@ export async function GET(request: NextRequest) {
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, email: string }
 
     // Get user from database
-    const [users] = await pool.execute(
+    const userArray = await executeQuery(
       'SELECT id, email, first_name, last_name, avatar_url, is_admin, created_at FROM users WHERE id = ?',
       [decoded.userId]
-    )
-
-    const userArray = users as any[]
+    ) as any[]
     if (userArray.length === 0) {
       return NextResponse.json(
         { error: 'User not found' },

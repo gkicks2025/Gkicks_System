@@ -47,13 +47,29 @@ export async function getAllProducts() {
       id, name, brand, description, price, original_price,
       image_url, rating, reviews, colors, color_images,
       is_new, is_sale, views, category, stock_quantity,
-      sku, is_active, created_at, updated_at
+      sku, is_active, model_3d_url, model_3d_filename,
+      created_at, updated_at
     FROM products 
     WHERE is_active = 1 AND is_deleted = 0
     ORDER BY created_at DESC
   `;
   
-  return await executeQuery(query);
+  const results = await executeQuery(query);
+  
+  // Debug logging for image URLs
+  console.log('🔍 MySQL getAllProducts - Debug image URLs:');
+  if (Array.isArray(results) && results.length > 0) {
+    results.forEach((product: any, index: number) => {
+      console.log(`Product ${index + 1} (ID: ${product.id}):`);
+      console.log(`  - Name: ${product.name}`);
+      console.log(`  - Image URL: ${product.image_url || 'NULL/EMPTY'}`);
+      console.log(`  - Has image: ${!!product.image_url}`);
+    });
+  } else {
+    console.log('No products returned from database');
+  }
+  
+  return results;
 }
 
 // Get product by ID
@@ -63,7 +79,8 @@ export async function getProductById(id: number) {
       id, name, brand, description, price, original_price,
       image_url, rating, reviews, colors, color_images,
       is_new, is_sale, views, category, stock_quantity,
-      sku, is_active, created_at, updated_at
+      sku, is_active, model_3d_url, model_3d_filename,
+      created_at, updated_at
     FROM products 
     WHERE id = ? AND is_active = 1 AND is_deleted = 0
   `;
@@ -79,8 +96,8 @@ export async function insertProduct(product: any) {
       name, brand, description, price, original_price,
       image_url, rating, reviews, colors, color_images,
       is_new, is_sale, views, category, stock_quantity,
-      sku, is_active
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      sku, is_active, model_3d_url, model_3d_filename
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
   
   const params = [
@@ -89,7 +106,8 @@ export async function insertProduct(product: any) {
     product.rating, product.reviews, JSON.stringify(product.colors),
     JSON.stringify(product.color_images), product.is_new,
     product.is_sale, product.views, product.category,
-    product.stock_quantity, product.sku, product.is_active
+    product.stock_quantity, product.sku, product.is_active,
+    product.model_3d_url, product.model_3d_filename
   ];
   
   return await executeQuery(query, params);
@@ -104,6 +122,7 @@ export async function updateProduct(id: number, product: any) {
       reviews = ?, colors = ?, color_images = ?,
       is_new = ?, is_sale = ?, category = ?,
       stock_quantity = ?, sku = ?, is_active = ?,
+      model_3d_url = ?, model_3d_filename = ?,
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `;
@@ -114,7 +133,8 @@ export async function updateProduct(id: number, product: any) {
     product.rating, product.reviews, JSON.stringify(product.colors),
     JSON.stringify(product.color_images), product.is_new,
     product.is_sale, product.category, product.stock_quantity,
-    product.sku, product.is_active, id
+    product.sku, product.is_active, product.model_3d_url,
+    product.model_3d_filename, id
   ];
   
   return await executeQuery(query, params);

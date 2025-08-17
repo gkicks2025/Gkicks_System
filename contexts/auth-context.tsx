@@ -47,7 +47,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, {
     user: null,
-    loading: false, // Set to false since we're not using real auth
+    loading: true, // Set to true initially while checking auth status
   });
   const { toast } = useToast();
 

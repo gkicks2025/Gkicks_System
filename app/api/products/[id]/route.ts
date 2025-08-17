@@ -1,12 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/database/mysql'
+import jwt from 'jsonwebtoken'
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret'
+
+// Helper function to get user from token
+async function getUserFromToken(request: NextRequest) {
+  try {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return null;
+    }
+
+    const token = authHeader.substring(7);
+    console.log('Received token length:', token.length);
+    console.log('Token preview:', token.substring(0, 50) + '...');
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, email: string };
+    return { id: decoded.userId, email: decoded.email };
+  } catch (error) {
+    console.error('Token verification failed:', error);
+    return null;
+  }
+}
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
+    const { id } = await context.params
     const productId = parseInt(id)
     
     if (isNaN(productId)) {
@@ -51,5 +72,197 @@ export async function GET(
       { error: 'Internal server error' },
       { status: 500 }
     )
+  }
+}
+
+// PUT - Update product
+export async function PUT(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    // Check authentication
+    const user = await getUserFromToken(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { id } = await context.params
+    const productId = parseInt(id)
+    
+    if (isNaN(productId)) {
+      return NextResponse.json(
+        { error: 'Invalid product ID' },
+        { status: 400 }
+      )
+    }
+
+    const body = await request.json();
+    const {
+      name,
+      brand,
+      price,
+      originalPrice,
+      category,
+      sku,
+      stock_quantity,
+      status,
+      image,
+      gallery_images,
+      description,
+      is_active,
+      is_new,
+      is_sale,
+      colors,
+      sizes,
+      low_stock_threshold,
+      model_3d_url,
+      model_3d_filename
+    } = body;
+
+    // Validate required fields
+    if (!name || !brand || price === undefined || !category) {
+      return NextResponse.json(
+        { error: 'Name, brand, price, and category are required' },
+        { status: 400 }
+      );
+    }
+
+    console.log('🔄 API: Updating product:', productId);
+
+    // Update product in MySQL database
+    const updateQuery = `
+      UPDATE products SET
+        name = ?,
+        brand = ?,
+        price = ?,
+        original_price = ?,
+        category = ?,
+        sku = ?,
+        stock_quantity = ?,
+        status = ?,
+        image_url = ?,
+        gallery_images = ?,
+        description = ?,
+        is_active = ?,
+        is_new = ?,
+        is_sale = ?,
+        colors = ?,
+        sizes = ?,
+        model_3d_url = ?,
+        model_3d_filename = ?,
+        updated_at = NOW()
+      WHERE id = ? AND is_deleted = 0
+    `;
+
+    const params = [
+      name,
+      brand,
+      parseFloat(price),
+      originalPrice ? parseFloat(originalPrice) : null,
+      category,
+      sku || `${brand.substring(0, 3).toUpperCase()}-${Date.now().toString().slice(-6)}`,
+      parseInt(stock_quantity) || 0,
+      status || 'Active',
+      image || '/placeholder-product.jpg',
+      JSON.stringify(gallery_images || []),
+      description || '',
+      is_active !== false,
+      is_new || false,
+      is_sale || false,
+      JSON.stringify(colors || []),
+      JSON.stringify(sizes || []),
+      model_3d_url || null,
+      model_3d_filename || null,
+      productId
+    ];
+
+    const result = await executeQuery(updateQuery, params);
+
+    if (result.affectedRows === 0) {
+      return NextResponse.json(
+        { error: 'Product not found or no changes made' },
+        { status: 404 }
+      );
+    }
+
+    console.log('✅ API: Product updated successfully:', productId);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Product updated successfully',
+      productId: productId
+    });
+
+  } catch (error) {
+    console.error('❌ API: Error updating product:', error);
+    return NextResponse.json(
+      { error: 'Failed to update product' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE - Delete product
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    // Check authentication
+    const user = await getUserFromToken(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { id } = await context.params
+    const productId = parseInt(id)
+    
+    if (isNaN(productId)) {
+      return NextResponse.json(
+        { error: 'Invalid product ID' },
+        { status: 400 }
+      )
+    }
+
+    console.log('🗑️ API: Deleting product:', productId);
+
+    // Soft delete the product
+    const deleteQuery = `
+      UPDATE products SET
+        is_deleted = 1,
+        is_active = 0,
+        updated_at = NOW()
+      WHERE id = ?
+    `;
+
+    const result = await executeQuery(deleteQuery, [productId]);
+
+    if (result.affectedRows === 0) {
+      return NextResponse.json(
+        { error: 'Product not found' },
+        { status: 404 }
+      );
+    }
+
+    console.log('✅ API: Product deleted successfully:', productId);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Product deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ API: Error deleting product:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete product' },
+      { status: 500 }
+    );
   }
 }

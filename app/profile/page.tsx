@@ -56,7 +56,7 @@ interface ProfileData {
 }
 
 export default function ProfilePage() {
-  const { user, updateProfile } = useAuth()
+  const { user, updateProfile, loading: authLoading } = useAuth()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [addresses, setAddresses] = useState<Address[]>([])
@@ -90,36 +90,38 @@ export default function ProfilePage() {
   })
 
   useEffect(() => {
-    if (user) {
+    if (user && !authLoading) {
       console.log('👤 User changed, fetching profile data for:', user.email)
-      // Clear any cached profile data
-      setProfileData({
-        first_name: "",
-        last_name: "",
-        phone: "",
-        birthdate: "",
-        gender: "",
-        bio: "",
-        avatar_url: "",
-        preferences: {
-          newsletter: true,
-          sms_notifications: false,
-          email_notifications: true,
-          preferred_language: "en",
-          currency: "PHP",
-        },
-      })
+      // Only clear profile data if we don't have any existing data
+      if (!profileData.first_name && !profileData.last_name) {
+        setProfileData({
+          first_name: "",
+          last_name: "",
+          phone: "",
+          birthdate: "",
+          gender: "",
+          bio: "",
+          avatar_url: "",
+          preferences: {
+            newsletter: true,
+            sms_notifications: false,
+            email_notifications: true,
+            preferred_language: "en",
+            currency: "PHP",
+          },
+        })
+      }
       fetchProfileData()
     }
-  }, [user])
+  }, [user, authLoading])
 
-  // Also refetch when component mounts or user data updates
+  // Also refetch when component mounts or user data updates (but not during auth loading)
   useEffect(() => {
-    if (user && profileData.first_name === '' && profileData.last_name === '') {
+    if (user && !authLoading && profileData.first_name === '' && profileData.last_name === '') {
       console.log('🔄 Profile data is empty, refetching...')
       fetchProfileData()
     }
-  }, [user, profileData.first_name, profileData.last_name])
+  }, [user, authLoading, profileData.first_name, profileData.last_name])
 
   const fetchProfileData = async () => {
     if (!user) return
@@ -539,12 +541,27 @@ export default function ProfilePage() {
     })
   }
 
-  if (!user) {
+  // Show loading only when auth is actually loading, not when user is null
+  if (!user && authLoading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-yellow-500 mx-auto mb-4" />
           <p className="text-gray-400">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // If not loading and no user, redirect to login
+  if (!user && !authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-400 mb-4">Please log in to view your profile</p>
+          <Link href="/auth" className="text-yellow-500 hover:text-yellow-400">
+            Go to Login
+          </Link>
         </div>
       </div>
     )

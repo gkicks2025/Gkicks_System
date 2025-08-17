@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { ReviewForm } from "@/components/review-form-modal"
+import ModelViewer3D from "@/components/3d-model-viewer"
 import type { Product } from "@/lib/product-data"
 
 export default function ProductPage() {
@@ -22,7 +23,7 @@ export default function ProductPage() {
   const productId = Number(params.id)
   const [mounted, setMounted] = useState(false)
   const [product, setProduct] = useState<Product | null>(null)
-  const { addToCart } = useCart()
+  const { addItem } = useCart()
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist()
   const { user, loading: authLoading } = useAuth()
   const { toast } = useToast()
@@ -104,17 +105,18 @@ export default function ProductPage() {
 
     async function fetchStocks() {
       const stocks: { [color: string]: { [size: string]: number } } = {}
-      if (product?.colors) {
-        for (const color of product?.colors) {
-          stocks[color] = {}
-          const sizes = ["5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
-          for (const size of sizes) {
-            stocks[color][size] = await checkStock(productId, color, size);
-          }
+      const colors = product?.colors && product?.colors.length > 0 ? product.colors : ["default"]
+      const sizes = product?.sizes || ["5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
+      
+      for (const color of colors) {
+        stocks[color] = {}
+        for (const size of sizes) {
+          stocks[color][size] = await checkStock(productId, color, size);
         }
       }
+      
       setStockLevels(stocks)
-      setSelectedColor(product?.colors?.[0] || "")
+      setSelectedColor(colors[0])
     }
 
     fetchStocks()
@@ -194,13 +196,19 @@ export default function ProductPage() {
 
   const savingsAmount = product.originalPrice ? product.originalPrice - product.price : 0
 
-  const productImages = [
-    { src: product.colorImages?.[selectedColor]?.three_d || product.image, alt: "3D view" },
-    { src: product.colorImages?.[selectedColor]?.front || product.image, alt: "Front view" },
-    { src: product.colorImages?.[selectedColor]?.side || product.image, alt: "Side view" },
-    { src: product.colorImages?.[selectedColor]?.back || product.image, alt: "Back view" },
-    { src: product.colorImages?.[selectedColor]?.sole || product.image, alt: "Sole view" },
-  ]
+  // Use gallery_images if available, otherwise fall back to colorImages
+  const productImages = product.gallery_images && product.gallery_images.length > 0
+    ? product.gallery_images.map((imageUrl, index) => ({
+        src: imageUrl,
+        alt: `${product.name} - Image ${index + 1}`
+      }))
+    : [
+        { src: product.colorImages?.[selectedColor]?.three_d || product.image, alt: "3D view" },
+        { src: product.colorImages?.[selectedColor]?.front || product.image, alt: "Front view" },
+        { src: product.colorImages?.[selectedColor]?.side || product.image, alt: "Side view" },
+        { src: product.colorImages?.[selectedColor]?.back || product.image, alt: "Back view" },
+        { src: product.colorImages?.[selectedColor]?.sole || product.image, alt: "Sole view" },
+      ]
 
   const handleAddToCart = () => {
     if (authLoading) return
@@ -232,7 +240,18 @@ export default function ProductPage() {
       })
       return
     }
-    addToCart(product.id, quantity, selectedSize, selectedColor)
+    // Add items based on selected quantity
+    for (let i = 0; i < quantity; i++) {
+      addItem({
+        id: product.id.toString(),
+        name: product.name,
+        price: product.price,
+        image: productImages[selectedImageIndex]?.src || product.image || "/placeholder.svg",
+        size: selectedSize,
+        color: selectedColor,
+        brand: product.brand,
+      })
+    }
     toast({
       title: "Added to Cart",
       description: `${product.name} has been added to your cart.`,
@@ -348,6 +367,39 @@ export default function ProductPage() {
                   </div>
                 ))}
               </div>
+
+              {/* 3D Model Viewer */}
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">3D Model View</h3>
+                {product.model_3d_url ? (
+                   <ModelViewer3D
+                     modelUrl={product.model_3d_url}
+                     filename={product.model_3d_filename}
+                     productColors={product.colors || []}
+                   />
+                 ) : (
+                   <div className="relative aspect-square bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center p-6">
+                     <div className="text-center space-y-4">
+                       <div className="w-16 h-16 mx-auto bg-yellow-400 rounded-full flex items-center justify-center">
+                         <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                         </svg>
+                       </div>
+                       <div>
+                         <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Interactive 3D Model</h4>
+                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">No 3D model available for this product</p>
+                         <div className="inline-flex items-center px-4 py-2 bg-gray-400 text-white rounded-lg font-medium text-sm cursor-not-allowed">
+                           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                           </svg>
+                           Not Available
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                 )}
+              </div>
             </div>
 
             {/* Product Details */}
@@ -414,17 +466,19 @@ export default function ProductPage() {
                       <button
                         key={color}
                         onClick={() => setSelectedColor(color)}
-                        className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full ${colorMap[color]} ${
+                        className={`px-3 py-2 text-sm font-medium rounded-lg border-2 transition-colors capitalize ${
                           selectedColor === color
-                            ? "ring-2 ring-yellow-400 ring-offset-1 sm:ring-offset-2 dark:ring-offset-gray-900"
-                            : ""
-                        } transition-all duration-200 hover:scale-110`}
-                        title={`Select ${color} color`}
-                      />
+                            ? "border-yellow-400 bg-yellow-400 text-black"
+                            : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300"
+                        }`}
+                        title={`Select ${color} colorway`}
+                      >
+                        {color}
+                      </button>
                     ))}
                   </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                    Click colors to see different colorways
+                    Click to select different colorways
                   </p>
                 </div>
               )}
@@ -438,8 +492,9 @@ export default function ProductPage() {
                   </span>
                 </div>
                 <div className="grid grid-cols-4 gap-2">
-                  {["5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"].map((size) => {
-                    const sizeStock = selectedColor ? stockLevels[selectedColor]?.[size] ?? 0 : 0
+                  {(Array.isArray(product?.sizes) ? product.sizes : ["5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]).map((size) => {
+                    const colorToCheck = selectedColor || "default"
+                    const sizeStock = stockLevels[colorToCheck]?.[size] ?? 0
                     const isAvailable = sizeStock > 0
 
                     return (

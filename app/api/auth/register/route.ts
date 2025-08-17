@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import pool from '@/lib/database/mysql'
+import { executeQuery } from '@/lib/database/mysql'
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,12 +32,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already exists
-    const [existingUsers] = await pool.execute(
+    const existingUserArray = await executeQuery(
       'SELECT id FROM users WHERE email = ?',
       [email]
-    )
-
-    const existingUserArray = existingUsers as any[]
+    ) as any[]
     if (existingUserArray.length > 0) {
       return NextResponse.json(
         { error: 'User with this email already exists' },
@@ -50,12 +48,10 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, saltRounds)
 
     // Create user
-    const [result] = await pool.execute(
+    const insertResult = await executeQuery(
       'INSERT INTO users (email, password_hash, first_name, last_name, is_admin, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
       [email, hashedPassword, firstName, lastName, false]
-    )
-
-    const insertResult = result as any
+    ) as any
     const userId = insertResult.insertId
 
     // Generate JWT token
@@ -89,7 +85,6 @@ export async function POST(request: NextRequest) {
       maxAge: 7 * 24 * 60 * 60 // 7 days
     })
 
-    await connection.end()
     return response
 
   } catch (error) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import pool from '@/lib/database/mysql'
+import { executeQuery } from '@/lib/database/mysql'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,12 +15,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user exists
-    const [users] = await pool.execute(
+    const userArray = await executeQuery(
       'SELECT * FROM users WHERE email = ?',
       [email]
-    )
-
-    const userArray = users as any[]
+    ) as any[]
     if (userArray.length === 0) {
       return NextResponse.json(
         { error: 'Invalid credentials' },

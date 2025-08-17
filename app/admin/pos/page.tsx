@@ -465,7 +465,12 @@ if (newQuantity > stock) {
                           <CardContent className="p-4">
                             <div className="aspect-square bg-gray-100 dark:bg-gray-600 rounded-lg mb-3 overflow-hidden">
                               <img
-                                src={`/images/${product.name?.toLowerCase().replace(/\s+/g, "-")}.png`}
+                                src={
+                                  (product.gallery_images && product.gallery_images.length > 0 
+                                    ? product.gallery_images[0] 
+                                    : product.image_url) || 
+                                  `/images/${product.name?.toLowerCase().replace(/\s+/g, "-")}.png`
+                                }
                                 alt={product.name}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
@@ -812,7 +817,12 @@ if (newQuantity > stock) {
                 <div className="flex gap-6">
                   <div className="w-32 h-32 bg-gray-100 dark:bg-gray-600 rounded-lg overflow-hidden">
                     <img
-                      src={`/images/${selectedProduct.name?.toLowerCase().replace(/\s+/g, "-")}.png`}
+                      src={
+                        (selectedProduct.gallery_images && selectedProduct.gallery_images.length > 0 
+                          ? selectedProduct.gallery_images[0] 
+                          : selectedProduct.image_url) || 
+                        `/images/${selectedProduct.name?.toLowerCase().replace(/\s+/g, "-")}.png`
+                      }
                       alt={selectedProduct.name}
                       className="w-full h-full object-cover"
                       onError={(e) => {

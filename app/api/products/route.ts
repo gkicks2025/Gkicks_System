@@ -13,6 +13,8 @@ async function getUserFromToken(request: NextRequest) {
     }
 
     const token = authHeader.substring(7);
+    console.log('POST - Received token length:', token.length);
+    console.log('POST - Token preview:', token.substring(0, 50) + '...');
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, email: string };
     return { id: decoded.userId, email: decoded.email };
   } catch (error) {
@@ -21,29 +23,138 @@ async function getUserFromToken(request: NextRequest) {
   }
 }
 
+// POST - Create new product
+export async function POST(request: NextRequest) {
+  try {
+    // Check authentication
+    const user = await getUserFromToken(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const {
+      name,
+      brand,
+      price,
+      original_price,
+      category,
+      sku,
+      stock_quantity,
+      status,
+      image_url,
+      gallery_images,
+      description,
+      is_active,
+      is_new,
+      is_sale,
+      colors,
+      sizes,
+      model_3d_url,
+      model_3d_filename,
+      subtitle
+    } = body;
+
+    // Validate required fields
+    if (!name || !brand || !price || !category) {
+      return NextResponse.json(
+        { error: 'Name, brand, price, and category are required' },
+        { status: 400 }
+      );
+    }
+
+    // Generate SKU if empty
+    const finalSku = sku && sku.trim() !== '' ? sku : `${brand.substring(0, 3).toUpperCase()}-${Date.now().toString().slice(-6)}`;
+
+    console.log('🔄 API: Creating new product:', name);
+
+    // Create product in MySQL database
+    const insertQuery = `
+      INSERT INTO products (
+        name, brand, price, original_price, category, sku, stock_quantity, status,
+        image_url, gallery_images, description, is_active, is_new, is_sale,
+        colors, sizes, model_3d_url, model_3d_filename, created_at, updated_at
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
+      )
+    `;
+
+    const params = [
+      name,
+      brand,
+      parseFloat(price),
+      original_price ? parseFloat(original_price) : null,
+      category,
+      finalSku,
+      parseInt(stock_quantity) || 0,
+      status || 'Active',
+      image_url || '/placeholder-product.jpg',
+      JSON.stringify(gallery_images || []),
+      description || '',
+      is_active !== false,
+      is_new || false,
+      is_sale || false,
+      JSON.stringify(colors || []),
+      JSON.stringify(sizes || []),
+      model_3d_url || null,
+      model_3d_filename || null
+    ];
+
+    const result = await executeQueryMySQL(insertQuery, params);
+
+    console.log('✅ API: Product created successfully with ID:', result.insertId);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Product created successfully',
+      productId: result.insertId
+    });
+
+  } catch (error) {
+    console.error('❌ API: Error creating product:', error);
+    return NextResponse.json(
+      { error: 'Failed to create product' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 API: Fetching products from SQLite database...');
+    console.log('🔍 API: Fetching products from MySQL database...');
     
     const query = `
       SELECT * FROM products 
-      WHERE is_active = 1 AND is_deleted = 0 
+      WHERE is_active = 1 AND (is_deleted = 0 OR is_deleted IS NULL)
       ORDER BY created_at DESC
     `;
     
-    const data = await executeQuery(query);
+    const data = await executeQueryMySQL(query);
 
     if (!data || data.length === 0) {
       console.log('📦 API: No products found in database');
       return NextResponse.json([]);
     }
 
-    console.log(`✅ API: Successfully fetched ${data.length} products from database`);
+    console.log(`✅ API: Successfully fetched ${data.length} products from MySQL database`);
+    
+    // Debug logging for image URLs
+    console.log('🔍 Products API - Debug image URLs:');
+    data.forEach((product: any, index: number) => {
+      console.log(`Product ${index + 1} (ID: ${product.id}):`);
+      console.log(`  - Name: ${product.name}`);
+      console.log(`  - Image URL: ${product.image_url || 'NULL/EMPTY'}`);
+      console.log(`  - Has image: ${!!product.image_url}`);
+    });
     
     // Map the data to ensure it matches our Product interface
     const products = data.map((item: any) => {
       let colors = [];
       let colorImages = {};
+      let galleryImages = [];
       
       try {
         colors = item.colors ? JSON.parse(item.colors) : [];
@@ -59,24 +170,43 @@ export async function GET(request: NextRequest) {
         colorImages = {};
       }
       
+      try {
+        galleryImages = item.gallery_images ? JSON.parse(item.gallery_images) : [];
+      } catch (e) {
+        console.warn('Failed to parse gallery_images for product', item.id, ':', e);
+        galleryImages = [];
+      }
+      
       return {
         id: item.id,
         name: item.name || 'Unknown Product',
         brand: item.brand || 'Unknown Brand',
         price: parseFloat(item.price) || 0,
-        originalPrice: item.original_price ? parseFloat(item.original_price) : undefined,
+        original_price: item.original_price ? parseFloat(item.original_price) : undefined,
         description: item.description || '',
-        image: item.image_url || '/placeholder-product.jpg',
+        image_url: item.image_url || '/placeholder-product.jpg',
         rating: item.rating || 0,
         reviews: item.reviews || 0,
         colors,
         colorImages,
+        gallery_images: galleryImages,
         isNew: Boolean(item.is_new),
         isSale: Boolean(item.is_sale),
         views: item.views || 0,
         category: item.category || 'unisex',
+        gender: item.gender || 'unisex',
+        sku: item.sku || '',
+        stock_quantity: parseInt(item.stock_quantity) || 0,
+        low_stock_threshold: parseInt(item.low_stock_threshold) || 10,
+        sizes: item.sizes ? JSON.parse(item.sizes) : [],
+        variants: item.variants ? JSON.parse(item.variants) : {},
+        created_at: item.created_at,
+        updated_at: item.updated_at,
         isDeleted: false,
         isActive: Boolean(item.is_active),
+        status: item.status || 'Active',
+        model_3d_url: item.model_3d_url || null,
+        model_3d_filename: item.model_3d_filename || null,
       };
     });
 
@@ -122,8 +252,11 @@ export async function PUT(request: NextRequest) {
       sku,
       stock_quantity,
       image_url,
+      gallery_images,
       description,
       is_active,
+      is_new,
+      is_sale,
       colors,
       sizes
     } = body;
@@ -135,6 +268,9 @@ export async function PUT(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Generate SKU if empty to avoid duplicate key error
+    const finalSku = sku && sku.trim() !== '' ? sku : `${brand.substring(0, 3).toUpperCase()}-${Date.now().toString().slice(-6)}`;
 
     console.log('🔄 API: Updating product:', productId);
 
@@ -149,8 +285,11 @@ export async function PUT(request: NextRequest) {
         sku = ?,
         stock_quantity = ?,
         image_url = ?,
+        gallery_images = ?,
         description = ?,
         is_active = ?,
+        is_new = ?,
+        is_sale = ?,
         colors = ?,
         sizes = ?,
         updated_at = NOW()
@@ -163,11 +302,14 @@ export async function PUT(request: NextRequest) {
       parseFloat(price),
       original_price ? parseFloat(original_price) : null,
       category,
-      sku,
+      finalSku,
       parseInt(stock_quantity) || 0,
       image_url,
+      JSON.stringify(gallery_images || []),
       description,
       is_active,
+      is_new || false,
+      is_sale || false,
       JSON.stringify(colors || []),
       JSON.stringify(sizes || []),
       parseInt(productId)

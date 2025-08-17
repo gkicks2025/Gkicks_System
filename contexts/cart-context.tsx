@@ -11,6 +11,7 @@ export interface CartItem {
   size: string
   quantity: number
   color?: string;
+  brand?: string;
 }
 
 interface CartState {

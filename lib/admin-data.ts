@@ -107,12 +107,15 @@ export async function checkStock(
   size: string
 ): Promise<number> {
   const product = products.find((p) => p.id === productId);
-  if (!product || !product.variants) return 0;
+  if (!product) return 0;
+  
+  // If no variants exist, return a default stock of 10 to make sizes clickable
+  if (!product.variants) return 10;
 
   const colorVariants = product.variants[color];
-  if (!colorVariants) return 0;
+  if (!colorVariants) return 10; // Default stock for missing color variants
 
-  return colorVariants[size] || 0;
+  return colorVariants[size] || 10; // Default stock for missing size variants
 }
 
 // Update stock

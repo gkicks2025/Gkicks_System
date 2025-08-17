@@ -16,7 +16,8 @@ interface Product {
   price: number
   originalPrice?: number
   image?: string
-  image_url?: string  // <-- added this property
+  image_url?: string
+  gallery_images?: string[]
   rating?: number
   reviews?: number
   colors?: string[]
@@ -52,7 +53,8 @@ export function ProductCard({ product, onViewUpdate }: ProductCardProps) {
     brand: product?.brand || "Unknown Brand",
     price: product?.price || 0,
     originalPrice: product?.originalPrice,
-    image_url: product?.image_url,  // <-- here
+    image_url: product?.image_url,
+    gallery_images: product?.gallery_images || [],
     image:
       product?.image ||
       `/images/${product?.name?.toLowerCase().replace(/\s+/g, "-")}.png` ||
@@ -65,8 +67,29 @@ export function ProductCard({ product, onViewUpdate }: ProductCardProps) {
     category: product?.category || "uncategorized",
   }
 
+  // State declarations first
   const [currentViews, setCurrentViews] = useState(safeProduct.views)
   const [isHovered, setIsHovered] = useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+
+  // Get all available images (gallery_images first, then fallback to image_url or image)
+  const allImages = safeProduct.gallery_images.length > 0 
+    ? safeProduct.gallery_images 
+    : [safeProduct.image_url || safeProduct.image].filter(Boolean)
+  
+  const currentImage = allImages[currentImageIndex] || safeProduct.image || "/placeholder.svg?height=300&width=300"
+  
+  const nextImage = () => {
+    if (allImages.length > 1) {
+      setCurrentImageIndex((prev) => (prev + 1) % allImages.length)
+    }
+  }
+  
+  const prevImage = () => {
+    if (allImages.length > 1) {
+      setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length)
+    }
+  }
 
   const handleProductClick = () => {
     router.push(`/product/${safeProduct.id}`)
@@ -145,11 +168,7 @@ export function ProductCard({ product, onViewUpdate }: ProductCardProps) {
               }}
             >
               <img
-                src={
-                  safeProduct.image_url ||
-                  safeProduct.image ||
-                  "/placeholder.svg?height=300&width=300"
-                }
+                src={currentImage}
                 alt={safeProduct.name}
                 className="w-full h-48 sm:h-64 object-cover transition-all duration-700"
                 style={{
@@ -162,6 +181,46 @@ export function ProductCard({ product, onViewUpdate }: ProductCardProps) {
                   e.currentTarget.src = "/placeholder.svg?height=300&width=300"
                 }}
               />
+              
+              {/* Image Navigation - only show if multiple images */}
+              {allImages.length > 1 && (
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      prevImage()
+                    }}
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-75 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      nextImage()
+                    }}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-75 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  >
+                    ›
+                  </button>
+                  
+                  {/* Image indicators */}
+                  <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    {allImages.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setCurrentImageIndex(index)
+                        }}
+                        className={`w-2 h-2 rounded-full transition-colors ${
+                          index === currentImageIndex ? 'bg-yellow-400' : 'bg-white bg-opacity-50'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

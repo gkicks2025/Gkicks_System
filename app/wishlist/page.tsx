@@ -28,6 +28,7 @@ export default function WishlistPage() {
       image: item.image,
       color: item.colors?.[0] || "Default",
       size: defaultSize,
+      brand: item.brand || "Unknown",
     })
 
     toast({
@@ -37,7 +38,7 @@ export default function WishlistPage() {
   }
 
   const handleRemoveItem = (itemId: string) => {
-    removeFromWishlist(Number(itemId))
+    removeFromWishlist(parseInt(itemId))
     toast({
       title: "Removed from Wishlist",
       description: "Item has been removed from your wishlist.",
@@ -76,6 +77,7 @@ export default function WishlistPage() {
         image: item.image,
         color: item.colors?.[0] || "Default",
         size: defaultSize,
+        brand: item.brand || "Unknown",
       })
     })
 
@@ -156,140 +158,153 @@ export default function WishlistPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-          {wishlistState.items.map((item) => (
-            <Card
-              key={item.id}
-              className="group relative bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200"
-            >
-              <CardContent className="p-4">
-                <div className="absolute top-2 left-2 z-10">
-                  <input
-                    type="checkbox"
-                    checked={selectedItems.has(item.id.toString())}
-                    onChange={() => toggleItemSelection(item.id.toString())}
-                    className="w-4 h-4 text-yellow-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-yellow-400 dark:focus:ring-yellow-500"
-                  />
-                </div>
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleRemoveItem(item.id.toString())}
-                  className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-
-                <div className="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg mb-4 overflow-hidden">
-                  <Image
-                    src={item.image || "/placeholder.svg"}
-                    alt={item.name}
-                    width={300}
-                    height={300}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-medium text-sm text-gray-900 dark:text-white line-clamp-2 leading-tight">
-                      {item.name}
-                    </h3>
-                    {item.dateAdded && (
-                      <Badge
-                        variant="secondary"
-                        className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 flex-shrink-0"
-                      >
-                        {new Date(item.dateAdded).toLocaleDateString()}
-                      </Badge>
-                    )}
+          {wishlistState.items.map((item) => {
+            console.log('🖼️ Wishlist item image debug:', {
+              id: item.id,
+              name: item.name,
+              image: item.image,
+              hasImage: !!item.image,
+              isPlaceholder: item.image === '/placeholder.svg' || item.image === '/placeholder-product.jpg'
+            })
+            return (
+              <Card
+                key={item.id}
+                className="group relative bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200"
+              >
+                <CardContent className="p-4">
+                  <div className="absolute top-2 left-2 z-10">
+                    <input
+                      type="checkbox"
+                      checked={selectedItems.has(item.id.toString())}
+                      onChange={() => toggleItemSelection(item.id.toString())}
+                      className="w-4 h-4 text-yellow-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-yellow-400 dark:focus:ring-yellow-500"
+                    />
                   </div>
 
-                  {item.brand && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{item.brand}</p>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveItem(item.id.toString())}
+                    className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
 
-                  {item.colors && item.colors.length > 0 && (
-                    <div className="flex items-center gap-1">
-                      {item.colors.slice(0, 4).map((color, index) => (
-                        <div
-                          key={index}
-                          className="w-4 h-4 rounded-full border-2 border-white dark:border-gray-600 shadow-sm"
-                          style={{ backgroundColor: color.toLowerCase() }}
-                          title={color}
-                        />
-                      ))}
-                      {item.colors.length > 4 && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
-                          +{item.colors.length - 4}
-                        </span>
+                  <div className="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg mb-4 overflow-hidden">
+                    <Image
+                      src={item.image || "/placeholder.svg"}
+                      alt={item.name}
+                      width={300}
+                      height={300}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-medium text-sm text-gray-900 dark:text-white line-clamp-2 leading-tight">
+                        {item.name}
+                      </h3>
+                      {item.addedDate && (
+                        <Badge
+                          variant="secondary"
+                          className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 flex-shrink-0"
+                        >
+                          {new Date(item.addedDate).toLocaleDateString()}
+                        </Badge>
                       )}
                     </div>
-                  )}
 
-                  {item.rating && (
-                    <div className="flex items-center gap-1">
-                      <div className="flex items-center">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-3 w-3 ${
-                              i < Math.floor(item.rating ?? 0)
-                                ? "text-yellow-400 fill-current"
-                                : "text-gray-300 dark:text-gray-600"
-                            }`}
+                    {item.brand && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{item.brand}</p>
+                    )}
+
+                    {item.colors && item.colors.length > 0 && (
+                      <div className="flex items-center gap-1">
+                        {item.colors.slice(0, 4).map((color, index) => (
+                          <div
+                            key={index}
+                            className="w-4 h-4 rounded-full border-2 border-white dark:border-gray-600 shadow-sm"
+                            style={{ backgroundColor: color.toLowerCase() }}
+                            title={color}
                           />
                         ))}
+                        {item.colors.length > 4 && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
+                            +{item.colors.length - 4}
+                          </span>
+                        )}
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">({item.rating})</span>
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-gray-900 dark:text-yellow-400">
-                      ₱{item.price.toLocaleString()}
-                    </span>
-                    {item.originalPrice && item.originalPrice > item.price && (
-                      <span className="text-sm text-gray-500 dark:text-gray-500 line-through">
-                        ₱{item.originalPrice.toLocaleString()}
-                      </span>
                     )}
-                  </div>
 
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      onClick={() => handleAddToCart(item)}
-                      className="flex-1 bg-yellow-400 text-black hover:bg-yellow-500 dark:bg-yellow-500 dark:hover:bg-yellow-400 text-sm h-8"
-                    >
-                      <ShoppingCart className="h-3 w-3 mr-1" />
-                      Add to Cart
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => router.push(`/product/${item.id}`)}
-                      className="px-3 text-sm h-8 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-yellow-400"
-                    >
-                      View
-                    </Button>
+                    {item.rating && (
+                      <div className="flex items-center gap-1">
+                        <div className="flex items-center">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-3 w-3 ${
+                                i < Math.floor(item.rating ?? 0)
+                                  ? "text-yellow-400 fill-current"
+                                  : "text-gray-300 dark:text-gray-600"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">({item.rating})</span>
+                      </div>
+                    )}
+
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg font-bold text-gray-900 dark:text-white">
+                          ₱{item.price.toLocaleString()}
+                        </span>
+                        {item.originalPrice && item.originalPrice > item.price && (
+                          <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
+                            ₱{item.originalPrice.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        ₱{(item.price * 1.12).toLocaleString()} (incl. 12% VAT)
+                      </p>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        onClick={() => handleAddToCart(item)}
+                        className="flex-1 bg-yellow-400 text-black hover:bg-yellow-500 dark:bg-yellow-500 dark:hover:bg-yellow-400 text-xs py-2"
+                      >
+                        Add to Cart
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => router.push(`/product/${item.id}`)}
+                        className="flex-1 text-xs py-2 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                      >
+                        View Details
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
 
         {wishlistState.items.length > 0 && (
-          <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
             <Button
               onClick={() => router.push("/")}
               variant="outline"
-              className="border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-yellow-400"
+              className="flex-1 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Continue Shopping
             </Button>
             <Button
               onClick={() => router.push("/cart")}
-              className="bg-yellow-400 text-black hover:bg-yellow-500 dark:bg-yellow-500 dark:hover:bg-yellow-400"
+              className="flex-1 bg-yellow-400 text-black hover:bg-yellow-500 dark:bg-yellow-500 dark:hover:bg-yellow-400"
             >
               <ShoppingCart className="h-4 w-4 mr-2" />
               View Cart
