@@ -89,8 +89,8 @@ export default function MySQLAdminPage() {
       // Calculate stats
       const totalProducts = data.products?.length || 0;
       const activeProducts = data.products?.filter((p: Product) => p.is_active).length || 0;
-      const categories = [...new Set(data.products?.map((p: Product) => p.category) || [])];
-      const brands = [...new Set(data.products?.map((p: Product) => p.brand) || [])];
+      const categories = [...new Set(data.products?.map((p: Product) => p.category) || [])] as string[];
+      const brands = [...new Set(data.products?.map((p: Product) => p.brand) || [])] as string[];
       
       setStats({ totalProducts, activeProducts, categories, brands });
     } catch (err) {

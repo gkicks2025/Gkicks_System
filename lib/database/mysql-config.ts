@@ -63,7 +63,7 @@ export function getConnectionPool(): mysql.Pool {
       connectionLimit: config.connectionLimit,
       queueLimit: 0,
       // Additional MySQL 8.0+ settings
-      ssl: false,
+      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
       charset: 'utf8mb4',
       timezone: '+00:00',
       dateStrings: false,
@@ -73,11 +73,11 @@ export function getConnectionPool(): mysql.Pool {
     });
 
     // Handle pool events
-    pool.on('connection', (connection) => {
+    pool.on('connection', (connection: any) => {
       console.log('New MySQL connection established as id ' + connection.threadId);
     });
 
-    pool.on('error', (err) => {
+    pool.on('error' as any, (err: any) => {
       console.error('MySQL pool error:', err);
       if (err.code === 'PROTOCOL_CONNECTION_LOST') {
         console.log('Recreating MySQL connection pool...');

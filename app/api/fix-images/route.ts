@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       products: products
     })
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Failed to fix product images:', error)
     return NextResponse.json(
       { error: 'Failed to fix product images', details: error.message },
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       products: products
     })
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Failed to check product images:', error)
     return NextResponse.json(
       { error: 'Failed to check product images', details: error.message },

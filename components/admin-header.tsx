@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter, usePathname } from "next/navigation"
+import { useAuth } from "@/contexts/auth-context"
 import { Menu, X, Home, Package, ShoppingCart, BarChart3, Calculator, User, Settings, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -20,8 +21,9 @@ export function AdminHeader() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
+  const { signOut } = useAuth()
   
-  // Simple local auth state (replace with your preferred auth system)
+  // Mock user data - replace with actual auth
   const user = { email: 'admin@gkicks.com' }
   const profile = { first_name: 'Admin', last_name: 'User' }
 

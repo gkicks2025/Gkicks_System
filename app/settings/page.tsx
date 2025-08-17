@@ -25,7 +25,7 @@ import { useTheme } from "next-themes"
 export default function SettingsPage() {
   const [pushNotifications, setPushNotifications] = useState(true)
   const [emailUpdates, setEmailUpdates] = useState(false)
-  const { logout } = useAuth()
+  const { signOut } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const { theme, setTheme, resolvedTheme } = useTheme()
@@ -41,7 +41,7 @@ export default function SettingsPage() {
       description: "Your account has been permanently deleted.",
       variant: "destructive",
     })
-    logout()
+    signOut()
     router.push("/")
   }
 

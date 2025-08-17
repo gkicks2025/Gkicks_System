@@ -13,8 +13,9 @@ export async function POST(request: NextRequest) {
     }
 
     const uploadedUrls: string[] = []
-    const validExtensions = [".obj", ".mtl", ".zip", ".jpg", ".jpeg", ".png", ".bmp", ".tga"]
+    const validExtensions = [".obj", ".mtl", ".zip", ".jpg", ".jpeg", ".png", ".bmp", ".tga", ".glb", ".gltf"]
     let objFileFound = false
+    let glbFileFound = false
     let baseFileName = ""
 
     // Create uploads directory if it doesn't exist
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
       // Validate file extension
       if (!validExtensions.includes(fileExtension)) {
         return NextResponse.json({ 
-          error: `Invalid file type for ${file.name}. Supported: .obj, .mtl, .zip, .jpg, .jpeg, .png, .bmp, .tga` 
+          error: `Invalid file type for ${file.name}. Supported: .obj, .mtl, .zip, .jpg, .jpeg, .png, .bmp, .tga, .glb, .gltf` 
         }, { status: 400 })
       }
 
@@ -56,6 +57,7 @@ export async function POST(request: NextRequest) {
         const zipEntries = zip.getEntries()
         
         let objFound = false
+        let glbFound = false
         const extractedFiles: { name: string; buffer: Buffer; ext: string }[] = []
         
         // Extract and validate ZIP contents
@@ -69,13 +71,14 @@ export async function POST(request: NextRequest) {
                 ext: entryExt
               })
               if (entryExt === ".obj") objFound = true
+              if (entryExt === ".glb" || entryExt === ".gltf") glbFound = true
             }
           }
         })
         
-        if (!objFound) {
+        if (!objFound && !glbFound) {
           return NextResponse.json({ 
-            error: "ZIP file must contain at least one .obj file" 
+            error: "ZIP file must contain at least one 3D model file (.obj or .glb/.gltf)" 
           }, { status: 400 })
         }
         
@@ -86,6 +89,10 @@ export async function POST(request: NextRequest) {
         for (const extractedFile of extractedFiles) {
           const fileName = extractedFile.ext === ".obj" 
             ? `${baseFileName}.obj`
+            : extractedFile.ext === ".glb"
+            ? `${baseFileName}.glb`
+            : extractedFile.ext === ".gltf"
+            ? `${baseFileName}.gltf`
             : `${baseFileName}-${extractedFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
           
           fileMapping[extractedFile.name] = fileName
@@ -124,6 +131,10 @@ export async function POST(request: NextRequest) {
             const publicUrl = `/uploads/3d-models/${fileToSave.fileName}`
             uploadedUrls.push(publicUrl)
             objFileFound = true
+          } else if (fileToSave.ext === ".glb" || fileToSave.ext === ".gltf") {
+            const publicUrl = `/uploads/3d-models/${fileToSave.fileName}`
+            uploadedUrls.push(publicUrl)
+            glbFileFound = true
           }
           
           console.log("Extracted and saved:", fileToSave.fileName, "Size:", bufferToSave.length)
@@ -136,6 +147,12 @@ export async function POST(request: NextRequest) {
         if (fileExtension === ".obj") {
           fileName = `${baseFileName}.obj`
           objFileFound = true
+        } else if (fileExtension === ".glb") {
+          fileName = `${baseFileName}.glb`
+          glbFileFound = true
+        } else if (fileExtension === ".gltf") {
+          fileName = `${baseFileName}.gltf`
+          glbFileFound = true
         } else if (fileExtension === ".mtl") {
           fileName = `${baseFileName}.mtl`
         } else {
@@ -150,8 +167,8 @@ export async function POST(request: NextRequest) {
         
         await writeFile(filePath, buffer)
         
-        // Only add OBJ files to the returned URLs
-        if (fileExtension === ".obj") {
+        // Add OBJ and GLB/GLTF files to the returned URLs
+        if (fileExtension === ".obj" || fileExtension === ".glb" || fileExtension === ".gltf") {
           const publicUrl = `/uploads/3d-models/${fileName}`
           uploadedUrls.push(publicUrl)
         }
@@ -160,10 +177,10 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Ensure at least one OBJ file was uploaded
-    if (!objFileFound) {
+    // Ensure at least one 3D model file was uploaded
+    if (!objFileFound && !glbFileFound) {
       return NextResponse.json({ 
-        error: "At least one .obj file is required" 
+        error: "At least one 3D model file (.obj or .glb/.gltf) is required" 
       }, { status: 400 })
     }
     

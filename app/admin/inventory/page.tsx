@@ -67,6 +67,8 @@ interface Product {
   price: number
   originalPrice?: number
   image?: string
+  image_url?: string
+  gallery_images?: string[]
   description?: string
   is_new?: boolean
   is_sale?: boolean
@@ -289,7 +291,7 @@ export default function InventoryPage() {
 
       // Handle 3D model removal or upload
       if (remove3DModel) {
-        model3DUrl = null // Remove the 3D model
+        model3DUrl = undefined // Remove the 3D model
       } else if (selected3DModel) {
         model3DUrl = await upload3DModel(selected3DModel)
       }
@@ -302,7 +304,7 @@ export default function InventoryPage() {
         model_3d_url: model3DUrl,
         model_3d_filename: selected3DModel ? 
           (Array.isArray(selected3DModel) ? selected3DModel.map(f => f.name).join(', ') : selected3DModel.name) : 
-          (remove3DModel ? null : formData.model_3d_filename),
+          (remove3DModel ? undefined : formData.model_3d_filename),
         price: Number(formData.price),
         original_price: Number(formData.originalPrice),
         stock_quantity: Number(formData.low_stock_threshold),
@@ -334,7 +336,22 @@ export default function InventoryPage() {
         resetForm()
         loadProducts()
       } else {
-        throw new Error('Failed to save product')
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('API Error Response:', errorData)
+        
+        // Handle JWT token issues
+        if (response.status === 401) {
+          localStorage.removeItem('auth_token')
+          toast({
+            title: "Authentication Error",
+            description: "Your session has expired. Please log in again.",
+            variant: "destructive",
+          })
+          window.location.href = '/admin/login'
+          return
+        }
+        
+        throw new Error(errorData.error || `Failed to save product (${response.status})`)
       }
     } catch (error) {
       console.error('Error saving product:', error)

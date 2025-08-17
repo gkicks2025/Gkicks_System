@@ -51,11 +51,18 @@ export async function POST(request: NextRequest) {
         throw new Error('Failed to verify status column creation');
       }
       
-    } finally {
-      connection.release();
+    } catch (innerError: any) {
+      console.error('❌ Inner error:', innerError);
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: innerError instanceof Error ? innerError.message : 'Unknown error occurred' 
+        },
+        { status: 500 }
+      );
     }
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Error adding status column:', error);
     return NextResponse.json(
       { 

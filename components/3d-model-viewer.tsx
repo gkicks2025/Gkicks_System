@@ -5,6 +5,7 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, useProgress, Html, Environment } from '@react-three/drei'
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { Mesh, Group, Material } from 'three'
 import * as THREE from 'three'
 import { Button } from '@/components/ui/button'
@@ -82,13 +83,28 @@ function Model3D({ url, productColors = [] }: Model3DProps) {
   React.useEffect(() => {
     const loadModel = async () => {
       try {
-        console.log('🔄 Starting OBJ+MTL loading:', url)
-        // Extract base filename from URL (without .obj extension)
-        const objFilename = url.split('/').pop() || ''
-        const baseFilename = objFilename.replace('.obj', '')
+        const filename = url.split('/').pop() || ''
+        const fileExtension = filename.split('.').pop()?.toLowerCase()
         
-        const objLoader = new OBJLoader()
+        console.log('🔄 Starting 3D model loading:', url, 'Extension:', fileExtension)
+        
         let obj: THREE.Group
+        
+        // Handle GLB/GLTF files
+        if (fileExtension === 'glb' || fileExtension === 'gltf') {
+          console.log('🔄 Loading GLB/GLTF file:', url)
+          const gltfLoader = new GLTFLoader()
+          const gltf = await gltfLoader.loadAsync(url)
+          obj = gltf.scene
+          console.log('✅ GLB/GLTF file loaded:', obj)
+        } else {
+          // Handle OBJ files with MTL materials
+          console.log('🔄 Starting OBJ+MTL loading:', url)
+          // Extract base filename from URL (without .obj extension)
+          const objFilename = filename
+          const baseFilename = objFilename.replace('.obj', '')
+          
+          const objLoader = new OBJLoader()
         
         // Try to find the corresponding MTL file
         // Try multiple patterns to find the MTL file
@@ -97,6 +113,7 @@ function Model3D({ url, productColors = [] }: Model3DProps) {
           `${baseFilename}-nike_air_zoom_pegasus_36.mtl`, // Nike shoe pattern with prefix
           `${baseFilename}-model.mtl`, // Generic model pattern
           `${baseFilename}-material.mtl`, // Material pattern
+          `${baseFilename}-*.mtl`, // Wildcard pattern (will be handled specially)
           `nike_air_zoom_pegasus_36.mtl` // Original filename pattern
         ]
         
@@ -113,6 +130,28 @@ function Model3D({ url, productColors = [] }: Model3DProps) {
           )
         }
         
+        // Try to find any MTL file with the same prefix by scanning directory
+        try {
+          const response = await fetch('/api/list-3d-files', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prefix: baseFilename })
+          })
+          
+          if (response.ok) {
+            const data = await response.json()
+            if (data.mtlFiles && data.mtlFiles.length > 0) {
+              // Add any found MTL files to the beginning of the patterns list
+              data.mtlFiles.forEach((mtlFile: string) => {
+                possibleMtlPatterns.unshift(mtlFile)
+              })
+              console.log('🔍 Found MTL files via API:', data.mtlFiles)
+            }
+          }
+        } catch (apiError) {
+          console.log('⚠️ Could not fetch MTL files via API, using fallback patterns')
+        }
+        
         let mtlUrl = ''
         let mtlFound = false
         
@@ -120,6 +159,11 @@ function Model3D({ url, productColors = [] }: Model3DProps) {
         
         // Try each pattern to find the MTL file
         for (const pattern of possibleMtlPatterns) {
+          // Skip wildcard patterns in direct testing
+          if (pattern.includes('*')) {
+            continue;
+          }
+          
           try {
             const testUrl = `/uploads/3d-models/${pattern}`
             console.log('🔍 Checking for MTL file:', testUrl)
@@ -142,15 +186,65 @@ function Model3D({ url, productColors = [] }: Model3DProps) {
             // Try to load MTL file
             console.log('🔄 Loading MTL file:', mtlUrl)
             const mtlLoader = new MTLLoader()
-            // Set the resource path for textures
+            
+            // Set the resource path for textures - this is crucial for texture loading
             mtlLoader.setResourcePath('/uploads/3d-models/')
             
-            // Add error handling for MTL loading
-            mtlLoader.setMaterialOptions({ side: THREE.DoubleSide })
+            // Configure material options for better rendering
+            // Note: setMaterialOptions may not be available in newer Three.js versions
+            // mtlLoader.setMaterialOptions({ 
+            //   side: THREE.DoubleSide,
+            //   transparent: false,
+            //   alphaTest: 0.1
+            // })
             
             const materials = await mtlLoader.loadAsync(mtlUrl)
+            
+            // Enhanced material processing with texture loading fixes
+            console.log('🔄 Processing MTL materials...')
             materials.preload()
-            console.log('✅ MTL materials loaded:', materials)
+            
+            // Fix texture loading issues by ensuring proper texture configuration
+            Object.values(materials.materials).forEach((material: any) => {
+              if (material) {
+                // Ensure textures are properly configured
+                if (material.map) {
+                  material.map.wrapS = THREE.RepeatWrapping
+                  material.map.wrapT = THREE.RepeatWrapping
+                  material.map.flipY = false
+                  console.log('🎨 Configured diffuse texture:', material.map.image?.src || 'loading...')
+                }
+                
+                // Configure normal maps
+                if (material.normalMap) {
+                  material.normalMap.wrapS = THREE.RepeatWrapping
+                  material.normalMap.wrapT = THREE.RepeatWrapping
+                  material.normalMap.flipY = false
+                  console.log('🎨 Configured normal map:', material.normalMap.image?.src || 'loading...')
+                }
+                
+                // Configure roughness/metallic maps
+                if (material.roughnessMap) {
+                  material.roughnessMap.wrapS = THREE.RepeatWrapping
+                  material.roughnessMap.wrapT = THREE.RepeatWrapping
+                  material.roughnessMap.flipY = false
+                  console.log('🎨 Configured roughness map:', material.roughnessMap.image?.src || 'loading...')
+                }
+                
+                // Ensure proper material properties
+                material.side = THREE.DoubleSide
+                material.needsUpdate = true
+                
+                console.log('🎨 Enhanced material:', material.name, {
+                  hasTexture: !!material.map,
+                  hasNormal: !!material.normalMap,
+                  hasRoughness: !!material.roughnessMap,
+                  color: material.color
+                })
+              }
+            })
+            
+            console.log('✅ MTL materials loaded and enhanced:', materials)
             
             // Load OBJ file with materials
             console.log('🔄 Loading OBJ file with materials:', url)
@@ -171,6 +265,7 @@ function Model3D({ url, productColors = [] }: Model3DProps) {
           obj = await objLoader.loadAsync(url)
           console.log('✅ OBJ file loaded without materials:', obj)
         }
+        } // End of OBJ handling
         
         // Calculate bounding box to center and scale the model
         const box = new THREE.Box3().setFromObject(obj)
@@ -190,29 +285,63 @@ function Model3D({ url, productColors = [] }: Model3DProps) {
         
         console.log('🔧 Applied scale:', scale)
         
-        // Enhance materials for better rendering
+        // Enhance materials for better rendering while preserving textures
         obj.traverse((child) => {
           if (child instanceof Mesh) {
             if (child.material) {
-              // Enhance existing material from MTL
+              // Enhance existing material from MTL - preserve textures!
               if (Array.isArray(child.material)) {
                 child.material.forEach(mat => {
                   if (mat instanceof THREE.Material) {
                     mat.side = THREE.DoubleSide
-                    // Enhance MTL materials with better lighting
+                    
+                    // Enhance MTL materials with better lighting while preserving textures
                     if (mat instanceof THREE.MeshLambertMaterial || mat instanceof THREE.MeshPhongMaterial) {
-                      mat.shininess = mat.shininess || 30
+                      (mat as any).shininess = (mat as any).shininess || 30
                     }
+                    
+                    // Ensure textures are properly applied and visible
+                    if ((mat as any).map) {
+                      (mat as any).map.needsUpdate = true
+                      console.log('🎨 Preserved diffuse texture on material:', (mat as any).map.image?.src)
+                    }
+                    
+                    if ((mat as any).normalMap) {
+                      (mat as any).normalMap.needsUpdate = true
+                      console.log('🎨 Preserved normal map on material:', (mat as any).normalMap.image?.src)
+                    }
+                    
+                    mat.needsUpdate = true
                   }
                 })
               } else if (child.material instanceof THREE.Material) {
                 child.material.side = THREE.DoubleSide
-                // Enhance MTL materials with better lighting
+                
+                // Enhance MTL materials with better lighting while preserving textures
                 if (child.material instanceof THREE.MeshLambertMaterial || child.material instanceof THREE.MeshPhongMaterial) {
-                  child.material.shininess = child.material.shininess || 30
+                  (child.material as any).shininess = (child.material as any).shininess || 30
                 }
+                
+                // Ensure textures are properly applied and visible
+                if ((child.material as any).map) {
+                  (child.material as any).map.needsUpdate = true
+                  console.log('🎨 Preserved diffuse texture on material:', (child.material as any).map.image?.src)
+                }
+                
+                if ((child.material as any).normalMap) {
+                  (child.material as any).normalMap.needsUpdate = true
+                  console.log('🎨 Preserved normal map on material:', (child.material as any).normalMap.image?.src)
+                }
+                
+                child.material.needsUpdate = true
               }
-              console.log('🎨 Enhanced MTL material for mesh:', child.name, child.material)
+              
+              console.log('🎨 Enhanced MTL material for mesh:', child.name, {
+                material: child.material,
+                hasTexture: !!(child.material as any).map,
+                hasNormal: !!(child.material as any).normalMap,
+                textureUrl: (child.material as any).map?.image?.src
+              })
             } else {
               // Apply realistic colored material based on product colors as fallback
               const materialColor = getColorForMesh(child, productColors)
@@ -228,6 +357,7 @@ function Model3D({ url, productColors = [] }: Model3DProps) {
         })
         
         console.log('✅ Model processed and ready to render')
+        
         setLoadedModel(obj)
         console.log('✅ Model set in state:', obj)
       } catch (error) {
@@ -336,9 +466,232 @@ export default function ModelViewer3D({ modelUrl, filename, className = '', prod
               style={{ background: 'linear-gradient(135deg, #2a2a3e 0%, #1e2a4e 100%)' }}
               gl={{ antialias: true, alpha: true }}
             >
-              {/* Simple lighting for debugging */}
-              <ambientLight intensity={0.6} />
-              <directionalLight position={[10, 10, 5]} intensity={1} />
+              {/* Professional lighting setup for enhanced 3D model visibility - Brightened */}
+               {/* Ambient base lighting - Increased */}
+               <ambientLight intensity={0.6} color="#ffffff" />
+               
+               {/* Hemisphere light for natural sky/ground lighting - Increased */}
+               <hemisphereLight 
+                 args={["#87CEEB", "#362d1d", 0.8]}
+               />
+               
+               {/* Main key light - primary illumination - Increased */}
+               <directionalLight 
+                 position={[10, 10, 5]} 
+                 intensity={1.8} 
+                 color="#ffffff"
+                 castShadow 
+                 shadow-mapSize-width={2048}
+                 shadow-mapSize-height={2048}
+                 shadow-camera-far={50}
+                 shadow-camera-left={-10}
+                 shadow-camera-right={10}
+                 shadow-camera-top={10}
+                 shadow-camera-bottom={-10}
+               />
+               
+               {/* Fill light - softer secondary lighting - Increased */}
+               <directionalLight 
+                 position={[-8, 6, -3]} 
+                 intensity={0.9} 
+                 color="#b3d9ff"
+               />
+               
+               {/* Rim light - creates edge definition - Increased */}
+               <directionalLight 
+                 position={[0, 0, -10]} 
+                 intensity={1.0} 
+                 color="#ffd700"
+               />
+               
+               {/* Spot lights for dramatic effect - Increased */}
+               <spotLight 
+                 position={[5, 8, 5]} 
+                 intensity={1.2}
+                 angle={Math.PI / 6}
+                 penumbra={0.3}
+                 color="#ffffff"
+                 castShadow
+               />
+               
+               {/* Bottom fill light to reduce harsh shadows - Increased */}
+               <pointLight 
+                 position={[0, -5, 3]} 
+                 intensity={0.7} 
+                 color="#87CEEB"
+               />
+               
+               {/* Side accent lights - Increased */}
+                 <pointLight 
+                   position={[8, 2, 0]} 
+                   intensity={0.6} 
+                   color="#ffb347"
+                 />
+                 <pointLight 
+                   position={[-8, 2, 0]} 
+                   intensity={0.6} 
+                   color="#b3d9ff"
+                 />
+                 
+                 {/* Additional comprehensive lighting for maximum brightness */}
+                 {/* Top ring lights for even illumination */}
+                 <pointLight 
+                   position={[0, 8, 8]} 
+                   intensity={0.8} 
+                   color="#ffffff"
+                 />
+                 <pointLight 
+                   position={[0, 8, -8]} 
+                   intensity={0.8} 
+                   color="#ffffff"
+                 />
+                 
+                 {/* Corner fill lights */}
+                 <pointLight 
+                   position={[6, 6, 6]} 
+                   intensity={0.5} 
+                   color="#f0f8ff"
+                 />
+                 <pointLight 
+                   position={[-6, 6, 6]} 
+                   intensity={0.5} 
+                   color="#f0f8ff"
+                 />
+                 <pointLight 
+                   position={[6, 6, -6]} 
+                   intensity={0.5} 
+                   color="#f0f8ff"
+                 />
+                 <pointLight 
+                   position={[-6, 6, -6]} 
+                   intensity={0.5} 
+                   color="#f0f8ff"
+                 />
+                 
+                 {/* Mid-level ring lights */}
+                 <pointLight 
+                   position={[10, 0, 0]} 
+                   intensity={0.4} 
+                   color="#ffe4b5"
+                 />
+                 <pointLight 
+                   position={[-10, 0, 0]} 
+                   intensity={0.4} 
+                   color="#e6f3ff"
+                 />
+                 <pointLight 
+                   position={[0, 0, 10]} 
+                   intensity={0.4} 
+                   color="#fff8dc"
+                 />
+                 
+                 {/* Additional spot lights for enhanced drama */}
+                 <spotLight 
+                   position={[-5, 8, -5]} 
+                   intensity={0.9}
+                   angle={Math.PI / 4}
+                   penumbra={0.4}
+                   color="#ffffff"
+                 />
+                 <spotLight 
+                   position={[5, -3, 8]} 
+                   intensity={0.7}
+                   angle={Math.PI / 5}
+                   penumbra={0.3}
+                   color="#f5f5dc"
+                 />
+                 
+                 {/* Environment simulation lights */}
+                 <directionalLight 
+                   position={[3, 3, 3]} 
+                   intensity={0.4} 
+                   color="#ffefd5"
+                 />
+                 <directionalLight 
+                   position={[-3, -3, 3]} 
+                   intensity={0.4} 
+                   color="#e0f6ff"
+                 />
+               
+               {/* Additional comprehensive lighting for maximum brightness */}
+               {/* Top ring lights for even illumination */}
+               <pointLight 
+                 position={[0, 8, 8]} 
+                 intensity={0.8} 
+                 color="#ffffff"
+               />
+               <pointLight 
+                 position={[0, 8, -8]} 
+                 intensity={0.8} 
+                 color="#ffffff"
+               />
+               
+               {/* Corner fill lights */}
+               <pointLight 
+                 position={[6, 6, 6]} 
+                 intensity={0.5} 
+                 color="#f0f8ff"
+               />
+               <pointLight 
+                 position={[-6, 6, 6]} 
+                 intensity={0.5} 
+                 color="#f0f8ff"
+               />
+               <pointLight 
+                 position={[6, 6, -6]} 
+                 intensity={0.5} 
+                 color="#f0f8ff"
+               />
+               <pointLight 
+                 position={[-6, 6, -6]} 
+                 intensity={0.5} 
+                 color="#f0f8ff"
+               />
+               
+               {/* Mid-level ring lights */}
+               <pointLight 
+                 position={[10, 0, 0]} 
+                 intensity={0.4} 
+                 color="#ffe4b5"
+               />
+               <pointLight 
+                 position={[-10, 0, 0]} 
+                 intensity={0.4} 
+                 color="#e6f3ff"
+               />
+               <pointLight 
+                 position={[0, 0, 10]} 
+                 intensity={0.4} 
+                 color="#fff8dc"
+               />
+               
+               {/* Additional spot lights for enhanced drama */}
+               <spotLight 
+                 position={[-5, 8, -5]} 
+                 intensity={0.9}
+                 angle={Math.PI / 4}
+                 penumbra={0.4}
+                 color="#ffffff"
+               />
+               <spotLight 
+                 position={[5, -3, 8]} 
+                 intensity={0.7}
+                 angle={Math.PI / 5}
+                 penumbra={0.3}
+                 color="#f5f5dc"
+               />
+               
+               {/* Environment simulation lights */}
+               <directionalLight 
+                 position={[3, 3, 3]} 
+                 intensity={0.4} 
+                 color="#ffefd5"
+               />
+               <directionalLight 
+                 position={[-3, -3, 3]} 
+                 intensity={0.4} 
+                 color="#e0f6ff"
+               />
               
               <Suspense fallback={<Loader />}>
                   <Model3D url={modelUrl} productColors={productColors} />
@@ -408,9 +761,72 @@ export default function ModelViewer3D({ modelUrl, filename, className = '', prod
              style={{ background: 'linear-gradient(135deg, #2a2a3e 0%, #1e2a4e 100%)' }}
              gl={{ antialias: true, alpha: true }}
            >
-             {/* Simple lighting for debugging */}
-             <ambientLight intensity={0.6} />
-             <directionalLight position={[10, 10, 5]} intensity={1} />
+             {/* Professional lighting setup for enhanced 3D model visibility - Brightened */}
+              {/* Ambient base lighting - Increased */}
+              <ambientLight intensity={0.6} color="#ffffff" />
+              
+              {/* Hemisphere light for natural sky/ground lighting - Increased */}
+              <hemisphereLight 
+                args={["#87CEEB", "#362d1d", 0.8]}
+              />
+              
+              {/* Main key light - primary illumination - Increased */}
+              <directionalLight 
+                position={[10, 10, 5]} 
+                intensity={1.8} 
+                color="#ffffff"
+                castShadow 
+                shadow-mapSize-width={2048}
+                shadow-mapSize-height={2048}
+                shadow-camera-far={50}
+                shadow-camera-left={-10}
+                shadow-camera-right={10}
+                shadow-camera-top={10}
+                shadow-camera-bottom={-10}
+              />
+              
+              {/* Fill light - softer secondary lighting - Increased */}
+              <directionalLight 
+                position={[-8, 6, -3]} 
+                intensity={0.9} 
+                color="#b3d9ff"
+              />
+              
+              {/* Rim light - creates edge definition - Increased */}
+              <directionalLight 
+                position={[0, 0, -10]} 
+                intensity={1.0} 
+                color="#ffd700"
+              />
+              
+              {/* Spot lights for dramatic effect - Increased */}
+              <spotLight 
+                position={[5, 8, 5]} 
+                intensity={1.2}
+                angle={Math.PI / 6}
+                penumbra={0.3}
+                color="#ffffff"
+                castShadow
+              />
+              
+              {/* Bottom fill light to reduce harsh shadows - Increased */}
+              <pointLight 
+                position={[0, -5, 3]} 
+                intensity={0.7} 
+                color="#87CEEB"
+              />
+              
+              {/* Side accent lights - Increased */}
+              <pointLight 
+                position={[8, 2, 0]} 
+                intensity={0.6} 
+                color="#ffb347"
+              />
+              <pointLight 
+                position={[-8, 2, 0]} 
+                intensity={0.6} 
+                color="#b3d9ff"
+              />
              
              <Suspense fallback={<Loader />}>
                  <Model3D url={modelUrl} productColors={productColors} />

@@ -1,11 +1,12 @@
-import Database from 'better-sqlite3';
+// @ts-ignore - better-sqlite3 types not available
+const Database = require('better-sqlite3');
 import path from 'path';
 
 // MySQL Simulator using SQLite backend
 // This provides MySQL-like functionality while using SQLite as the storage engine
 
 const dbPath = path.join(process.cwd(), 'database', 'gkicks.db');
-let db: Database.Database | null = null;
+let db: any | null = null;
 
 // Initialize database connection
 function getDatabase() {

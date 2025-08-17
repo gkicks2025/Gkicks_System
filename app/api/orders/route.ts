@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
     // Fetch the created order
     const newOrder = await executeQuery(
       `SELECT * FROM orders WHERE rowid = ?`,
-      [result.lastID]
+      [(result as any).lastID]
     )
 
     const order = newOrder[0]
@@ -171,7 +171,7 @@ export async function PUT(request: NextRequest) {
       [status, tracking_number || null, id, user.id]
     )
 
-    if (result.changes === 0) {
+    if ((result as any).changes === 0) {
       return NextResponse.json(
         { error: 'Order not found or unauthorized' },
         { status: 404 }

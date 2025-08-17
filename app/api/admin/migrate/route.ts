@@ -15,7 +15,7 @@ const mysqlConfig = {
   database: process.env.MYSQL_DATABASE || 'gkicks',
   ssl: process.env.MYSQL_SSL === 'true' ? {
     rejectUnauthorized: false
-  } : false
+  } : undefined
 };
 
 // Test database connections

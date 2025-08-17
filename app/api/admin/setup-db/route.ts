@@ -9,7 +9,7 @@ const mysqlConfigWithoutDB = {
   password: process.env.MYSQL_PASSWORD || '',
   ssl: process.env.MYSQL_SSL === 'true' ? {
     rejectUnauthorized: false
-  } : false
+  } : undefined
 };
 
 // MySQL connection configuration (with database)

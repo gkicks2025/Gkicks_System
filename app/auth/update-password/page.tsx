@@ -19,7 +19,7 @@ export default function UpdatePasswordPage() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false)
 
-  const { updatePassword, user, loading } = useAuth()
+  const { user, loading } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
 
@@ -65,25 +65,42 @@ export default function UpdatePasswordPage() {
       return
     }
 
-    const { error: updateError } = await updatePassword(newPassword)
+    try {
+      const response = await fetch('/api/auth/update-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password: newPassword }),
+      })
 
-    if (updateError) {
-      setError(updateError.message)
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || 'Failed to update password')
+        toast({
+          title: "Password Update Error",
+          description: data.error || 'Failed to update password',
+          variant: "destructive",
+        })
+      } else {
+        setSuccessMessage("Your password has been updated successfully!")
+        toast({
+          title: "Password Updated",
+          description: "Your password has been updated successfully!",
+        })
+        // Redirect to sign-in page after a short delay
+        setTimeout(() => {
+          router.push("/auth")
+        }, 2000)
+      }
+    } catch (error) {
+      setError('An error occurred while updating password')
       toast({
         title: "Password Update Error",
-        description: updateError.message,
+        description: 'An error occurred while updating password',
         variant: "destructive",
       })
-    } else {
-      setSuccessMessage("Your password has been updated successfully!")
-      toast({
-        title: "Password Updated",
-        description: "Your password has been updated successfully!",
-      })
-      // Redirect to sign-in page after a short delay
-      setTimeout(() => {
-        router.push("/auth")
-      }, 2000)
     }
   }
 

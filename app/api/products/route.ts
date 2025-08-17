@@ -105,12 +105,12 @@ export async function POST(request: NextRequest) {
 
     const result = await executeQueryMySQL(insertQuery, params);
 
-    console.log('✅ API: Product created successfully with ID:', result.insertId);
+    console.log('✅ API: Product created successfully with ID:', (result as any).insertId);
 
     return NextResponse.json({
       success: true,
       message: 'Product created successfully',
-      productId: result.insertId
+      productId: (result as any).insertId
     });
 
   } catch (error) {
@@ -134,16 +134,17 @@ export async function GET(request: NextRequest) {
     
     const data = await executeQueryMySQL(query);
 
-    if (!data || data.length === 0) {
+    const dataArray = data as any[];
+    if (!dataArray || dataArray.length === 0) {
       console.log('📦 API: No products found in database');
       return NextResponse.json([]);
     }
 
-    console.log(`✅ API: Successfully fetched ${data.length} products from MySQL database`);
+    console.log(`✅ API: Successfully fetched ${dataArray.length} products from MySQL database`);
     
     // Debug logging for image URLs
     console.log('🔍 Products API - Debug image URLs:');
-    data.forEach((product: any, index: number) => {
+    dataArray.forEach((product: any, index: number) => {
       console.log(`Product ${index + 1} (ID: ${product.id}):`);
       console.log(`  - Name: ${product.name}`);
       console.log(`  - Image URL: ${product.image_url || 'NULL/EMPTY'}`);
@@ -151,7 +152,7 @@ export async function GET(request: NextRequest) {
     });
     
     // Map the data to ensure it matches our Product interface
-    const products = data.map((item: any) => {
+    const products = dataArray.map((item: any) => {
       let colors = [];
       let colorImages = {};
       let galleryImages = [];
@@ -317,7 +318,7 @@ export async function PUT(request: NextRequest) {
 
     const result = await executeQueryMySQL(updateQuery, params);
 
-    if (result.affectedRows === 0) {
+    if ((result as any).affectedRows === 0) {
       return NextResponse.json(
         { error: 'Product not found or no changes made' },
         { status: 404 }

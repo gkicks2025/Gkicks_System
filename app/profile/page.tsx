@@ -30,10 +30,10 @@ import Link from "next/link"
 
 interface Address {
   id: string
-  street_address: string
+  address_line_1: string
   city: string
-  state_province: string
-  zip_code: string
+  state: string
+  postal_code: string
   country: string
   is_default: boolean
 }
@@ -583,7 +583,7 @@ export default function ProfilePage() {
                   <Avatar className="w-24 h-24">
                     <AvatarImage src={profileData.avatar_url || "/placeholder.svg"} />
                     <AvatarFallback className="bg-yellow-500 text-black text-xl">
-                      {profileData.first_name?.charAt(0) || user.email?.charAt(0)?.toUpperCase()}
+                      {profileData.first_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <input
@@ -606,7 +606,7 @@ export default function ProfilePage() {
                     ? `${profileData.first_name} ${profileData.last_name}`.trim()
                     : "User"}
                 </h3>
-                <p className="text-gray-400 mb-6">{user.email}</p>
+                <p className="text-gray-400 mb-6">{user?.email}</p>
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
@@ -921,13 +921,13 @@ export default function ProfilePage() {
                             >
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <p className="font-medium text-white">{address.street_address}</p>
+                                  <p className="font-medium text-white">{address.address_line_1}</p>
                                   {address.is_default && (
                                     <Badge className="bg-yellow-500 text-black text-xs">Default</Badge>
                                   )}
                                 </div>
                                 <p className="text-gray-300 text-sm">
-                                  {address.city}, {address.state_province} {address.zip_code}
+                                  {address.city}, {address.state} {address.postal_code}
                                 </p>
                                 <p className="text-gray-400 text-sm">{address.country}</p>
                               </div>

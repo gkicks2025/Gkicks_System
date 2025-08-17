@@ -15,7 +15,7 @@ async function getUserFromToken(request: NextRequest) {
     const token = authHeader.substring(7)
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, email: string }
     return { id: decoded.userId, email: decoded.email }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Token verification failed:', error)
     return null
   }
@@ -40,8 +40,9 @@ export async function GET(request: NextRequest) {
     
     console.log('🐛 DEBUG: Raw profile data from DB:', profiles)
     
-    if (profiles.length > 0) {
-      const dbProfile = profiles[0]
+    const profilesArray = profiles as any[]
+    if (profilesArray.length > 0) {
+      const dbProfile = profilesArray[0]
       console.log('🐛 DEBUG: Profile found:', {
         id: dbProfile.id,
         first_name: dbProfile.first_name,
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('🐛 DEBUG: Error:', error)
     return NextResponse.json(
       { error: 'Internal server error', details: error.message },

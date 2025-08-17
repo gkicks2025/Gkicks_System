@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
       SELECT id, name, brand, sku, stock_quantity 
       FROM products 
       WHERE is_active = 1
-    `);
+    `) as any[];
     
     console.log(`📦 Found ${products.length} products to check`);
     
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       updatedProducts: updatedCount
     });
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Error fixing products:', error);
     return NextResponse.json(
       { error: 'Failed to fix products' },

@@ -41,8 +41,9 @@ export async function GET(request: NextRequest) {
     console.log('📊 API: Raw profile data from DB:', profiles)
     
     let profile
-    if (profiles.length > 0) {
-      const dbProfile = profiles[0]
+    const profilesArray = profiles as any[]
+    if (profilesArray.length > 0) {
+      const dbProfile = profilesArray[0]
       console.log('📋 API: Processing profile:', {
         id: dbProfile.id,
         first_name: dbProfile.first_name,
@@ -59,10 +60,11 @@ export async function GET(request: NextRequest) {
         const userQuery = 'SELECT first_name, last_name, avatar_url FROM users WHERE id = ?'
         const userData = await executeQuery(userQuery, [user.id])
         
-        if (userData.length > 0) {
-          const userFirstName = userData[0].first_name || ''
-          const userLastName = userData[0].last_name || ''
-          const userAvatarUrl = userData[0].avatar_url || ''
+        const userDataArray = userData as any[]
+        if (userDataArray.length > 0) {
+          const userFirstName = userDataArray[0].first_name || ''
+          const userLastName = userDataArray[0].last_name || ''
+          const userAvatarUrl = userDataArray[0].avatar_url || ''
           
           // Update profile with user data
           const updateQuery = `
@@ -134,8 +136,9 @@ export async function GET(request: NextRequest) {
       let userLastName = ''
       let userAvatarUrl = ''
       
-      if (users.length > 0) {
-        const userData = users[0]
+      const usersArray = users as any[]
+      if (usersArray.length > 0) {
+        const userData = usersArray[0]
         userFirstName = userData.first_name || ''
         userLastName = userData.last_name || ''
         userAvatarUrl = userData.avatar_url || ''

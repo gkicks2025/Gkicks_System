@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/database/mysql'
 import jwt from 'jsonwebtoken'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret'
 
 // Get user's wishlist
 export async function GET(request: NextRequest) {

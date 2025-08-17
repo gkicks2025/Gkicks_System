@@ -10,7 +10,7 @@ export async function GET() {
       LIMIT 1
     `;
     
-    const result = await executeQuery(testQuery, []);
+    const result = await executeQuery('SELECT * FROM products LIMIT 1') as any[];
     
     return NextResponse.json({
       success: true,

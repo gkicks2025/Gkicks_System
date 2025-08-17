@@ -16,6 +16,8 @@ export interface ProductInventory {
   price: number;
   originalPrice: number;
   image?: string;
+  image_url?: string;
+  gallery_images?: string[];
   description?: string;
   is_new?: boolean;
   is_sale?: boolean;

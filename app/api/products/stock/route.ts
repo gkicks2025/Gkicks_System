@@ -16,7 +16,8 @@ async function getUserFromToken(request: NextRequest) {
     }
 
     const token = authHeader.substring(7)
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload
+    const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret'
+    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload
     return decoded
   } catch (error) {
     console.error('Token verification failed:', error)
@@ -71,20 +72,22 @@ export async function PUT(request: NextRequest) {
     }
 
     const product = productResult[0]
-    let variants = {}
+    let variants: Record<string, Record<string, number>>
     
     try {
       variants = product.variants ? JSON.parse(product.variants) : {}
-    } catch (error) {
-      console.error('Error parsing variants:', error)
+    } catch (e) {
+      console.warn('Failed to parse variants for product', productId, ':', e)
       variants = {}
     }
 
     // Update variants
-    if (!variants[color]) variants[color] = {}
-    const currentStock = variants[color][size] || 0
+    const variantsAny = variants as any
+    if (!variantsAny[color]) variantsAny[color] = {}
+    const currentStock = variantsAny[color][size] || 0
     const newStock = Math.max(currentStock - quantity, 0)
-    variants[color][size] = newStock
+    variantsAny[color][size] = newStock
+    variants = variantsAny
 
     // Calculate total stock
     let totalStock = 0
@@ -99,7 +102,7 @@ export async function PUT(request: NextRequest) {
       [JSON.stringify(variants), totalStock, productId]
     )
 
-    if (result.changes === 0) {
+    if ((result as any).changes === 0) {
       return NextResponse.json(
         { error: 'Failed to update product stock' },
         { status: 500 }

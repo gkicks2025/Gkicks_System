@@ -58,16 +58,11 @@ export default function ProductPage() {
     if (!mounted) return
 
     async function loadProduct() {
-      // First try to get product from local storage
-      let prod = getProductById(productId)
+      // Always fetch from API to ensure we have the latest data including 3D model URLs
+      const fetchedProduct = await fetchProductByIdFromAPI(productId)
+      const prod = fetchedProduct || undefined
       
-      // If not found locally, fetch from Supabase
-      if (!prod) {
-        console.log('Product not found locally, fetching from Supabase...', productId)
-        prod = await fetchProductByIdFromAPI(productId)
-      }
-      
-      setProduct(prod)
+      setProduct(prod || null)
       if (prod) setCurrentViews(prod.views || 0)
     }
     

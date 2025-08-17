@@ -85,7 +85,9 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     items: [],
     itemCount: 0,
   })
-  const { isAuthenticated, token } = useAuth()
+  const { user, loading } = useAuth()
+  const isAuthenticated = !!user && !loading
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
 
   // Load wishlist from API for authenticated users or localStorage for guests
   useEffect(() => {

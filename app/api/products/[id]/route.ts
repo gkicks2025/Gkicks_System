@@ -182,7 +182,7 @@ export async function PUT(
 
     const result = await executeQuery(updateQuery, params);
 
-    if (result.affectedRows === 0) {
+    if ((result as any).affectedRows === 0) {
       return NextResponse.json(
         { error: 'Product not found or no changes made' },
         { status: 404 }
@@ -244,7 +244,7 @@ export async function DELETE(
 
     const result = await executeQuery(deleteQuery, [productId]);
 
-    if (result.affectedRows === 0) {
+    if ((result as any).affectedRows === 0) {
       return NextResponse.json(
         { error: 'Product not found' },
         { status: 404 }

@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       [user.id]
     )
 
-    console.log(`✅ API: Successfully fetched ${addresses.length} addresses`)
+    console.log(`✅ API: Successfully fetched ${(addresses as any[]).length} addresses`)
     return NextResponse.json(addresses)
 
   } catch (error) {
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     )
 
     console.log('✅ API: Successfully created address')
-    return NextResponse.json(newAddress[0], { status: 201 })
+    return NextResponse.json((newAddress as any[])[0], { status: 201 })
 
   } catch (error) {
     console.error('❌ API: Error creating address:', error)

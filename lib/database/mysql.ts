@@ -9,7 +9,7 @@ const dbConfig = {
   database: process.env.MYSQL_DATABASE || 'gkicks',
   ssl: process.env.MYSQL_SSL === 'true' ? {
     rejectUnauthorized: false
-  } : false,
+  } : undefined,
   connectionLimit: 10,
 };
 
