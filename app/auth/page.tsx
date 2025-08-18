@@ -32,7 +32,12 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (user && !loading) {
-      router.push("/") // Redirect to home if already logged in
+      // Check if user is admin and redirect accordingly
+      if (user.email === "gkcksdmn@gmail.com") {
+        router.push("/admin")
+      } else {
+        router.push("/") // Redirect to home if already logged in
+      }
     }
   }, [user, loading, router])
 
@@ -53,7 +58,12 @@ export default function AuthPage() {
         title: "Signed In",
         description: "You have successfully signed in.",
       })
-      router.push("/")
+      // Check if user is admin and redirect accordingly
+      if (email === "gkcksdmn@gmail.com") {
+        router.push("/admin")
+      } else {
+        router.push("/")
+      }
     }
   }
 

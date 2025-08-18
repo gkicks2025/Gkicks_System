@@ -41,21 +41,40 @@ export async function GET(request: NextRequest) {
 
     const user = userArray[0]
 
+    // Also get profile data which might have more up-to-date information
+    const profileArray = await executeQuery(
+      'SELECT first_name, last_name, avatar_url FROM profiles WHERE id = ?',
+      [decoded.userId]
+    ) as any[]
+
+    // Use profile data if available, otherwise fall back to user data
+    let firstName = user.first_name
+    let lastName = user.last_name
+    let avatarUrl = user.avatar_url
+
+    if (profileArray.length > 0) {
+      const profile = profileArray[0]
+      // Use profile data if it exists and is not empty
+      if (profile.first_name) firstName = profile.first_name
+      if (profile.last_name) lastName = profile.last_name
+      if (profile.avatar_url) avatarUrl = profile.avatar_url
+    }
+
     console.log('🔐 Auth Me: Returning user data:', {
       id: user.id,
       email: user.email,
-      first_name: user.first_name,
-      last_name: user.last_name,
-      avatar_url: user.avatar_url
+      first_name: firstName,
+      last_name: lastName,
+      avatar_url: avatarUrl
     });
 
     return NextResponse.json({
       user: {
         id: user.id.toString(),
         email: user.email,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        avatar_url: user.avatar_url,
+        first_name: firstName,
+        last_name: lastName,
+        avatar_url: avatarUrl,
         is_admin: user.is_admin,
         created_at: user.created_at
       }
