@@ -61,7 +61,8 @@ export async function GET(
       ...product,
       colors: product.colors ? JSON.parse(product.colors) : [],
       color_images: product.color_images ? JSON.parse(product.color_images) : {},
-      variants: product.variants ? JSON.parse(product.variants) : {}
+      variants: product.variants ? JSON.parse(product.variants) : {},
+      gallery_images: product.gallery_images ? JSON.parse(product.gallery_images) : []
     }
 
     return NextResponse.json(parsedProduct)
@@ -195,6 +196,104 @@ export async function PUT(
       success: true,
       message: 'Product updated successfully',
       productId: productId
+    });
+
+  } catch (error) {
+    console.error('❌ API: Error updating product:', error);
+    return NextResponse.json(
+      { error: 'Failed to update product' },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH - Update specific product fields (like stock)
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    // Check authentication
+    const user = await getUserFromToken(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { id } = await context.params
+    const productId = parseInt(id)
+    
+    if (isNaN(productId)) {
+      return NextResponse.json(
+        { error: 'Invalid product ID' },
+        { status: 400 }
+      )
+    }
+
+    const body = await request.json();
+    const { stock_quantity, stock_update_reason, low_stock_threshold, variants } = body;
+
+    console.log('🔄 API: Updating product stock:', productId, 'New quantity:', stock_quantity);
+
+    // Build dynamic update query based on provided fields
+    const updateFields = [];
+    const params = [];
+
+    if (stock_quantity !== undefined) {
+      updateFields.push('stock_quantity = ?');
+      params.push(parseInt(stock_quantity));
+    }
+
+    if (low_stock_threshold !== undefined) {
+      updateFields.push('low_stock_threshold = ?');
+      params.push(parseInt(low_stock_threshold));
+    }
+
+    if (variants !== undefined) {
+      updateFields.push('variants = ?');
+      params.push(variants);
+    }
+
+    if (updateFields.length === 0) {
+      return NextResponse.json(
+        { error: 'No valid fields to update' },
+        { status: 400 }
+      );
+    }
+
+    updateFields.push('updated_at = NOW()');
+    params.push(productId);
+
+    const updateQuery = `
+      UPDATE products SET
+        ${updateFields.join(', ')}
+      WHERE id = ? AND is_deleted = 0
+    `;
+
+    const result = await executeQuery(updateQuery, params);
+
+    if ((result as any).affectedRows === 0) {
+      return NextResponse.json(
+        { error: 'Product not found or no changes made' },
+        { status: 404 }
+      );
+    }
+
+    // Log stock update if reason provided
+    if (stock_update_reason && stock_quantity !== undefined) {
+      console.log(`📝 Stock update logged: Product ${productId}, Quantity: ${stock_quantity}, Reason: ${stock_update_reason}`);
+      // TODO: Add to stock_updates log table if needed
+    }
+
+    console.log('✅ API: Product stock updated successfully:', productId);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Product updated successfully',
+      productId: productId,
+      stock_quantity: stock_quantity
     });
 
   } catch (error) {

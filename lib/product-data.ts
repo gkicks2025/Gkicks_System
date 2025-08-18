@@ -143,6 +143,7 @@ export async function fetchProductByIdFromAPI(id: number): Promise<Product | nul
       originalPrice: data.original_price,
       description: data.description || "",
       image: data.image_url || `/images/${data.name.toLowerCase().replace(/\s+/g, "-")}.png`,
+      gallery_images: data.gallery_images || [],
       model_3d_url: data.model_3d_url,
       model_3d_filename: data.model_3d_filename,
       rating: data.rating || 0,

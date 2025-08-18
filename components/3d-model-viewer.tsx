@@ -461,24 +461,24 @@ export default function ModelViewer3D({ modelUrl, filename, className = '', prod
             </div>
 
             {/* 3D Canvas */}
-            <Canvas
+            <Canvas 
               camera={{ position: [0, 0, 8], fov: 75 }}
               style={{ background: 'linear-gradient(135deg, #2a2a3e 0%, #1e2a4e 100%)' }}
               gl={{ antialias: true, alpha: true }}
             >
-              {/* Professional lighting setup for enhanced 3D model visibility - Brightened */}
-               {/* Ambient base lighting - Increased */}
-               <ambientLight intensity={0.6} color="#ffffff" />
+              {/* Professional lighting setup for enhanced 3D model visibility - Maximum Brightened */}
+               {/* Ambient base lighting - Maximum Increased */}
+               <ambientLight intensity={2.0} color="#ffffff" />
                
-               {/* Hemisphere light for natural sky/ground lighting - Increased */}
+               {/* Hemisphere light for natural sky/ground lighting - Maximum Increased */}
                <hemisphereLight 
-                 args={["#87CEEB", "#362d1d", 0.8]}
+                 args={["#ffffff", "#ffffff", 2.5]}
                />
                
-               {/* Main key light - primary illumination - Increased */}
+               {/* Main key light - primary illumination - Maximum Increased */}
                <directionalLight 
                  position={[10, 10, 5]} 
-                 intensity={1.8} 
+                 intensity={3.5} 
                  color="#ffffff"
                  castShadow 
                  shadow-mapSize-width={2048}
@@ -490,18 +490,18 @@ export default function ModelViewer3D({ modelUrl, filename, className = '', prod
                  shadow-camera-bottom={-10}
                />
                
-               {/* Fill light - softer secondary lighting - Increased */}
+               {/* Fill light - softer secondary lighting - Maximum Increased */}
                <directionalLight 
                  position={[-8, 6, -3]} 
-                 intensity={0.9} 
-                 color="#b3d9ff"
+                 intensity={2.2} 
+                 color="#ffffff"
                />
                
-               {/* Rim light - creates edge definition - Increased */}
+               {/* Rim light - creates edge definition - Maximum Increased */}
                <directionalLight 
                  position={[0, 0, -10]} 
-                 intensity={1.0} 
-                 color="#ffd700"
+                 intensity={2.5} 
+                 color="#ffffff"
                />
                
                {/* Spot lights for dramatic effect - Increased */}
@@ -757,47 +757,47 @@ export default function ModelViewer3D({ modelUrl, filename, className = '', prod
 
            {/* 3D Canvas */}
            <Canvas
-             camera={{ position: [0, 0, 8], fov: 75 }}
-             style={{ background: 'linear-gradient(135deg, #2a2a3e 0%, #1e2a4e 100%)' }}
-             gl={{ antialias: true, alpha: true }}
-           >
-             {/* Professional lighting setup for enhanced 3D model visibility - Brightened */}
-              {/* Ambient base lighting - Increased */}
-              <ambientLight intensity={0.6} color="#ffffff" />
+              camera={{ position: [0, 0, 8], fov: 75 }}
+              style={{ background: 'linear-gradient(135deg, #2a2a3e 0%, #1e2a4e 100%)' }}
+              gl={{ antialias: true, alpha: true }}
+            >
+             {/* Professional lighting setup for enhanced 3D model visibility - Maximum Brightened */}
+               {/* Ambient base lighting - Maximum Increased */}
+               <ambientLight intensity={2.0} color="#ffffff" />
               
-              {/* Hemisphere light for natural sky/ground lighting - Increased */}
-              <hemisphereLight 
-                args={["#87CEEB", "#362d1d", 0.8]}
-              />
+              {/* Hemisphere light for natural sky/ground lighting - Maximum Increased */}
+               <hemisphereLight 
+                 args={["#ffffff", "#ffffff", 2.5]}
+               />
               
-              {/* Main key light - primary illumination - Increased */}
-              <directionalLight 
-                position={[10, 10, 5]} 
-                intensity={1.8} 
-                color="#ffffff"
-                castShadow 
-                shadow-mapSize-width={2048}
-                shadow-mapSize-height={2048}
-                shadow-camera-far={50}
-                shadow-camera-left={-10}
-                shadow-camera-right={10}
-                shadow-camera-top={10}
-                shadow-camera-bottom={-10}
-              />
+              {/* Main key light - primary illumination - Maximum Increased */}
+               <directionalLight 
+                 position={[10, 10, 5]} 
+                 intensity={3.5} 
+                 color="#ffffff"
+                 castShadow 
+                 shadow-mapSize-width={2048}
+                 shadow-mapSize-height={2048}
+                 shadow-camera-far={50}
+                 shadow-camera-left={-10}
+                 shadow-camera-right={10}
+                 shadow-camera-top={10}
+                 shadow-camera-bottom={-10}
+               />
               
-              {/* Fill light - softer secondary lighting - Increased */}
-              <directionalLight 
-                position={[-8, 6, -3]} 
-                intensity={0.9} 
-                color="#b3d9ff"
-              />
+              {/* Fill light - softer secondary lighting - Maximum Increased */}
+               <directionalLight 
+                 position={[-8, 6, -3]} 
+                 intensity={2.2} 
+                 color="#ffffff"
+               />
               
-              {/* Rim light - creates edge definition - Increased */}
-              <directionalLight 
-                position={[0, 0, -10]} 
-                intensity={1.0} 
-                color="#ffd700"
-              />
+              {/* Rim light - creates edge definition - Maximum Increased */}
+               <directionalLight 
+                 position={[0, 0, -10]} 
+                 intensity={2.5} 
+                 color="#ffffff"
+               />
               
               {/* Spot lights for dramatic effect - Increased */}
               <spotLight 

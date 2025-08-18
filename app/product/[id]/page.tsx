@@ -101,7 +101,7 @@ export default function ProductPage() {
     async function fetchStocks() {
       const stocks: { [color: string]: { [size: string]: number } } = {}
       const colors = product?.colors && product?.colors.length > 0 ? product.colors : ["default"]
-      const sizes = product?.sizes || ["5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
+      const sizes = product?.sizes || ["5", "6", "7", "8", "9", "10", "11", "12"]
       
       for (const color of colors) {
         stocks[color] = {}
@@ -115,6 +115,21 @@ export default function ProductPage() {
     }
 
     fetchStocks()
+
+    // Listen for inventory updates
+    const handleInventoryUpdate = (event: CustomEvent) => {
+      const { productId: updatedProductId } = event.detail
+      if (updatedProductId === productId) {
+        // Refresh stock levels when this product's inventory is updated
+        fetchStocks()
+      }
+    }
+
+    window.addEventListener('inventoryUpdate', handleInventoryUpdate as EventListener)
+
+    return () => {
+      window.removeEventListener('inventoryUpdate', handleInventoryUpdate as EventListener)
+    }
   }, [product, productId])
 
   if (!mounted) {
@@ -191,19 +206,15 @@ export default function ProductPage() {
 
   const savingsAmount = product.originalPrice ? product.originalPrice - product.price : 0
 
-  // Use gallery_images if available, otherwise fall back to colorImages
+  // Use gallery_images if available, otherwise show single main image
   const productImages = product.gallery_images && product.gallery_images.length > 0
     ? product.gallery_images.map((imageUrl, index) => ({
         src: imageUrl,
         alt: `${product.name} - Image ${index + 1}`
       }))
-    : [
-        { src: product.colorImages?.[selectedColor]?.three_d || product.image, alt: "3D view" },
-        { src: product.colorImages?.[selectedColor]?.front || product.image, alt: "Front view" },
-        { src: product.colorImages?.[selectedColor]?.side || product.image, alt: "Side view" },
-        { src: product.colorImages?.[selectedColor]?.back || product.image, alt: "Back view" },
-        { src: product.colorImages?.[selectedColor]?.sole || product.image, alt: "Sole view" },
-      ]
+    : product.image_url || product.image
+      ? [{ src: product.image_url || product.image, alt: product.name }]
+      : []
 
   const handleAddToCart = () => {
     if (authLoading) return
@@ -324,7 +335,7 @@ export default function ProductPage() {
               {/* Main Image */}
               <div className="relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden border-2 sm:border-4 border-yellow-400 group">
                 <Image
-                  src={productImages[selectedImageIndex]?.src || product.image || "/placeholder.svg"}
+                  src={productImages[selectedImageIndex]?.src || product.image_url || product.image}
                   alt={productImages[selectedImageIndex]?.alt || product.name}
                   width={600}
                   height={600}
@@ -333,35 +344,37 @@ export default function ProductPage() {
                 />
               </div>
 
-              {/* Thumbnail Images */}
-              <div className="grid grid-cols-5 gap-2 sm:gap-3">
-                {productImages.map((image, index) => (
-                  <div
-                    key={index}
-                    className={`thumbnail-image relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden cursor-pointer border-2 sm:border-3 transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
-                      selectedImageIndex === index
-                        ? "border-yellow-400 ring-2 sm:ring-3 ring-yellow-400 ring-offset-1 sm:ring-offset-2 shadow-lg"
-                        : "border-gray-200 dark:border-gray-700 hover:border-yellow-300"
-                    }`}
-                    onClick={() => handleImageSelect(index)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        handleImageSelect(index)
-                      }
-                    }}
-                  >
-                    <Image
-                      src={image.src || "/placeholder.svg"}
-                      alt={image.alt}
-                      width={150}
-                      height={150}
-                      className="w-full h-full object-cover transition-all duration-300"
-                    />
-                  </div>
-                ))}
-              </div>
+              {/* Thumbnail Images - Only show if there are multiple images */}
+              {productImages.length > 1 && (
+                <div className="grid grid-cols-5 gap-2 sm:gap-3">
+                  {productImages.map((image, index) => (
+                    <div
+                      key={index}
+                      className={`thumbnail-image relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden cursor-pointer border-2 sm:border-3 transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
+                        selectedImageIndex === index
+                          ? "border-yellow-400 ring-2 sm:ring-3 ring-yellow-400 ring-offset-1 sm:ring-offset-2 shadow-lg"
+                          : "border-gray-200 dark:border-gray-700 hover:border-yellow-300"
+                      }`}
+                      onClick={() => handleImageSelect(index)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          handleImageSelect(index)
+                        }
+                      }}
+                    >
+                      <Image
+                        src={image.src}
+                        alt={image.alt}
+                        width={150}
+                        height={150}
+                        className="w-full h-full object-cover transition-all duration-300"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* 3D Model Viewer */}
               <div className="mt-6">
@@ -487,7 +500,7 @@ export default function ProductPage() {
                   </span>
                 </div>
                 <div className="grid grid-cols-4 gap-2">
-                  {(Array.isArray(product?.sizes) ? product.sizes : ["5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]).map((size) => {
+                  {(Array.isArray(product?.sizes) ? product.sizes : ["5", "6", "7", "8", "9", "10", "11", "12"]).map((size) => {
                     const colorToCheck = selectedColor || "default"
                     const sizeStock = stockLevels[colorToCheck]?.[size] ?? 0
                     const isAvailable = sizeStock > 0

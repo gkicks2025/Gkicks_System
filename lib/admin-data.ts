@@ -102,22 +102,41 @@ export async function deleteProduct(productId: number): Promise<boolean> {
   }
 }
 
-// Check stock for given product/color/size by reading variants JSON in product
+// Check stock for given product/color/size by fetching from database
 export async function checkStock(
   productId: number,
   color: string,
   size: string
 ): Promise<number> {
-  const product = products.find((p) => p.id === productId);
-  if (!product) return 0;
-  
-  // If no variants exist, return a default stock of 10 to make sizes clickable
-  if (!product.variants) return 10;
-
-  const colorVariants = product.variants[color];
-  if (!colorVariants) return 10; // Default stock for missing color variants
-
-  return colorVariants[size] || 10; // Default stock for missing size variants
+  try {
+    // Fetch product data from database API
+    const response = await fetch(`/api/products/${productId}`);
+    if (!response.ok) {
+      console.error('Failed to fetch product data for stock check');
+      return 0;
+    }
+    
+    const product = await response.json();
+    if (!product) return 0;
+    
+    // Check if product has variants (size/color specific stock)
+    if (product.variants && product.variants[color] && product.variants[color][size] !== undefined) {
+      return product.variants[color][size] || 0;
+    }
+    
+    // If product has variants structure but this specific color/size combo doesn't exist,
+    // and the general stock_quantity is > 0, assume this size is available
+    if (product.variants && Object.keys(product.variants).length > 0) {
+      // If general stock is available, assume reasonable stock for missing variants
+      return product.stock_quantity > 0 ? Math.min(product.stock_quantity, 10) : 0;
+    }
+    
+    // Fall back to general stock_quantity if no variants structure exists
+    return product.stock_quantity || 10;
+  } catch (error) {
+    console.error('Error checking stock:', error);
+    return 0;
+  }
 }
 
 // Update stock
@@ -128,33 +147,57 @@ export async function updateStock(
   delta: number
 ): Promise<number> {
   try {
-    const product = products.find((p) => p.id === productId);
-    if (!product || !product.variants) return 0;
+    // First get current stock
+    const currentStock = await checkStock(productId, color, size);
+    const newQty = Math.max(0, currentStock + delta);
 
-    const colorVariants = product.variants[color] || {};
-    const currentQty = colorVariants[size] || 0;
-    const newQty = Math.max(0, currentQty + delta);
+    // Get current product data to update variants
+    const response = await fetch(`/api/products/${productId}`);
+    if (!response.ok) {
+      console.error('Failed to fetch product for stock update');
+      return 0;
+    }
+    
+    const product = await response.json();
+    if (!product) return 0;
 
+    // Update variants structure
     const updatedVariants = {
       ...product.variants,
       [color]: {
-        ...colorVariants,
+        ...product.variants[color],
         [size]: newQty,
       },
     };
 
-    // TODO: Implement with MySQL simulator API
-    console.log("Updating stock for product:", productId, color, size, delta);
+    // Update product in database via API
+    const updateResponse = await fetch(`/api/products/${productId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+      },
+      body: JSON.stringify({
+        variants: JSON.stringify(updatedVariants),
+        stock_quantity: newQty // Also update general stock quantity
+      }),
+    });
 
-    // Update local cache
-    product.variants = updatedVariants;
+    if (!updateResponse.ok) {
+      console.error('Failed to update stock in database');
+      return currentStock;
+    }
+
+    console.log("Stock updated successfully:", productId, color, size, newQty);
 
     // Notify UI
-    window.dispatchEvent(
-      new CustomEvent("inventoryUpdate", {
-        detail: { productId, color, size, newStock: newQty },
-      })
-    );
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent("inventoryUpdate", {
+          detail: { productId, color, size, newStock: newQty },
+        })
+      );
+    }
 
     return newQty;
   } catch (error) {

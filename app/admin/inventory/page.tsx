@@ -73,6 +73,7 @@ interface Product {
   is_new?: boolean
   is_sale?: boolean
   is_active: boolean
+  stock_quantity?: number
   low_stock_threshold?: number
   colors?: string[]
   sizes?: string[]
@@ -95,8 +96,12 @@ export default function InventoryPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isStockUpdateDialogOpen, setIsStockUpdateDialogOpen] = useState(false)
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null)
   const [productToDelete, setProductToDelete] = useState<Product | null>(null)
+  const [stockUpdateProduct, setStockUpdateProduct] = useState<Product | null>(null)
+  const [stockAdjustment, setStockAdjustment] = useState<number>(0)
+  const [stockUpdateReason, setStockUpdateReason] = useState<string>("")
   const [expandedProducts, setExpandedProducts] = useState<Set<number>>(new Set())
   const [uploadingImages, setUploadingImages] = useState(false)
   const [uploading3DModel, setUploading3DModel] = useState(false)
@@ -114,12 +119,15 @@ export default function InventoryPage() {
     is_new: false,
     is_sale: false,
     is_active: true,
+    stock_quantity: 0,
     low_stock_threshold: 10,
     colors: [],
     sizes: [],
     variants: {},
     model_3d_url: "",
     model_3d_filename: "",
+    image_url: "",
+    gallery_images: [],
     status: "Active"
   })
 
@@ -151,7 +159,7 @@ export default function InventoryPage() {
 
   const categories = ["Men", "Women", "Kids", "Unisex"]
   const brands = ["Nike", "Adidas", "Converse", "New Balance", "ASICS"]
-  const commonSizes = ["6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10", "10.5", "11", "11.5", "12"]
+  const commonSizes = ["6", "7", "8", "9", "10", "11", "12"]
 
   const loadProducts = async () => {
     try {
@@ -269,7 +277,7 @@ export default function InventoryPage() {
       setUploadingImages(true)
       setUploading3DModel(true)
 
-      let imageUrl = currentProduct?.image_url || formData.image
+      let imageUrl = currentProduct?.image_url || formData.image_url
       let galleryImages: string[] = currentProduct?.gallery_images || []
       let model3DUrl = formData.model_3d_url
 
@@ -307,7 +315,8 @@ export default function InventoryPage() {
           (remove3DModel ? undefined : formData.model_3d_filename),
         price: Number(formData.price),
         original_price: Number(formData.originalPrice),
-        stock_quantity: Number(formData.low_stock_threshold),
+        stock_quantity: Number(formData.stock_quantity),
+        low_stock_threshold: Number(formData.low_stock_threshold),
       }
 
       const url = currentProduct ? `/api/products/${currentProduct.id}` : '/api/products'
@@ -380,12 +389,16 @@ export default function InventoryPage() {
       is_new: false,
       is_sale: false,
       is_active: true,
+      stock_quantity: 0,
       low_stock_threshold: 10,
       colors: [],
       sizes: [],
       variants: {},
       model_3d_url: "",
-      model_3d_filename: ""
+      model_3d_filename: "",
+      image_url: "",
+      gallery_images: [],
+      status: "Active"
     })
     setSelectedImages([])
     setImagesToRemove([])
@@ -403,6 +416,75 @@ export default function InventoryPage() {
     setImagesToRemove([]) // Clear images to remove for edit mode
     setRemove3DModel(false) // Clear 3D model removal state for edit mode
     setIsEditDialogOpen(true)
+  }
+
+  const handleQuickStockUpdate = (product: Product) => {
+    setStockUpdateProduct(product)
+    setStockAdjustment(0)
+    setStockUpdateReason("")
+    setIsStockUpdateDialogOpen(true)
+  }
+
+  const handleStockUpdate = async () => {
+    if (!stockUpdateProduct) return
+
+    try {
+      const token = localStorage.getItem('auth_token')
+      if (!token) {
+        toast({
+          title: "Authentication Error",
+          description: "Please log in again to update stock",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const newStockQuantity = (stockUpdateProduct.stock_quantity || 0) + stockAdjustment
+      if (newStockQuantity < 0) {
+        toast({
+          title: "Invalid Stock Adjustment",
+          description: "Stock quantity cannot be negative",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const response = await fetch(`/api/products/${stockUpdateProduct.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          stock_quantity: newStockQuantity,
+          stock_update_reason: stockUpdateReason
+        }),
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: `Stock updated successfully. New quantity: ${newStockQuantity}`,
+        })
+        
+        // Dispatch inventory update event for real-time updates
+        window.dispatchEvent(new CustomEvent('inventoryUpdate', {
+          detail: { productId: stockUpdateProduct.id }
+        }))
+        
+        loadProducts()
+        setIsStockUpdateDialogOpen(false)
+      } else {
+        throw new Error('Failed to update stock')
+      }
+    } catch (error) {
+      console.error('Error updating stock:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update stock",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleDelete = async () => {
@@ -561,6 +643,7 @@ export default function InventoryPage() {
                 <TableHead className="text-gray-300">Category</TableHead>
                 <TableHead className="text-gray-300">Brand</TableHead>
                 <TableHead className="text-gray-300">Price</TableHead>
+                <TableHead className="text-gray-300">Stock</TableHead>
                 <TableHead className="text-gray-300">Status</TableHead>
                 <TableHead className="text-gray-300">3D Model</TableHead>
                 <TableHead className="text-gray-300">Actions</TableHead>
@@ -602,6 +685,22 @@ export default function InventoryPage() {
                     </div>
                   </TableCell>
                   <TableCell>
+                    <div className="flex flex-col gap-1">
+                      <span className="font-medium text-white">
+                        {product.stock_quantity ?? 0} units
+                      </span>
+                      <div className="flex gap-1">
+                        {(product.stock_quantity ?? 0) === 0 ? (
+                          <Badge className="bg-red-600 text-white">Out of Stock</Badge>
+                        ) : (product.stock_quantity ?? 0) <= (product.low_stock_threshold ?? 10) ? (
+                          <Badge className="bg-yellow-600 text-white">Low Stock</Badge>
+                        ) : (
+                          <Badge className="bg-green-600 text-white">In Stock</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
                     <div className="flex gap-1">
                       <Badge variant={product.status === 'Active' ? "default" : "secondary"}>
                         {product.status || 'Active'}
@@ -623,8 +722,18 @@ export default function InventoryPage() {
                         size="sm"
                         variant="outline"
                         onClick={() => handleEdit(product)}
+                        title="Edit Product"
                       >
                         <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleQuickStockUpdate(product)}
+                        title="Quick Stock Update"
+                        className="bg-blue-600 hover:bg-blue-700 border-blue-600"
+                      >
+                        <RefreshCw className="h-4 w-4" />
                       </Button>
                       <Button
                         size="sm"
@@ -633,6 +742,7 @@ export default function InventoryPage() {
                           setProductToDelete(product)
                           setIsDeleteDialogOpen(true)
                         }}
+                        title="Delete Product"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -753,6 +863,35 @@ export default function InventoryPage() {
                     onChange={(e) => setFormData(prev => ({ ...prev, originalPrice: parseFloat(e.target.value) || 0 }))}
                     className="bg-gray-800 border-gray-700"
                     placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              {/* Stock Management Section */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="stock_quantity" className="text-gray-300">Stock Quantity *</Label>
+                  <Input
+                    id="stock_quantity"
+                    type="number"
+                    min="0"
+                    value={formData.stock_quantity}
+                    onChange={(e) => setFormData(prev => ({ ...prev, stock_quantity: parseInt(e.target.value) || 0 }))}
+                    className="bg-gray-800 border-gray-700"
+                    placeholder="0"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="low_stock_threshold" className="text-gray-300">Low Stock Threshold</Label>
+                  <Input
+                    id="low_stock_threshold"
+                    type="number"
+                    min="0"
+                    value={formData.low_stock_threshold}
+                    onChange={(e) => setFormData(prev => ({ ...prev, low_stock_threshold: parseInt(e.target.value) || 10 }))}
+                    className="bg-gray-800 border-gray-700"
+                    placeholder="10"
                   />
                 </div>
               </div>
@@ -1297,6 +1436,35 @@ export default function InventoryPage() {
                 </div>
               </div>
 
+              {/* Stock Management Section */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-stock_quantity" className="text-gray-300">Stock Quantity *</Label>
+                  <Input
+                    id="edit-stock_quantity"
+                    type="number"
+                    min="0"
+                    value={formData.stock_quantity}
+                    onChange={(e) => setFormData(prev => ({ ...prev, stock_quantity: parseInt(e.target.value) || 0 }))}
+                    className="bg-gray-800 border-gray-700"
+                    placeholder="0"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-low_stock_threshold" className="text-gray-300">Low Stock Threshold</Label>
+                  <Input
+                    id="edit-low_stock_threshold"
+                    type="number"
+                    min="0"
+                    value={formData.low_stock_threshold}
+                    onChange={(e) => setFormData(prev => ({ ...prev, low_stock_threshold: parseInt(e.target.value) || 10 }))}
+                    className="bg-gray-800 border-gray-700"
+                    placeholder="10"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="edit-description" className="text-gray-300">Description</Label>
                 <Textarea
@@ -1809,6 +1977,70 @@ export default function InventoryPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Quick Stock Update Dialog */}
+      <Dialog open={isStockUpdateDialogOpen} onOpenChange={setIsStockUpdateDialogOpen}>
+        <DialogContent className="bg-gray-900 border-gray-800 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white">Quick Stock Update</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Update stock for {stockUpdateProduct?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-gray-300">Current Stock</Label>
+              <div className="text-lg font-semibold text-white">
+                {stockUpdateProduct?.stock_quantity || 0} units
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="stockAdjustment" className="text-gray-300">
+                Stock Adjustment
+              </Label>
+              <Input
+                id="stockAdjustment"
+                type="number"
+                value={stockAdjustment}
+                onChange={(e) => setStockAdjustment(parseInt(e.target.value) || 0)}
+                placeholder="Enter adjustment (+/-)"
+                className="bg-gray-800 border-gray-700 text-white"
+              />
+              <div className="text-sm text-gray-400 mt-1">
+                New quantity: {(stockUpdateProduct?.stock_quantity || 0) + stockAdjustment}
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="stockReason" className="text-gray-300">
+                Reason (Optional)
+              </Label>
+              <Textarea
+                id="stockReason"
+                value={stockUpdateReason}
+                onChange={(e) => setStockUpdateReason(e.target.value)}
+                placeholder="Reason for stock adjustment..."
+                className="bg-gray-800 border-gray-700 text-white"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsStockUpdateDialogOpen(false)}
+              className="bg-gray-800 border-gray-700 text-gray-300"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleStockUpdate}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Update Stock
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
