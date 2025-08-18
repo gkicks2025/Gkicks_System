@@ -56,7 +56,7 @@ interface ProfileData {
 }
 
 export default function ProfilePage() {
-  const { user, updateProfile, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, tokenReady, updateProfile, updateUserData } = useAuth()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [addresses, setAddresses] = useState<Address[]>([])
@@ -90,18 +90,18 @@ export default function ProfilePage() {
   })
 
   useEffect(() => {
-    if (user && !authLoading) {
-      console.log('👤 User changed, fetching profile data for:', user.email)
+    if (user && !authLoading && tokenReady) {
+      console.log('👤 User changed and token ready, fetching profile data for:', user.email)
       // Only clear profile data if we don't have any existing data
       if (!profileData.first_name && !profileData.last_name) {
         setProfileData({
-          first_name: "",
-          last_name: "",
+          first_name: user.firstName || "",
+          last_name: user.lastName || "",
           phone: "",
           birthdate: "",
           gender: "",
           bio: "",
-          avatar_url: "",
+          avatar_url: user.avatar || "",
           preferences: {
             newsletter: true,
             sms_notifications: false,
@@ -113,15 +113,15 @@ export default function ProfilePage() {
       }
       fetchProfileData()
     }
-  }, [user, authLoading])
+  }, [user, authLoading, tokenReady])
 
   // Also refetch when component mounts or user data updates (but not during auth loading)
   useEffect(() => {
-    if (user && !authLoading && profileData.first_name === '' && profileData.last_name === '') {
-      console.log('🔄 Profile data is empty, refetching...')
+    if (user && !authLoading && tokenReady && profileData.first_name === '' && profileData.last_name === '') {
+      console.log('🔄 Profile data is empty and token ready, refetching...')
       fetchProfileData()
     }
-  }, [user, authLoading, profileData.first_name, profileData.last_name])
+  }, [user, authLoading, tokenReady, profileData.first_name, profileData.last_name])
 
   const fetchProfileData = async () => {
     if (!user) return
@@ -214,10 +214,10 @@ export default function ProfilePage() {
   }
 
   useEffect(() => {
-    if (user) {
+    if (user && tokenReady) {
       fetchAddresses()
     }
-  }, [user])
+  }, [user, tokenReady])
 
   const fetchAddresses = async () => {
     if (!user) return
@@ -326,27 +326,32 @@ export default function ProfilePage() {
   }
 
   const handleSaveProfile = async () => {
-    if (!user) return
+    if (!user) {
+      return
+    }
 
     setLoading(true)
     try {
       const token = localStorage.getItem('auth_token')
+      
+      const requestBody = {
+        first_name: profileData.first_name.trim(),
+        last_name: profileData.last_name.trim(),
+        phone: profileData.phone.trim(),
+        birthdate: profileData.birthdate || '',
+        gender: profileData.gender || '',
+        bio: profileData.bio.trim(),
+        avatar_url: profileData.avatar_url,
+        preferences: profileData.preferences,
+      }
+      
       const response = await fetch('/api/profiles', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : '',
         },
-        body: JSON.stringify({
-          first_name: profileData.first_name.trim(),
-          last_name: profileData.last_name.trim(),
-          phone: profileData.phone.trim(),
-          birthdate: profileData.birthdate || '',
-          gender: profileData.gender || '',
-          bio: profileData.bio.trim(),
-          avatar_url: profileData.avatar_url,
-          preferences: profileData.preferences,
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       if (!response.ok) {
@@ -360,10 +365,9 @@ export default function ProfilePage() {
       }
 
       const data = await response.json()
-      console.log('✅ Profile saved successfully:', data)
       
-      // Update the auth context with basic profile info
-      await updateProfile({
+      // Update the auth context directly without making another API call
+      updateUserData({
         firstName: profileData.first_name.trim(),
         lastName: profileData.last_name.trim(),
         avatar: profileData.avatar_url,
@@ -581,8 +585,8 @@ export default function ProfilePage() {
               <CardContent className="p-6 text-center">
                 <div className="relative inline-block mb-4">
                   <Avatar className="w-24 h-24">
-                    <AvatarImage src={profileData.avatar_url || "/placeholder.svg"} />
-                    <AvatarFallback className="bg-yellow-500 text-black text-xl">
+                    <AvatarImage src={profileData.avatar_url || user?.avatar || "/placeholder.svg"} />
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xl">
                       {profileData.first_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -595,7 +599,7 @@ export default function ProfilePage() {
                   />
                   <label
                     htmlFor="avatar-upload"
-                    className="absolute -bottom-3 -right-3 rounded-full bg-yellow-500 hover:bg-yellow-600 text-black cursor-pointer p-3"
+                    className="absolute -bottom-3 -right-3 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer p-3"
                     style={{ boxShadow: '0 0 8px rgba(0,0,0,0.3)' }}
                   >
                     <Camera className="h-4 w-4" />
@@ -655,19 +659,19 @@ export default function ProfilePage() {
               <TabsList className="grid w-full grid-cols-3 bg-gray-800">
                 <TabsTrigger
                   value="personal"
-                  className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black"
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                 >
                   Personal Info
                 </TabsTrigger>
                 <TabsTrigger
                   value="address"
-                  className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black"
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                 >
                   Address
                 </TabsTrigger>
                 <TabsTrigger
                   value="preferences"
-                  className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black"
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                 >
                   Preferences
                 </TabsTrigger>
@@ -776,7 +780,7 @@ export default function ProfilePage() {
                     <Button
                       onClick={handleSaveProfile}
                       disabled={loading}
-                      className="bg-yellow-500 hover:bg-yellow-600 text-black"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                       Save Changes
@@ -899,7 +903,7 @@ export default function ProfilePage() {
                       <Button
                         onClick={handleSaveAddress}
                         disabled={addressLoading}
-                        className="bg-yellow-500 hover:bg-yellow-600 text-black"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
                       >
                         {addressLoading ? (
                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -923,7 +927,7 @@ export default function ProfilePage() {
                                 <div className="flex items-center gap-2 mb-1">
                                   <p className="font-medium text-white">{address.address_line_1}</p>
                                   {address.is_default && (
-                                    <Badge className="bg-yellow-500 text-black text-xs">Default</Badge>
+                                    <Badge className="bg-primary text-primary-foreground text-xs">Default</Badge>
                                   )}
                                 </div>
                                 <p className="text-gray-300 text-sm">
@@ -1074,7 +1078,7 @@ export default function ProfilePage() {
                     <Button
                       onClick={handleSaveProfile}
                       disabled={loading}
-                      className="bg-yellow-500 hover:bg-yellow-600 text-black"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                       Save Preferences

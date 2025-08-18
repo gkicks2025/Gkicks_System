@@ -134,7 +134,7 @@ export default function ProductPage() {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <p className="text-gray-900 dark:text-yellow-400">Loading...</p>
       </div>
     )
@@ -142,7 +142,7 @@ export default function ProductPage() {
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-yellow-400 mb-2">Product Not Found</h1>
         <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
           The product you're looking for doesn't exist.
@@ -183,7 +183,7 @@ export default function ProductPage() {
       <div className="flex items-center space-x-2 sm:space-x-3">
         <span className="text-xs sm:text-sm font-medium w-2 text-gray-900 dark:text-gray-300">{stars}</span>
         <Star className="h-3 w-3 sm:h-4 sm:w-4 fill-yellow-400 text-yellow-400" />
-        <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 sm:h-2">
+        <div className="flex-1 bg-muted rounded-full h-1.5 sm:h-2">
           <div
             className="bg-yellow-400 h-1.5 sm:h-2 rounded-full transition-all duration-300"
             style={{ width: `${percentage}%` }}
@@ -326,14 +326,14 @@ export default function ProductPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-      <div className="flex-1 bg-white dark:bg-gray-900">
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="flex-1 bg-background">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12">
             {/* Product Images */}
             <div className="space-y-3 sm:space-y-4">
               {/* Main Image */}
-              <div className="relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden border-2 sm:border-4 border-yellow-400 group">
+              <div className="relative aspect-square bg-muted rounded-lg overflow-hidden border-2 sm:border-4 border-yellow-400 group">
                 <Image
                   src={productImages[selectedImageIndex]?.src || product.image_url || product.image}
                   alt={productImages[selectedImageIndex]?.alt || product.name}
@@ -350,7 +350,7 @@ export default function ProductPage() {
                   {productImages.map((image, index) => (
                     <div
                       key={index}
-                      className={`thumbnail-image relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden cursor-pointer border-2 sm:border-3 transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
+                      className={`thumbnail-image relative aspect-square bg-muted rounded-lg overflow-hidden cursor-pointer border-2 sm:border-3 transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
                         selectedImageIndex === index
                           ? "border-yellow-400 ring-2 sm:ring-3 ring-yellow-400 ring-offset-1 sm:ring-offset-2 shadow-lg"
                           : "border-gray-200 dark:border-gray-700 hover:border-yellow-300"
@@ -477,7 +477,7 @@ export default function ProductPage() {
                         className={`px-3 py-2 text-sm font-medium rounded-lg border-2 transition-colors capitalize ${
                           selectedColor === color
                             ? "border-yellow-400 bg-yellow-400 text-black"
-                            : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300"
+                            : "border-border hover:border-gray-300 dark:hover:border-gray-500 bg-card text-foreground"
                         }`}
                         title={`Select ${color} colorway`}
                       >
@@ -501,7 +501,7 @@ export default function ProductPage() {
                 </div>
                 <div className="grid grid-cols-4 gap-2">
                   {(Array.isArray(product?.sizes) ? product.sizes : ["5", "6", "7", "8", "9", "10", "11", "12"]).map((size) => {
-                    const colorToCheck = selectedColor || "default"
+                    const colorToCheck = selectedColor || (product.colors && product.colors.length > 0 ? product.colors[0] : "default")
                     const sizeStock = stockLevels[colorToCheck]?.[size] ?? 0
                     const isAvailable = sizeStock > 0
 
@@ -514,8 +514,8 @@ export default function ProductPage() {
                           selectedSize === size
                             ? "border-yellow-400 bg-yellow-400 text-black"
                             : isAvailable
-                            ? "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300"
-                            : "border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                            ? "border-border hover:border-gray-300 dark:hover:border-gray-500 bg-card text-foreground"
+                  : "border-muted bg-muted text-muted-foreground cursor-not-allowed"
                         }`}
                       >
                         {size}
@@ -592,7 +592,7 @@ export default function ProductPage() {
 
           {/* Customer Reviews Section */}
           <div className="mt-12 sm:mt-16">
-            <Card className="shadow-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            <Card className="shadow-lg bg-card border-border">
               <CardHeader>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                   <div>
@@ -636,7 +636,7 @@ export default function ProductPage() {
                   </div>
                 </div>
 
-                <Separator className="bg-gray-200 dark:bg-gray-700" />
+                <Separator className="bg-border" />
 
                 {/* No Reviews Message */}
                 {totalReviews === 0 && (
@@ -682,7 +682,7 @@ export default function ProductPage() {
       {/* Login Required Modal */}
       {showLoginModal && !authLoading && !isAuthenticated && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-auto transform transition-all duration-300 scale-100">
+          <div className="bg-card rounded-2xl shadow-2xl max-w-md w-full mx-auto transform transition-all duration-300 scale-100">
             <div className="p-6 sm:p-8 text-center">
               <div className="w-12 h-12 sm:w-16 sm:h-16 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
                 <ShoppingCart className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-600 dark:text-yellow-400" />

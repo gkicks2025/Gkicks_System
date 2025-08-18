@@ -74,7 +74,7 @@ export default function AdminLogin() {
         {/* Header */}
         <div className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="w-20 h-20 bg-yellow-400 rounded-xl flex items-center justify-center p-2">
+            <div className="w-20 h-20 bg-primary rounded-xl flex items-center justify-center p-2">
               <Image
                 src="/images/gkicks-transparent-logo.png"
                 alt="GKicks Admin"
@@ -97,15 +97,15 @@ export default function AdminLogin() {
           <CardContent>
             <Tabs defaultValue="admin" className="w-full">
               <TabsList className="grid w-full grid-cols-3 bg-gray-800">
-                <TabsTrigger value="admin" className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black">
+                <TabsTrigger value="admin" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   Admin
                 </TabsTrigger>
-                <TabsTrigger value="staff" className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black">
+                <TabsTrigger value="staff" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   Staff
                 </TabsTrigger>
                 <TabsTrigger
                   value="cashier"
-                  className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black"
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                 >
                   Cashier
                 </TabsTrigger>
@@ -147,7 +147,7 @@ export default function AdminLogin() {
                   </div>
                   <Button
                     onClick={() => fillDemoCredentials("admin")}
-                    className="w-full mt-3 bg-yellow-400 text-black hover:bg-yellow-500 font-semibold"
+                    className="w-full mt-3 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
                   >
                     Use Admin Credentials
                   </Button>
@@ -186,7 +186,7 @@ export default function AdminLogin() {
                   </div>
                   <Button
                     onClick={() => fillDemoCredentials("staff")}
-                    className="w-full mt-3 bg-yellow-400 text-black hover:bg-yellow-500 font-semibold"
+                    className="w-full mt-3 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
                   >
                     Use Staff Credentials
                   </Button>
@@ -221,7 +221,7 @@ export default function AdminLogin() {
                   </div>
                   <Button
                     onClick={() => fillDemoCredentials("cashier")}
-                    className="w-full mt-3 bg-yellow-400 text-black hover:bg-yellow-500 font-semibold"
+                    className="w-full mt-3 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
                   >
                     Use Cashier Credentials
                   </Button>
@@ -290,7 +290,7 @@ export default function AdminLogin() {
 
               <Button
                 type="submit"
-                className="w-full bg-yellow-400 text-black hover:bg-yellow-500 font-semibold"
+                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
                 disabled={state.isLoading}
               >
                 {state.isLoading ? (
@@ -314,7 +314,7 @@ export default function AdminLogin() {
               <Button
                 variant="outline"
                 onClick={() => router.push("/admin/staff-login")}
-                className="w-full border-yellow-400 text-yellow-400 hover:bg-yellow-400 hover:text-black"
+                className="w-full border-primary text-primary hover:bg-primary hover:text-primary-foreground"
               >
                 Go to Staff Portal
               </Button>

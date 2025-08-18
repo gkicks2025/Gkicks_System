@@ -35,8 +35,8 @@ export default function AdminLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">
-        <div className="text-white">Loading...</div>
+      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-gray-900 dark:text-white">Loading...</div>
       </div>
     )
   }
@@ -46,7 +46,7 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[#0f172a]">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       <AdminHeader />
       <main className="flex-1">{children}</main>
     </div>

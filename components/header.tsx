@@ -113,7 +113,7 @@ export function Header({ onSearch }: HeaderProps) {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-yellow-400 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
               <Image
                 src="/images/gkicks-transparent-logo.png"
                 alt="GKICKS"
@@ -193,7 +193,7 @@ export function Header({ onSearch }: HeaderProps) {
               <Link href="/cart">
                 <ShoppingCart className="h-5 w-5" />
                 {cartCount > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-yellow-400 text-black">
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-primary text-primary-foreground">
                     {cartCount}
                   </Badge>
                 )}
@@ -308,7 +308,7 @@ export function Header({ onSearch }: HeaderProps) {
             ) : authLoading ? (
               <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
             ) : (
-              <Button asChild className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold">
+              <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
                 <Link href="/auth">Sign In</Link>
               </Button>
             )}

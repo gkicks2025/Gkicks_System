@@ -17,7 +17,7 @@ import Image from "next/image"
 
 export default function CartPage() {
   const { state: { items = [] } = {}, updateQuantity, removeItem: removeFromCart, clearCart } = useCart()
-  const { user } = useAuth()
+  const { user, tokenReady } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [isProcessing, setIsProcessing] = useState(false)
@@ -50,7 +50,7 @@ export default function CartPage() {
 
   useEffect(() => {
     async function loadUserProfileAndAddress() {
-      if (!user) return
+      if (!user || !tokenReady) return
 
       try {
         const token = localStorage.getItem('auth_token')
@@ -99,7 +99,7 @@ export default function CartPage() {
       }
     }
     loadUserProfileAndAddress()
-  }, [user])
+  }, [user, tokenReady])
 
   const handleQuantityChange = (id: string, size: string, newQuantity: number) => {
     if (newQuantity < 1) {
@@ -261,7 +261,11 @@ export default function CartPage() {
       })
 
       if (!orderResponse.ok) {
-        throw new Error('Failed to create order')
+        const errorData = await orderResponse.json()
+        if (errorData.error === 'Insufficient stock') {
+          throw new Error(errorData.message || 'Some items are out of stock')
+        }
+        throw new Error(errorData.message || 'Failed to create order')
       }
 
       const orderData = await orderResponse.json()
@@ -304,9 +308,9 @@ export default function CartPage() {
 
   if (items.length === 0 && !showOrderSuccess) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col transition-colors">
+      <div className="min-h-screen bg-background flex flex-col transition-colors">
         <main className="flex-1 container mx-auto px-4 py-8">
-          <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          <Card className="bg-card border-border">
             <CardContent className="text-center py-8 sm:py-12">
               <ShoppingBag className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
               <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-yellow-400 mb-2">
@@ -317,7 +321,7 @@ export default function CartPage() {
               </p>
               <Button
                 onClick={() => router.push("/")}
-                className="bg-yellow-400 text-black hover:bg-yellow-500 dark:bg-yellow-500 dark:hover:bg-yellow-400 w-full sm:w-auto"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto"
               >
                 Continue Shopping
               </Button>
@@ -329,7 +333,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col transition-colors">
+    <div className="min-h-screen bg-background flex flex-col transition-colors">
       <main className="flex-1 container mx-auto px-4 py-6 sm:py-8">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
@@ -351,7 +355,7 @@ export default function CartPage() {
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
             {items.map((item, index) => (
-              <Card key={`${item.id}-${item.size}-${index}`} className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              <Card key={`${item.id}-${item.size}-${index}`} className="bg-card border-border">
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                     <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -452,7 +456,7 @@ export default function CartPage() {
                 </div>
                 <Button
                   onClick={() => setShowCheckout(!showCheckout)}
-                  className="w-full bg-yellow-400 text-black hover:bg-yellow-500 dark:bg-yellow-500 dark:hover:bg-yellow-400"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                   size="lg"
                 >
                   {showCheckout ? "Hide Checkout" : "Proceed to Checkout"}
@@ -485,7 +489,7 @@ export default function CartPage() {
 
             {/* Checkout Form */}
             {showCheckout && (
-              <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              <Card className="bg-card border-border">
                 <CardHeader>
                   <CardTitle className="text-lg sm:text-xl text-gray-900 dark:text-yellow-400">
                     Checkout Information
@@ -671,7 +675,7 @@ export default function CartPage() {
 
         {/* QR Code Dialog */}
         <Dialog open={showQRDialog} onOpenChange={setShowQRDialog}>
-          <DialogContent className="sm:max-w-md bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          <DialogContent className="sm:max-w-md bg-card border-border">
             <DialogHeader>
               <DialogTitle className="text-center text-base sm:text-lg text-gray-900 dark:text-yellow-400">
                 {qrPaymentMethod === "gcash" ? "GCash Payment" : "PayMaya Payment"}
@@ -715,7 +719,7 @@ export default function CartPage() {
 
         {/* Order Success Dialog */}
         <Dialog open={showOrderSuccess} onOpenChange={setShowOrderSuccess}>
-          <DialogContent className="sm:max-w-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          <DialogContent className="sm:max-w-lg bg-card border-border">
             <DialogHeader>
               <DialogTitle className="text-center flex items-center justify-center gap-2 text-base sm:text-lg text-gray-900 dark:text-yellow-400">
                 <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 dark:text-green-400" />
@@ -736,7 +740,7 @@ export default function CartPage() {
                   </p>
                 </div>
 
-                <Card className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
+                <Card className="bg-muted border-border">
                   <CardContent className="p-4">
                     <div className="space-y-2">
                       <div className="flex justify-between">
@@ -790,7 +794,7 @@ export default function CartPage() {
 
                 <Button
                   onClick={handleOrderSuccessClose}
-                  className="w-full bg-yellow-400 text-black hover:bg-yellow-500 dark:bg-yellow-500 dark:hover:bg-yellow-400"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   {user ? "View My Orders" : "Continue Shopping"}
                 </Button>

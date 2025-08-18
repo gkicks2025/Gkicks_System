@@ -81,10 +81,24 @@ export async function PUT(request: NextRequest) {
       variants = {}
     }
 
-    // Update variants
+    // Update variants with stock validation
     const variantsAny = variants as any
     if (!variantsAny[color]) variantsAny[color] = {}
     const currentStock = variantsAny[color][size] || 0
+    
+    // Validate stock availability to prevent overselling
+    if (quantity > 0 && currentStock < quantity) {
+      return NextResponse.json(
+        { 
+          error: 'Insufficient stock', 
+          message: `Only ${currentStock} items available for ${color} ${size}`,
+          availableStock: currentStock,
+          requestedQuantity: quantity
+        },
+        { status: 400 }
+      )
+    }
+    
     const newStock = Math.max(currentStock - quantity, 0)
     variantsAny[color][size] = newStock
     variants = variantsAny

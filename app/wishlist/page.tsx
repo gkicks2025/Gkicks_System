@@ -104,7 +104,7 @@ export default function WishlistPage() {
               </p>
               <Button
                 onClick={() => router.push("/")}
-                className="bg-yellow-400 text-black hover:bg-yellow-500 dark:bg-yellow-500 dark:hover:bg-yellow-400 w-full sm:w-auto"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto"
               >
                 Start Shopping
               </Button>
@@ -140,7 +140,7 @@ export default function WishlistPage() {
               {selectedItems.size > 0 && (
                 <Button
                   onClick={handleAddSelectedToCart}
-                  className="bg-yellow-400 text-black hover:bg-yellow-500 dark:bg-yellow-500 dark:hover:bg-yellow-400"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   <ShoppingCart className="h-4 w-4 mr-2" />
                   Add Selected to Cart ({selectedItems.size})
@@ -274,7 +274,7 @@ export default function WishlistPage() {
                     <div className="flex gap-2 pt-2">
                       <Button
                         onClick={() => handleAddToCart(item)}
-                        className="flex-1 bg-yellow-400 text-black hover:bg-yellow-500 dark:bg-yellow-500 dark:hover:bg-yellow-400 text-xs py-2"
+                        className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground text-xs py-2"
                       >
                         Add to Cart
                       </Button>
@@ -304,7 +304,7 @@ export default function WishlistPage() {
             </Button>
             <Button
               onClick={() => router.push("/cart")}
-              className="flex-1 bg-yellow-400 text-black hover:bg-yellow-500 dark:bg-yellow-500 dark:hover:bg-yellow-400"
+              className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               <ShoppingCart className="h-4 w-4 mr-2" />
               View Cart

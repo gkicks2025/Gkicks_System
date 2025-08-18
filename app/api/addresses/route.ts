@@ -6,17 +6,25 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret'
 
 // Helper function to get user from token
 async function getUserFromToken(request: NextRequest) {
+  const authHeader = request.headers.get('authorization')
+  
   try {
-    const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('🚫 No valid authorization header found')
       return null
     }
 
     const token = authHeader.substring(7)
+    console.log('🔍 Token received:', token.substring(0, 50) + '...')
+    console.log('🔍 Token length:', token.length)
+    console.log('🔍 Token parts:', token.split('.').length)
+    
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, email: string }
+    console.log('✅ Token verified successfully for user:', decoded.userId)
     return { id: decoded.userId, email: decoded.email }
   } catch (error) {
-    console.error('Token verification failed:', error)
+    console.error('❌ Token verification failed:', error)
+    console.error('❌ Token that failed:', authHeader ? authHeader.substring(7, 57) + '...' : 'No token')
     return null
   }
 }

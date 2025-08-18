@@ -141,7 +141,7 @@ export function ProductCard({ product, onViewUpdate }: ProductCardProps) {
 
   if (!product) {
     return (
-      <Card className="group hover:shadow-2xl transition-all duration-500 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+      <Card className="group hover:shadow-2xl transition-all duration-500 bg-card border-border">
         <CardContent className="p-4">
           <div className="text-center text-gray-500 dark:text-gray-400">Product not available</div>
         </CardContent>
@@ -151,7 +151,7 @@ export function ProductCard({ product, onViewUpdate }: ProductCardProps) {
 
   return (
     <Card
-      className="group hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 cursor-pointer bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800"
+      className="group hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 cursor-pointer bg-card border-border"
       onClick={handleProductClick}
     >
       <CardContent className="p-0">

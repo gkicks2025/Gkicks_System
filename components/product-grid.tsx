@@ -169,7 +169,7 @@ export function ProductGrid({
                 <SelectTrigger className="w-32 border-2 border-yellow-400 bg-yellow-50 dark:bg-yellow-400 dark:text-black">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                <SelectContent className="bg-card border-border">
                   <SelectItem value="featured" className="dark:text-gray-300 dark:hover:bg-gray-700">
                     Featured
                   </SelectItem>
@@ -206,10 +206,10 @@ export function ProductGrid({
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-gray-500 dark:text-gray-400" />
               <Select value={filterBy} onValueChange={setFilterBy}>
-                <SelectTrigger className="w-32 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300">
+                <SelectTrigger className="w-32 border-border bg-card text-foreground">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                <SelectContent className="bg-card border-border">
                   <SelectItem value="all" className="dark:text-gray-300 dark:hover:bg-gray-700">
                     All
                   </SelectItem>
@@ -227,7 +227,7 @@ export function ProductGrid({
 
         {/* Products Grid */}
         {products.length === 0 ? (
-          <Card className="p-12 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          <Card className="p-12 bg-card border-border">
             <CardContent className="text-center">
               <RefreshCw className="h-16 w-16 text-gray-400 dark:text-gray-500 mx-auto mb-4 animate-spin" />
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Loading products...</h3>
@@ -237,7 +237,7 @@ export function ProductGrid({
             </CardContent>
           </Card>
         ) : displayedProducts.length === 0 ? (
-          <Card className="p-12 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          <Card className="p-12 bg-card border-border">
             <CardContent className="text-center">
               <Package className="h-16 w-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No products found</h3>

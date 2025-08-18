@@ -100,7 +100,7 @@ export function CustomerReviews({ productName, productId }: CustomerReviewsProps
 
   return (
     <div className="space-y-8">
-      <Card className="shadow-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+      <Card className="shadow-lg bg-card border-border">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -157,7 +157,7 @@ export function CustomerReviews({ productName, productId }: CustomerReviewsProps
           ) : (
             <div className="space-y-4">
               {reviews.map((review) => (
-                <Card key={review.id} className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                <Card key={review.id} className="border border-border bg-card">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">

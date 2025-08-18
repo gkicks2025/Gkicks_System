@@ -1,105 +1,106 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
 
 @layer base {
   :root {
-    --background: 97 16% 90%;   /* off-white #e7eae5 */
-    --foreground: 222.2 84% 4.9%; /* black text */
-    --card: 97 16% 90%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 97 16% 90%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
+    --background: 45 100% 95%;   /* light yellow background */
+    --foreground: 0 0% 0%; /* black text */
+    --card: 45 100% 98%;
+    --card-foreground: 0 0% 0%;
+    --popover: 45 100% 98%;
+    --popover-foreground: 0 0% 0%;
+    --primary: 0 0% 0%; /* black primary */
+    --primary-foreground: 45 100% 50%; /* yellow text on black */
+    --secondary: 45 100% 85%;
+    --secondary-foreground: 0 0% 0%;
+    --muted: 45 100% 90%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 45 100% 50%; /* bright yellow accent */
+    --accent-foreground: 0 0% 0%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --destructive-foreground: 45 100% 98%;
+    --border: 45 100% 80%;
+    --input: 45 100% 98%;
+    --ring: 45 100% 50%;
     --radius: 0.5rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --chart-1: 45 100% 50%;
+    --chart-2: 0 0% 20%;
+    --chart-3: 45 100% 40%;
+    --chart-4: 0 0% 40%;
+    --chart-5: 45 100% 60%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 45 100% 70%;
-    --card: 222.2 84% 4.9%;
+    --background: 0 0% 5%; /* deep black background */
+    --foreground: 45 100% 70%; /* yellow text */
+    --card: 0 0% 8%;
     --card-foreground: 45 100% 70%;
-    --popover: 222.2 84% 4.9%;
+    --popover: 0 0% 8%;
     --popover-foreground: 45 100% 70%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
+    --primary: 45 100% 50%; /* bright yellow primary */
+    --primary-foreground: 0 0% 0%; /* black text on yellow */
+    --secondary: 0 0% 15%;
     --secondary-foreground: 45 100% 70%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 45 100% 70%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 45 100% 50%;
+    --accent: 45 100% 50%; /* bright yellow accent */
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 45 100% 98%;
+    --border: 0 0% 20%;
+    --input: 0 0% 15%;
+    --ring: 45 100% 50%;
+    --chart-1: 45 100% 50%;
+    --chart-2: 0 0% 60%;
+    --chart-3: 45 100% 40%;
+    --chart-4: 0 0% 40%;
+    --chart-5: 45 100% 60%;
   }
 }
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: var(--border);
   }
   body {
-    @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
 }
 
-/* Custom scrollbar for dark mode */
+/* Custom scrollbar for black and yellow theme */
 .dark ::-webkit-scrollbar {
   width: 8px;
 }
 
 .dark ::-webkit-scrollbar-track {
-  background: #374151;
+  background: #1a1a1a;
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: #6b7280;
+  background: #ffd700;
   border-radius: 4px;
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: #ffed4e;
 }
 
-/* Toast customization for dark mode */
+/* Toast customization for black and yellow theme */
 .dark [data-sonner-toaster] {
-  --normal-bg: #374151 !important;
-  --normal-border: #4b5563 !important;
-  --normal-text: #fbbf24 !important;
-  --success-bg: #065f46 !important;
-  --success-border: #047857 !important;
-  --success-text: #fbbf24 !important;
-  --error-bg: #7f1d1d !important;
-  --error-border: #991b1b !important;
-  --error-text: #fbbf24 !important;
-  --warning-bg: #78350f !important;
-  --warning-border: #92400e !important;
-  --warning-text: #fbbf24 !important;
+  --normal-bg: #0d0d0d !important;
+  --normal-border: #333333 !important;
+  --normal-text: #ffd700 !important;
+  --success-bg: #1a1a00 !important;
+  --success-border: #333300 !important;
+  --success-text: #ffd700 !important;
+  --error-bg: #330000 !important;
+  --error-border: #660000 !important;
+  --error-text: #ffd700 !important;
+  --warning-bg: #332200 !important;
+  --warning-border: #664400 !important;
+  --warning-text: #ffd700 !important;
 }
 
 .dark [data-sonner-toast] {

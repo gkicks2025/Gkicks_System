@@ -158,13 +158,29 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
   // Async addOrder to decrease stock in DB before adding order locally
   const addOrder = async (order: Omit<Order, "id" | "orderDate">) => {
     try {
+      // Validate stock for all items before processing any
+      for (const item of order.items) {
+        const response = await fetch(`/api/products/${item.id}`);
+        if (response.ok) {
+          const product = await response.json();
+          const variants = product.variants || {};
+          const availableStock = variants[item.color]?.[item.size] || 0;
+          
+          if (availableStock < item.quantity) {
+            throw new Error(`Insufficient stock for ${item.name} (${item.color}, ${item.size}). Only ${availableStock} available.`);
+          }
+        }
+      }
+      
+      // Process stock reduction for all items
       for (const item of order.items) {
         await decreaseVariantStock(item.id, item.color, item.size, item.quantity);
       }
+      
       dispatch({ type: "ADD_ORDER", payload: order });
     } catch (error) {
       console.error("Error processing order stock update:", error);
-      // Optionally show toast or handle error here
+      throw error; // Re-throw to allow caller to handle the error
     }
   }
 

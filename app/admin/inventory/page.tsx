@@ -5,6 +5,7 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -40,6 +41,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { useAdmin } from "@/contexts/admin-context"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Trash2,
   Edit,
@@ -54,7 +56,11 @@ import {
   Eye,
   ImageIcon,
   PlusCircle,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle,
+  Package,
+  TrendingDown,
+  Grid3X3
 } from "lucide-react"
 
 interface Product {
@@ -85,13 +91,15 @@ interface Product {
 
 export default function InventoryPage() {
   const { toast } = useToast()
-  const { state: adminState, isAdmin } = useAdmin()
+  const { state: adminState } = useAdmin()
+  const router = useRouter()
   
   // State management
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
+  const [stockFilter, setStockFilter] = useState("all") // all, low_stock, out_of_stock, in_stock
   const [selectedProducts, setSelectedProducts] = useState<number[]>([])
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -102,6 +110,10 @@ export default function InventoryPage() {
   const [stockUpdateProduct, setStockUpdateProduct] = useState<Product | null>(null)
   const [stockAdjustment, setStockAdjustment] = useState<number>(0)
   const [stockUpdateReason, setStockUpdateReason] = useState<string>("")
+  const [isVariantStockDialogOpen, setIsVariantStockDialogOpen] = useState(false)
+  const [variantStockProduct, setVariantStockProduct] = useState<Product | null>(null)
+  const [variantStockData, setVariantStockData] = useState<Record<string, Record<string, number>>>({})
+  const [updatingVariantStock, setUpdatingVariantStock] = useState(false)
   const [expandedProducts, setExpandedProducts] = useState<Set<number>>(new Set())
   const [uploadingImages, setUploadingImages] = useState(false)
   const [uploading3DModel, setUploading3DModel] = useState(false)
@@ -153,7 +165,7 @@ export default function InventoryPage() {
         variant: "destructive",
       })
       // Redirect to admin login page
-      window.location.href = '/admin/login'
+      router.push('/admin/login')
     }
   }, [adminState, toast])
 
@@ -199,28 +211,6 @@ export default function InventoryPage() {
       loadProducts()
     }
   }, [adminState.isAuthenticated])
-
-  // Show loading spinner while checking authentication
-  if (adminState.isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-black text-white">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Checking authentication...</span>
-      </div>
-    )
-  }
-
-  if (!adminState.isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-black text-white p-8">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold text-red-500 mb-4">Authentication Required</h1>
-          <p className="text-gray-300 mb-4">You need to be logged in as an admin to access this page.</p>
-          <a href="/admin/login" className="text-yellow-400 hover:underline">Go to Admin Login</a>
-        </div>
-      </div>
-    )
-  }
 
   // Handle image upload
   const uploadImages = async (files: File[]): Promise<string[]> => {
@@ -356,7 +346,7 @@ export default function InventoryPage() {
             description: "Your session has expired. Please log in again.",
             variant: "destructive",
           })
-          window.location.href = '/admin/login'
+          router.push('/admin/login')
           return
         }
         
@@ -423,6 +413,62 @@ export default function InventoryPage() {
     setStockAdjustment(0)
     setStockUpdateReason("")
     setIsStockUpdateDialogOpen(true)
+  }
+
+  const handleVariantStockUpdate = (product: Product) => {
+    setVariantStockProduct(product)
+    // Initialize variant stock data from product
+    const variants = product.variants || {}
+    setVariantStockData(variants)
+    setIsVariantStockDialogOpen(true)
+  }
+
+  const handleVariantStockSave = async () => {
+    if (!variantStockProduct) return
+    
+    setUpdatingVariantStock(true)
+    try {
+      // Calculate total stock from variants
+      let totalStock = 0
+      Object.values(variantStockData).forEach((sizeStocks) => {
+        totalStock += Object.values(sizeStocks).reduce((sum, qty) => sum + qty, 0)
+      })
+
+      const response = await fetch(`/api/products/${variantStockProduct.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({
+          variants: JSON.stringify(variantStockData),
+          stock_quantity: totalStock
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update variant stock')
+      }
+
+      toast({
+        title: "Success",
+        description: "Variant stock updated successfully",
+      })
+
+      // Refresh products
+      await loadProducts()
+      setIsVariantStockDialogOpen(false)
+      
+    } catch (error) {
+      console.error('Error updating variant stock:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update variant stock",
+        variant: "destructive",
+      })
+    } finally {
+      setUpdatingVariantStock(false)
+    }
   }
 
   const handleStockUpdate = async () => {
@@ -574,26 +620,108 @@ export default function InventoryPage() {
                          product.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.sku?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesCategory = selectedCategory === "all" || product.category === selectedCategory
-    return matchesSearch && matchesCategory
+    
+    // Stock filter logic
+    const stock = product.stock_quantity ?? 0
+    const threshold = product.low_stock_threshold ?? 10
+    let matchesStock = true
+    
+    if (stockFilter === "out_of_stock") {
+      matchesStock = stock === 0
+    } else if (stockFilter === "low_stock") {
+      matchesStock = stock > 0 && stock <= threshold
+    } else if (stockFilter === "in_stock") {
+      matchesStock = stock > threshold
+    }
+    
+    return matchesSearch && matchesCategory && matchesStock
   })
+
+  // Calculate stock statistics
+  const stockStats = {
+    outOfStock: products.filter(p => (p.stock_quantity ?? 0) === 0).length,
+    lowStock: products.filter(p => {
+      const stock = p.stock_quantity ?? 0
+      const threshold = p.low_stock_threshold ?? 10
+      return stock > 0 && stock <= threshold
+    }).length,
+    inStock: products.filter(p => {
+      const stock = p.stock_quantity ?? 0
+      const threshold = p.low_stock_threshold ?? 10
+      return stock > threshold
+    }).length
+  }
+
+  // Get products that need attention
+  const lowStockProducts = products.filter(p => {
+    const stock = p.stock_quantity ?? 0
+    const threshold = p.low_stock_threshold ?? 10
+    return stock > 0 && stock <= threshold
+  })
+
+  const outOfStockProducts = products.filter(p => (p.stock_quantity ?? 0) === 0)
+
+  // Show toast notifications for stock alerts
+  useEffect(() => {
+    if (products.length > 0) {
+      const criticalProducts = outOfStockProducts.length
+      const lowStockCount = lowStockProducts.length
+      
+      if (criticalProducts > 0) {
+        toast({
+          title: "🚨 Critical Stock Alert",
+          description: `${criticalProducts} product${criticalProducts > 1 ? 's are' : ' is'} out of stock and need immediate attention.`,
+          variant: "destructive",
+        })
+      } else if (lowStockCount > 0) {
+        toast({
+          title: "⚠️ Low Stock Warning",
+          description: `${lowStockCount} product${lowStockCount > 1 ? 's have' : ' has'} low stock levels.`,
+          variant: "default",
+        })
+      }
+    }
+  }, [products.length, outOfStockProducts.length, lowStockProducts.length, toast])
+
+  // Show loading spinner while checking authentication
+  if (adminState.isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Checking authentication...</span>
+      </div>
+    )
+  }
+
+  if (!adminState.isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-8">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-2xl font-bold text-red-500 mb-4">Authentication Required</h1>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">You need to be logged in as an admin to access this page.</p>
+          <a href="/admin/login" className="text-yellow-400 hover:underline">Go to Admin Login</a>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-[400px] bg-white dark:bg-gray-900">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-yellow-500 mx-auto mb-4" />
-          <p className="text-gray-400">Loading inventory...</p>
+          <p className="text-gray-600 dark:text-gray-300">Loading inventory...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white space-y-6 p-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-yellow-500">Product Inventory</h1>
-          <p className="text-gray-400">Manage your product stock levels and details</p>
+          <p className="text-gray-600 dark:text-gray-300">Manage your product stock levels and details</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -601,7 +729,7 @@ export default function InventoryPage() {
               resetForm()
               setIsAddDialogOpen(true)
             }}
-            className="bg-yellow-600 hover:bg-yellow-700"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Product
@@ -609,19 +737,90 @@ export default function InventoryPage() {
         </div>
       </div>
 
+      {/* Stock Alerts Dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Stock Statistics Cards */}
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-300">In Stock</p>
+                <p className="text-2xl font-bold text-green-500">{stockStats.inStock}</p>
+              </div>
+              <Package className="h-8 w-8 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Low Stock</p>
+                <p className="text-2xl font-bold text-yellow-500">{stockStats.lowStock}</p>
+              </div>
+              <TrendingDown className="h-8 w-8 text-yellow-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Out of Stock</p>
+                <p className="text-2xl font-bold text-red-500">{stockStats.outOfStock}</p>
+              </div>
+              <AlertTriangle className="h-8 w-8 text-red-500" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Low Stock Alerts */}
+      {(lowStockProducts.length > 0 || outOfStockProducts.length > 0) && (
+        <div className="space-y-3">
+          {outOfStockProducts.length > 0 && (
+            <Alert className="border-red-600 bg-red-50 dark:bg-red-900/20">
+              <AlertTriangle className="h-4 w-4 text-red-500" />
+              <AlertDescription className="text-red-700 dark:text-red-300">
+                <strong>Critical:</strong> {outOfStockProducts.length} product{outOfStockProducts.length > 1 ? 's are' : ' is'} out of stock:
+                <span className="ml-2 font-medium">
+                  {outOfStockProducts.slice(0, 3).map(p => p.name).join(', ')}
+                  {outOfStockProducts.length > 3 && ` and ${outOfStockProducts.length - 3} more`}
+                </span>
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {lowStockProducts.length > 0 && (
+            <Alert className="border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20">
+              <TrendingDown className="h-4 w-4 text-yellow-500" />
+              <AlertDescription className="text-yellow-700 dark:text-yellow-300">
+                <strong>Warning:</strong> {lowStockProducts.length} product{lowStockProducts.length > 1 ? 's have' : ' has'} low stock:
+                <span className="ml-2 font-medium">
+                  {lowStockProducts.slice(0, 3).map(p => `${p.name} (${p.stock_quantity} left)`).join(', ')}
+                  {lowStockProducts.length > 3 && ` and ${lowStockProducts.length - 3} more`}
+                </span>
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
+      )}
+
       {/* Search and Filter */}
       <div className="flex gap-4 items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 h-4 w-4" />
           <Input
             placeholder="Search products..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-gray-800 border-gray-700"
+            className="pl-10 bg-card border-border text-foreground"
           />
         </div>
         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="w-48 bg-gray-800 border-gray-700">
+          <SelectTrigger className="w-48 bg-card border-border text-foreground">
             <SelectValue placeholder="Filter by category" />
           </SelectTrigger>
           <SelectContent>
@@ -631,27 +830,54 @@ export default function InventoryPage() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={stockFilter} onValueChange={setStockFilter}>
+          <SelectTrigger className="w-48 bg-card border-border text-foreground">
+            <Package className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Filter by stock" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Stock Levels</SelectItem>
+            <SelectItem value="in_stock" className="text-green-600 dark:text-green-400">
+              <div className="flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                In Stock
+              </div>
+            </SelectItem>
+            <SelectItem value="low_stock" className="text-yellow-600 dark:text-yellow-400">
+              <div className="flex items-center gap-2">
+                <TrendingDown className="h-4 w-4" />
+                Low Stock
+              </div>
+            </SelectItem>
+            <SelectItem value="out_of_stock" className="text-red-600 dark:text-red-400">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Out of Stock
+              </div>
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Products Table */}
-      <Card className="bg-gray-900 border-gray-800">
+      <Card className="bg-card border-border">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="border-gray-800">
-                <TableHead className="text-gray-300">Product</TableHead>
-                <TableHead className="text-gray-300">Category</TableHead>
-                <TableHead className="text-gray-300">Brand</TableHead>
-                <TableHead className="text-gray-300">Price</TableHead>
-                <TableHead className="text-gray-300">Stock</TableHead>
-                <TableHead className="text-gray-300">Status</TableHead>
-                <TableHead className="text-gray-300">3D Model</TableHead>
-                <TableHead className="text-gray-300">Actions</TableHead>
+              <TableRow className="border-border">
+                <TableHead className="text-gray-900 dark:text-white">Product</TableHead>
+                <TableHead className="text-gray-900 dark:text-white">Category</TableHead>
+                <TableHead className="text-gray-900 dark:text-white">Brand</TableHead>
+                <TableHead className="text-gray-900 dark:text-white">Price</TableHead>
+                <TableHead className="text-gray-900 dark:text-white">Stock</TableHead>
+                <TableHead className="text-gray-900 dark:text-white">Status</TableHead>
+                <TableHead className="text-gray-900 dark:text-white">3D Model</TableHead>
+                <TableHead className="text-gray-900 dark:text-white">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredProducts.map((product) => (
-                <TableRow key={product.id} className="border-gray-800">
+                <TableRow key={product.id} className="border-border">
                   <TableCell>
                     <div className="flex items-center gap-3">
                       {product.image && (
@@ -662,23 +888,23 @@ export default function InventoryPage() {
                         />
                       )}
                       <div>
-                        <div className="font-medium text-white">{product.name}</div>
+                        <div className="font-medium text-gray-900 dark:text-white">{product.name}</div>
                         {product.subtitle && (
-                          <div className="text-sm text-gray-400">{product.subtitle}</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-300">{product.subtitle}</div>
                         )}
                         {product.sku && (
-                          <div className="text-xs text-gray-500">SKU: {product.sku}</div>
+                          <div className="text-xs text-gray-600 dark:text-gray-300">SKU: {product.sku}</div>
                         )}
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-gray-300">{product.category}</TableCell>
-                  <TableCell className="text-gray-300">{product.brand}</TableCell>
-                  <TableCell className="text-gray-300">
+                  <TableCell className="text-gray-900 dark:text-white">{product.category}</TableCell>
+                  <TableCell className="text-gray-900 dark:text-white">{product.brand}</TableCell>
+                  <TableCell className="text-gray-900 dark:text-white">
                     <div className="flex flex-col">
                       <span className="font-medium">${product.price}</span>
                       {product.originalPrice && product.originalPrice > product.price && (
-                        <span className="text-sm text-gray-500 line-through">
+                        <span className="text-sm text-gray-600 dark:text-gray-300 line-through">
                           ${product.originalPrice}
                         </span>
                       )}
@@ -686,18 +912,40 @@ export default function InventoryPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      <span className="font-medium text-white">
-                        {product.stock_quantity ?? 0} units
-                      </span>
-                      <div className="flex gap-1">
-                        {(product.stock_quantity ?? 0) === 0 ? (
-                          <Badge className="bg-red-600 text-white">Out of Stock</Badge>
-                        ) : (product.stock_quantity ?? 0) <= (product.low_stock_threshold ?? 10) ? (
-                          <Badge className="bg-yellow-600 text-white">Low Stock</Badge>
-                        ) : (
-                          <Badge className="bg-green-600 text-white">In Stock</Badge>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-gray-900 dark:text-white text-lg">
+                          {product.stock_quantity ?? 0} units
+                        </span>
+                        {(product.stock_quantity ?? 0) === 0 && (
+                          <AlertTriangle className="h-4 w-4 text-red-500 animate-pulse" />
+                        )}
+                        {(product.stock_quantity ?? 0) > 0 && (product.stock_quantity ?? 0) <= (product.low_stock_threshold ?? 10) && (
+                          <TrendingDown className="h-4 w-4 text-yellow-500" />
+                        )}
+                        {(product.stock_quantity ?? 0) > (product.low_stock_threshold ?? 10) && (
+                          <Package className="h-4 w-4 text-green-500" />
                         )}
                       </div>
+                      <div className="flex gap-1">
+                        {(product.stock_quantity ?? 0) === 0 ? (
+                          <Badge className="bg-red-600 text-white border-red-500 shadow-red-500/20 shadow-lg font-semibold animate-pulse">
+                            🚨 Out of Stock
+                          </Badge>
+                        ) : (product.stock_quantity ?? 0) <= (product.low_stock_threshold ?? 10) ? (
+                          <Badge className="bg-primary text-primary-foreground border-primary shadow-primary/20 shadow-lg font-semibold">
+                            ⚠️ Low Stock
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-green-600 text-white border-green-500 shadow-green-500/20 shadow-lg font-semibold">
+                            ✅ In Stock
+                          </Badge>
+                        )}
+                      </div>
+                      {(product.stock_quantity ?? 0) <= (product.low_stock_threshold ?? 10) && (product.stock_quantity ?? 0) > 0 && (
+                        <span className="text-xs text-yellow-600 dark:text-yellow-400">
+                          Threshold: {product.low_stock_threshold ?? 10}
+                        </span>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -723,6 +971,7 @@ export default function InventoryPage() {
                         variant="outline"
                         onClick={() => handleEdit(product)}
                         title="Edit Product"
+                        className="bg-primary hover:bg-primary/90 border-primary text-primary-foreground"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -731,9 +980,18 @@ export default function InventoryPage() {
                         variant="outline"
                         onClick={() => handleQuickStockUpdate(product)}
                         title="Quick Stock Update"
-                        className="bg-blue-600 hover:bg-blue-700 border-blue-600"
+                        className="bg-primary hover:bg-primary/90 border-primary text-primary-foreground"
                       >
                         <RefreshCw className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleVariantStockUpdate(product)}
+                        title="Manage Size Stock"
+                        className="bg-primary hover:bg-primary/90 border-primary text-primary-foreground"
+                      >
+                        <Grid3X3 className="h-4 w-4" />
                       </Button>
                       <Button
                         size="sm"
@@ -743,6 +1001,7 @@ export default function InventoryPage() {
                           setIsDeleteDialogOpen(true)
                         }}
                         title="Delete Product"
+                        className="bg-destructive hover:bg-destructive/90 border-destructive text-destructive-foreground"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -757,10 +1016,10 @@ export default function InventoryPage() {
 
       {/* Add Product Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-800">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-yellow-500">Add New Product</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle className="text-blue-600 dark:text-blue-400">Add New Product</DialogTitle>
+            <DialogDescription className="text-gray-600 dark:text-gray-300">
               Create a new product with all necessary details including 3D model support.
             </DialogDescription>
           </DialogHeader>
@@ -768,49 +1027,49 @@ export default function InventoryPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Basic Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white">Basic Information</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Basic Information</h3>
               
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-gray-300">Product Name *</Label>
+                <Label htmlFor="name" className="text-gray-900 dark:text-white">Product Name *</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="bg-gray-800 border-gray-700"
+                  className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                   placeholder="Enter product name"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="subtitle" className="text-gray-300">Subtitle</Label>
+                <Label htmlFor="subtitle" className="text-gray-900 dark:text-white">Subtitle</Label>
                 <Input
                   id="subtitle"
                   value={formData.subtitle}
                   onChange={(e) => setFormData(prev => ({ ...prev, subtitle: e.target.value }))}
-                  className="bg-gray-800 border-gray-700"
+                  className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                   placeholder="Enter product subtitle"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="sku" className="text-gray-300">SKU</Label>
+                <Label htmlFor="sku" className="text-gray-900 dark:text-white">SKU</Label>
                 <Input
                   id="sku"
                   value={formData.sku}
                   onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
-                  className="bg-gray-800 border-gray-700"
+                  className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                   placeholder="Enter SKU"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="category" className="text-gray-300">Category *</Label>
+                  <Label htmlFor="category" className="text-gray-900 dark:text-white">Category *</Label>
                   <Select
                     value={formData.category}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
                   >
-                    <SelectTrigger className="bg-gray-800 border-gray-700">
+                    <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -822,12 +1081,12 @@ export default function InventoryPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="brand" className="text-gray-300">Brand *</Label>
+                  <Label htmlFor="brand" className="text-gray-900 dark:text-white">Brand *</Label>
                   <Select
                     value={formData.brand}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, brand: value }))}
                   >
-                    <SelectTrigger className="bg-gray-800 border-gray-700">
+                    <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
                       <SelectValue placeholder="Select brand" />
                     </SelectTrigger>
                     <SelectContent>
@@ -841,27 +1100,27 @@ export default function InventoryPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="price" className="text-gray-300">Price *</Label>
+                  <Label htmlFor="price" className="text-gray-900 dark:text-white">Price *</Label>
                   <Input
                     id="price"
                     type="number"
                     step="0.01"
                     value={formData.price}
                     onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                     placeholder="0.00"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="originalPrice" className="text-gray-300">Original Price</Label>
+                  <Label htmlFor="originalPrice" className="text-gray-900 dark:text-white">Original Price</Label>
                   <Input
                     id="originalPrice"
                     type="number"
                     step="0.01"
                     value={formData.originalPrice}
                     onChange={(e) => setFormData(prev => ({ ...prev, originalPrice: parseFloat(e.target.value) || 0 }))}
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                     placeholder="0.00"
                   />
                 </div>
@@ -870,39 +1129,39 @@ export default function InventoryPage() {
               {/* Stock Management Section */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="stock_quantity" className="text-gray-300">Stock Quantity *</Label>
+                  <Label htmlFor="stock_quantity" className="text-gray-900 dark:text-white">Stock Quantity *</Label>
                   <Input
                     id="stock_quantity"
                     type="number"
                     min="0"
                     value={formData.stock_quantity}
                     onChange={(e) => setFormData(prev => ({ ...prev, stock_quantity: parseInt(e.target.value) || 0 }))}
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                     placeholder="0"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="low_stock_threshold" className="text-gray-300">Low Stock Threshold</Label>
+                  <Label htmlFor="low_stock_threshold" className="text-gray-900 dark:text-white">Low Stock Threshold</Label>
                   <Input
                     id="low_stock_threshold"
                     type="number"
                     min="0"
                     value={formData.low_stock_threshold}
                     onChange={(e) => setFormData(prev => ({ ...prev, low_stock_threshold: parseInt(e.target.value) || 10 }))}
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                     placeholder="10"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description" className="text-gray-300">Description</Label>
+                <Label htmlFor="description" className="text-gray-900 dark:text-white">Description</Label>
                 <Textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  className="bg-gray-800 border-gray-700"
+                  className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                   placeholder="Enter product description"
                   rows={4}
                 />
@@ -910,7 +1169,7 @@ export default function InventoryPage() {
 
               {/* Colors Section */}
               <div className="space-y-4">
-                <h4 className="text-md font-semibold text-white">Available Colors</h4>
+                <h4 className="text-md font-semibold text-gray-900 dark:text-white">Available Colors</h4>
                 
                 <div className="space-y-2">
                   <div className="flex gap-2">
@@ -918,7 +1177,7 @@ export default function InventoryPage() {
                       value={colorInput}
                       onChange={(e) => setColorInput(e.target.value)}
                       placeholder="Enter color name"
-                      className="bg-gray-800 border-gray-700"
+                      className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                       onKeyPress={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault()
@@ -943,7 +1202,7 @@ export default function InventoryPage() {
                           setColorInput("")
                         }
                       }}
-                      className="bg-yellow-600 hover:bg-yellow-700"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       Add
                     </Button>
@@ -952,8 +1211,8 @@ export default function InventoryPage() {
                   {formData.colors && formData.colors.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-2">
                       {formData.colors.map((color, index) => (
-                        <div key={index} className="flex items-center gap-1 bg-gray-700 px-2 py-1 rounded text-sm">
-                          <span className="text-gray-300">{color}</span>
+                        <div key={index} className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-sm">
+                          <span className="text-gray-900 dark:text-white">{color}</span>
                           <button
                             type="button"
                             onClick={() => {
@@ -962,7 +1221,7 @@ export default function InventoryPage() {
                                 colors: prev.colors?.filter(c => c !== color) || []
                               }))
                             }}
-                            className="text-red-400 hover:text-red-300 ml-1"
+                            className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 ml-1"
                           >
                             ×
                           </button>
@@ -975,7 +1234,7 @@ export default function InventoryPage() {
 
               {/* Sizes Section */}
               <div className="space-y-4">
-                <h4 className="text-md font-semibold text-white">Available Sizes</h4>
+                <h4 className="text-md font-semibold text-gray-900 dark:text-white">Available Sizes</h4>
                 
                 <div className="space-y-2">
                   <div className="flex gap-2">
@@ -983,7 +1242,7 @@ export default function InventoryPage() {
                       value={sizeInput}
                       onChange={(e) => setSizeInput(e.target.value)}
                       placeholder="Enter size (e.g., 8.5, 9, 10)"
-                      className="bg-gray-800 border-gray-700"
+                      className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                       onKeyPress={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault()
@@ -1008,7 +1267,7 @@ export default function InventoryPage() {
                           setSizeInput("")
                         }
                       }}
-                      className="bg-yellow-600 hover:bg-yellow-700"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       Add
                     </Button>
@@ -1016,7 +1275,7 @@ export default function InventoryPage() {
                   
                   {/* Quick Add Common Sizes */}
                   <div className="space-y-2">
-                    <p className="text-sm text-gray-400">Quick add common sizes:</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">Quick add common sizes:</p>
                     <div className="flex flex-wrap gap-1">
                       {commonSizes.map(size => (
                         <button
@@ -1032,8 +1291,8 @@ export default function InventoryPage() {
                           }}
                           className={`px-2 py-1 text-xs rounded ${
                             formData.sizes?.includes(size)
-                              ? 'bg-yellow-600 text-white'
-                              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                           }`}
                           disabled={formData.sizes?.includes(size)}
                         >
@@ -1046,8 +1305,8 @@ export default function InventoryPage() {
                   {formData.sizes && formData.sizes.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-2">
                       {formData.sizes.map((size, index) => (
-                        <div key={index} className="flex items-center gap-1 bg-gray-700 px-2 py-1 rounded text-sm">
-                          <span className="text-gray-300">{size}</span>
+                        <div key={index} className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-sm">
+                          <span className="text-gray-900 dark:text-white">{size}</span>
                           <button
                             type="button"
                             onClick={() => {
@@ -1056,7 +1315,7 @@ export default function InventoryPage() {
                                 sizes: prev.sizes?.filter(s => s !== size) || []
                               }))
                             }}
-                            className="text-red-400 hover:text-red-300 ml-1"
+                            className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 ml-1"
                           >
                             ×
                           </button>
@@ -1070,13 +1329,13 @@ export default function InventoryPage() {
 
             {/* Media and Assets */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white">Media & Assets</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Media & Assets</h3>
               
               {/* Product Images */}
               <div className="space-y-2">
-                <Label className="text-gray-300">Product Images</Label>
-                <div className="border-2 border-dashed border-gray-700 rounded-lg p-6 text-center">
-                  <ImageIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <Label className="text-gray-900 dark:text-white">Product Images</Label>
+                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
+                  <ImageIcon className="mx-auto h-12 w-12 text-gray-500 dark:text-gray-400 mb-4" />
                   <div className="space-y-2">
                     <Button
                       type="button"
@@ -1117,22 +1376,22 @@ export default function InventoryPage() {
                         console.log('Selected images state updated:', files.length)
                       }}
                     />
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
                       Drag and drop your images here, or click to browse
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-600 dark:text-gray-300">
                       Images: JPG, PNG, WebP, GIF (Max. 5 images, 10MB each) • Recommended size: 800x800px
                     </p>
                   </div>
                   {selectedImages.length > 0 && (
                     <div className="mt-4 space-y-3">
-                      <p className="text-sm text-green-400">
+                      <p className="text-sm text-green-600 dark:text-green-400">
                         {selectedImages.length} image(s) selected
                       </p>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                         {selectedImages.map((file, index) => (
                           <div key={index} className="relative group">
-                            <div className="aspect-square bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
+                            <div className="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600">
                               <img
                                 src={URL.createObjectURL(file)}
                                 alt={`Preview ${index + 1}`}
@@ -1148,17 +1407,17 @@ export default function InventoryPage() {
                             >
                               ×
                             </button>
-                            <p className="text-xs text-gray-400 mt-1 truncate">{file.name}</p>
+                            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 truncate">{file.name}</p>
                           </div>
                         ))}
                         {selectedImages.length < 5 && (
                           <div 
-                            className="aspect-square bg-gray-800/50 rounded-lg border-2 border-dashed border-gray-600 flex items-center justify-center cursor-pointer hover:border-gray-500 transition-colors"
+                            className="aspect-square bg-gray-100/50 dark:bg-gray-700/50 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
                             onClick={() => document.getElementById('image-upload')?.click()}
                           >
                             <div className="text-center">
-                              <Plus className="h-6 w-6 text-gray-500 mx-auto mb-1" />
-                              <p className="text-xs text-gray-500">Add More</p>
+                              <Plus className="h-6 w-6 text-gray-500 dark:text-gray-400 mx-auto mb-1" />
+                              <p className="text-xs text-gray-500 dark:text-gray-400">Add More</p>
                             </div>
                           </div>
                         )}
@@ -1170,9 +1429,9 @@ export default function InventoryPage() {
 
               {/* 3D Model Upload */}
               <div className="space-y-2">
-                <Label className="text-gray-300">3D Model (OBJ File)</Label>
-                <div className="border-2 border-dashed border-blue-700 rounded-lg p-6 text-center bg-blue-900/10">
-                  <div className="mx-auto h-12 w-12 text-blue-400 mb-4 flex items-center justify-center">
+                <Label className="text-gray-900 dark:text-white">3D Model (OBJ File)</Label>
+                <div className="border-2 border-dashed border-blue-600 dark:border-blue-700 rounded-lg p-6 text-center bg-blue-50 dark:bg-blue-900/10">
+                  <div className="mx-auto h-12 w-12 text-blue-600 dark:text-blue-400 mb-4 flex items-center justify-center">
                     <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
                       <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                     </svg>
@@ -1181,7 +1440,7 @@ export default function InventoryPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      className="border-blue-600 text-blue-400 hover:bg-blue-900/20"
+                      className="border-blue-600 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                       onClick={() => document.getElementById('model-upload')?.click()}
                       disabled={uploading3DModel}
                     >
@@ -1212,16 +1471,16 @@ export default function InventoryPage() {
                         }
                       }}
                     />
-                    <p className="text-sm text-blue-300">
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
                       Upload OBJ files with optional MTL materials, or ZIP archives containing OBJ+MTL+textures
                     </p>
-                    <p className="text-xs text-blue-400">
+                    <p className="text-xs text-blue-600 dark:text-blue-400">
                       3D Models: OBJ, FBX, GLTF, GLB (Max. 50MB) • Recommended: OBJ with MTL
                     </p>
                   </div>
                   {selected3DModel && (
                     <div className="mt-4">
-                      <p className="text-sm text-green-400">
+                      <p className="text-sm text-green-600 dark:text-green-400">
                         Selected: {Array.isArray(selected3DModel) ? 
                           selected3DModel.map(f => f.name).join(', ') : 
                           selected3DModel.name}
@@ -1233,7 +1492,7 @@ export default function InventoryPage() {
 
               {/* Product Options */}
               <div className="space-y-4">
-                <h4 className="text-md font-semibold text-white">Product Options</h4>
+                <h4 className="text-md font-semibold text-gray-900 dark:text-white">Product Options</h4>
                 
                 <div className="flex flex-wrap gap-4">
                   <div className="flex items-center space-x-2">
@@ -1242,7 +1501,7 @@ export default function InventoryPage() {
                       checked={formData.is_new}
                       onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_new: !!checked }))}
                     />
-                    <Label htmlFor="is_new" className="text-gray-300">New Product</Label>
+                    <Label htmlFor="is_new" className="text-gray-900 dark:text-white">New Product</Label>
                   </div>
                   
                   <div className="flex items-center space-x-2">
@@ -1251,7 +1510,7 @@ export default function InventoryPage() {
                       checked={formData.is_sale}
                       onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_sale: !!checked }))}
                     />
-                    <Label htmlFor="is_sale" className="text-gray-300">On Sale</Label>
+                    <Label htmlFor="is_sale" className="text-gray-900 dark:text-white">On Sale</Label>
                   </div>
                   
                   <div className="flex items-center space-x-2">
@@ -1260,29 +1519,29 @@ export default function InventoryPage() {
                       checked={formData.is_active}
                       onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: !!checked }))}
                     />
-                    <Label htmlFor="is_active" className="text-gray-300">Active</Label>
+                    <Label htmlFor="is_active" className="text-gray-900 dark:text-white">Active</Label>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="low_stock_threshold" className="text-gray-300">Low Stock Threshold</Label>
+                  <Label htmlFor="low_stock_threshold" className="text-gray-900 dark:text-white">Low Stock Threshold</Label>
                   <Input
                     id="low_stock_threshold"
                     type="number"
                     value={formData.low_stock_threshold}
                     onChange={(e) => setFormData(prev => ({ ...prev, low_stock_threshold: parseInt(e.target.value) || 0 }))}
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                     placeholder="10"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="status" className="text-gray-300">Status</Label>
+                  <Label htmlFor="status" className="text-gray-900 dark:text-white">Status</Label>
                   <Select
                     value={formData.status || 'Active'}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
                   >
-                    <SelectTrigger className="bg-gray-800 border-gray-700">
+                    <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1302,13 +1561,14 @@ export default function InventoryPage() {
               onClick={() => {
                 setIsAddDialogOpen(false)
               }}
+              className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSubmit}
               disabled={!formData.name || !formData.category || !formData.brand || uploadingImages || uploading3DModel}
-              className="bg-yellow-600 hover:bg-yellow-700"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               {uploadingImages || uploading3DModel ? (
                 <>
@@ -1325,10 +1585,10 @@ export default function InventoryPage() {
 
       {/* Edit Product Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-800">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-yellow-500">Edit Product</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle className="text-blue-600 dark:text-blue-400">Edit Product</DialogTitle>
+            <DialogDescription className="text-gray-600 dark:text-gray-300">
               Update product information and inventory details
             </DialogDescription>
           </DialogHeader>
@@ -1337,49 +1597,49 @@ export default function InventoryPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Basic Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white">Basic Information</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Basic Information</h3>
               
               <div className="space-y-2">
-                <Label htmlFor="edit-name" className="text-gray-300">Product Name *</Label>
+                <Label htmlFor="edit-name" className="text-gray-900 dark:text-white">Product Name *</Label>
                 <Input
                   id="edit-name"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="bg-gray-800 border-gray-700"
+                  className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                   placeholder="Enter product name"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-subtitle" className="text-gray-300">Subtitle</Label>
+                <Label htmlFor="edit-subtitle" className="text-gray-900 dark:text-white">Subtitle</Label>
                 <Input
                   id="edit-subtitle"
                   value={formData.subtitle}
                   onChange={(e) => setFormData(prev => ({ ...prev, subtitle: e.target.value }))}
-                  className="bg-gray-800 border-gray-700"
+                  className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                   placeholder="Enter product subtitle"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-sku" className="text-gray-300">SKU</Label>
+                <Label htmlFor="edit-sku" className="text-gray-900 dark:text-white">SKU</Label>
                 <Input
                   id="edit-sku"
                   value={formData.sku}
                   onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
-                  className="bg-gray-800 border-gray-700"
+                  className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                   placeholder="Enter SKU"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-category" className="text-gray-300">Category *</Label>
+                  <Label htmlFor="edit-category" className="text-gray-900 dark:text-white">Category *</Label>
                   <Select
                     value={formData.category}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
                   >
-                    <SelectTrigger className="bg-gray-800 border-gray-700">
+                    <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1391,12 +1651,12 @@ export default function InventoryPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-brand" className="text-gray-300">Brand *</Label>
+                  <Label htmlFor="edit-brand" className="text-gray-900 dark:text-white">Brand *</Label>
                   <Select
                     value={formData.brand}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, brand: value }))}
                   >
-                    <SelectTrigger className="bg-gray-800 border-gray-700">
+                    <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
                       <SelectValue placeholder="Select brand" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1410,27 +1670,27 @@ export default function InventoryPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-price" className="text-gray-300">Price *</Label>
+                  <Label htmlFor="edit-price" className="text-gray-900 dark:text-white">Price *</Label>
                   <Input
                     id="edit-price"
                     type="number"
                     step="0.01"
                     value={formData.price}
                     onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                     placeholder="0.00"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-originalPrice" className="text-gray-300">Original Price</Label>
+                  <Label htmlFor="edit-originalPrice" className="text-gray-900 dark:text-white">Original Price</Label>
                   <Input
                     id="edit-originalPrice"
                     type="number"
                     step="0.01"
                     value={formData.originalPrice}
                     onChange={(e) => setFormData(prev => ({ ...prev, originalPrice: parseFloat(e.target.value) || 0 }))}
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                     placeholder="0.00"
                   />
                 </div>
@@ -1439,39 +1699,39 @@ export default function InventoryPage() {
               {/* Stock Management Section */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-stock_quantity" className="text-gray-300">Stock Quantity *</Label>
+                  <Label htmlFor="edit-stock_quantity" className="text-gray-900 dark:text-white">Stock Quantity *</Label>
                   <Input
                     id="edit-stock_quantity"
                     type="number"
                     min="0"
                     value={formData.stock_quantity}
                     onChange={(e) => setFormData(prev => ({ ...prev, stock_quantity: parseInt(e.target.value) || 0 }))}
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                     placeholder="0"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-low_stock_threshold" className="text-gray-300">Low Stock Threshold</Label>
+                  <Label htmlFor="edit-low_stock_threshold" className="text-gray-900 dark:text-white">Low Stock Threshold</Label>
                   <Input
                     id="edit-low_stock_threshold"
                     type="number"
                     min="0"
                     value={formData.low_stock_threshold}
                     onChange={(e) => setFormData(prev => ({ ...prev, low_stock_threshold: parseInt(e.target.value) || 10 }))}
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                     placeholder="10"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-description" className="text-gray-300">Description</Label>
+                <Label htmlFor="edit-description" className="text-gray-900 dark:text-white">Description</Label>
                 <Textarea
                   id="edit-description"
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  className="bg-gray-800 border-gray-700"
+                  className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                   placeholder="Enter product description"
                   rows={4}
                 />
@@ -1479,7 +1739,7 @@ export default function InventoryPage() {
 
               {/* Colors Section */}
               <div className="space-y-4">
-                <h4 className="text-md font-semibold text-white">Available Colors</h4>
+                <h4 className="text-md font-semibold text-gray-900 dark:text-white">Available Colors</h4>
                 
                 <div className="space-y-2">
                   <div className="flex gap-2">
@@ -1487,7 +1747,7 @@ export default function InventoryPage() {
                       value={colorInput}
                       onChange={(e) => setColorInput(e.target.value)}
                       placeholder="Enter color name"
-                      className="bg-gray-800 border-gray-700"
+                      className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                       onKeyPress={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault()
@@ -1512,7 +1772,7 @@ export default function InventoryPage() {
                           setColorInput("")
                         }
                       }}
-                      className="bg-yellow-600 hover:bg-yellow-700"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       Add
                     </Button>
@@ -1521,8 +1781,8 @@ export default function InventoryPage() {
                   {formData.colors && formData.colors.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-2">
                       {formData.colors.map((color, index) => (
-                        <div key={index} className="flex items-center gap-1 bg-gray-700 px-2 py-1 rounded text-sm">
-                          <span className="text-gray-300">{color}</span>
+                        <div key={index} className="flex items-center gap-1 bg-muted px-2 py-1 rounded text-sm">
+                          <span className="text-foreground">{color}</span>
                           <button
                             type="button"
                             onClick={() => {
@@ -1531,7 +1791,7 @@ export default function InventoryPage() {
                                 colors: prev.colors?.filter(c => c !== color) || []
                               }))
                             }}
-                            className="text-red-400 hover:text-red-300 ml-1"
+                            className="text-destructive hover:text-destructive/80 ml-1"
                           >
                             ×
                           </button>
@@ -1544,7 +1804,7 @@ export default function InventoryPage() {
 
               {/* Sizes Section */}
               <div className="space-y-4">
-                <h4 className="text-md font-semibold text-white">Available Sizes</h4>
+                <h4 className="text-md font-semibold text-foreground">Available Sizes</h4>
                 
                 <div className="space-y-2">
                   <div className="flex gap-2">
@@ -1552,7 +1812,7 @@ export default function InventoryPage() {
                       value={sizeInput}
                       onChange={(e) => setSizeInput(e.target.value)}
                       placeholder="Enter size (e.g., 8.5, 9, 10)"
-                      className="bg-gray-800 border-gray-700"
+                      className="bg-background border-border"
                       onKeyPress={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault()
@@ -1577,7 +1837,7 @@ export default function InventoryPage() {
                           setSizeInput("")
                         }
                       }}
-                      className="bg-yellow-600 hover:bg-yellow-700"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       Add
                     </Button>
@@ -1585,7 +1845,7 @@ export default function InventoryPage() {
                   
                   {/* Quick Add Common Sizes */}
                   <div className="space-y-2">
-                    <p className="text-sm text-gray-400">Quick add common sizes:</p>
+                    <p className="text-sm text-muted-foreground">Quick add common sizes:</p>
                     <div className="flex flex-wrap gap-1">
                       {commonSizes.map(size => (
                         <button
@@ -1601,8 +1861,8 @@ export default function InventoryPage() {
                           }}
                           className={`px-2 py-1 text-xs rounded ${
                             formData.sizes?.includes(size)
-                              ? 'bg-yellow-600 text-white'
-                              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted text-foreground hover:bg-muted/80'
                           }`}
                           disabled={formData.sizes?.includes(size)}
                         >
@@ -1615,8 +1875,8 @@ export default function InventoryPage() {
                   {formData.sizes && formData.sizes.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-2">
                       {formData.sizes.map((size, index) => (
-                        <div key={index} className="flex items-center gap-1 bg-gray-700 px-2 py-1 rounded text-sm">
-                          <span className="text-gray-300">{size}</span>
+                        <div key={index} className="flex items-center gap-1 bg-muted px-2 py-1 rounded text-sm">
+                          <span className="text-foreground">{size}</span>
                           <button
                             type="button"
                             onClick={() => {
@@ -1625,7 +1885,7 @@ export default function InventoryPage() {
                                 sizes: prev.sizes?.filter(s => s !== size) || []
                               }))
                             }}
-                            className="text-red-400 hover:text-red-300 ml-1"
+                            className="text-destructive hover:text-destructive/80 ml-1"
                           >
                             ×
                           </button>
@@ -1639,16 +1899,16 @@ export default function InventoryPage() {
 
             {/* Media and Assets */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white">Media & Assets</h3>
+              <h3 className="text-lg font-semibold text-foreground">Media & Assets</h3>
               
               {/* Current Image */}
               {formData.image && (
                 <div className="space-y-2">
-                  <Label className="text-gray-300">Current Image</Label>
+                  <Label className="text-foreground">Current Image</Label>
                   <img
                     src={formData.image}
                     alt="Current product image"
-                    className="w-32 h-32 object-cover rounded border border-gray-700"
+                    className="w-32 h-32 object-cover rounded border border-border"
                   />
                 </div>
               )}
@@ -1656,11 +1916,11 @@ export default function InventoryPage() {
               {/* Existing Gallery Images */}
               {currentProduct?.gallery_images && currentProduct.gallery_images.length > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-gray-300">Current Gallery Images ({currentProduct.gallery_images.filter(imageUrl => !imagesToRemove.includes(imageUrl)).length})</Label>
+                  <Label className="text-foreground">Current Gallery Images ({currentProduct.gallery_images.filter(imageUrl => !imagesToRemove.includes(imageUrl)).length})</Label>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {currentProduct.gallery_images.filter(imageUrl => !imagesToRemove.includes(imageUrl)).map((imageUrl, index) => (
                       <div key={index} className="relative group">
-                        <div className="aspect-square bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
+                        <div className="aspect-square bg-muted rounded-lg overflow-hidden border border-border">
                           <img
                             src={imageUrl}
                             alt={`Gallery image ${index + 1}`}
@@ -1682,15 +1942,15 @@ export default function InventoryPage() {
                       </div>
                     ))}
                   </div>
-                  <p className="text-sm text-gray-400">These images will be preserved when you upload new ones</p>
+                  <p className="text-sm text-muted-foreground">These images will be preserved when you upload new ones</p>
                 </div>
               )}
               
               {/* Product Images */}
               <div className="space-y-2">
-                <Label className="text-gray-300">Update Product Images</Label>
-                <div className="border-2 border-dashed border-gray-700 rounded-lg p-6 text-center">
-                  <ImageIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <Label className="text-foreground">Update Product Images</Label>
+                <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                  <ImageIcon className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <div className="space-y-2">
                     <Button
                       type="button"
@@ -1729,19 +1989,19 @@ export default function InventoryPage() {
                         setSelectedImages(files)
                       }}
                     />
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-muted-foreground">
                       Upload new images to add to existing gallery
                     </p>
                   </div>
                   {selectedImages.length > 0 && (
                     <div className="mt-4 space-y-3">
-                      <p className="text-sm text-green-400">
+                      <p className="text-sm text-green-600 dark:text-green-400">
                         {selectedImages.length} new image(s) selected to add
                       </p>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                         {selectedImages.map((file, index) => (
                           <div key={index} className="relative group">
-                            <div className="aspect-square bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
+                            <div className="aspect-square bg-muted rounded-lg overflow-hidden border border-border">
                               <img
                                 src={URL.createObjectURL(file)}
                                 alt={`Preview ${index + 1}`}
@@ -1757,7 +2017,7 @@ export default function InventoryPage() {
                             >
                               ×
                             </button>
-                            <p className="text-xs text-gray-400 mt-1 truncate">{file.name}</p>
+                            <p className="text-xs text-muted-foreground mt-1 truncate">{file.name}</p>
                           </div>
                         ))}
                       </div>
@@ -1769,9 +2029,9 @@ export default function InventoryPage() {
               {/* Current 3D Model */}
               {formData.model_3d_url && !remove3DModel && (
                 <div className="space-y-2">
-                  <Label className="text-gray-300">Current 3D Model</Label>
-                  <div className="relative group p-3 bg-blue-900/20 border border-blue-700 rounded">
-                    <p className="text-sm text-blue-300">3D Model: {formData.model_3d_url.split('/').pop()}</p>
+                  <Label className="text-foreground">Current 3D Model</Label>
+                  <div className="relative group p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded">
+                    <p className="text-sm text-blue-700 dark:text-blue-300">3D Model: {formData.model_3d_url.split('/').pop()}</p>
                     <button
                       type="button"
                       onClick={() => setRemove3DModel(true)}
@@ -1787,13 +2047,13 @@ export default function InventoryPage() {
               {/* Removed 3D Model Notice */}
               {remove3DModel && formData.model_3d_url && (
                 <div className="space-y-2">
-                  <Label className="text-gray-300">Current 3D Model</Label>
-                  <div className="p-3 bg-red-900/20 border border-red-700 rounded">
-                    <p className="text-sm text-red-300">3D Model marked for removal: {formData.model_3d_url.split('/').pop()}</p>
+                  <Label className="text-foreground">Current 3D Model</Label>
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded">
+                    <p className="text-sm text-red-700 dark:text-red-300">3D Model marked for removal: {formData.model_3d_url.split('/').pop()}</p>
                     <button
                       type="button"
                       onClick={() => setRemove3DModel(false)}
-                      className="mt-2 text-xs text-blue-400 hover:text-blue-300 underline"
+                      className="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 underline"
                     >
                       Undo removal
                     </button>
@@ -1803,9 +2063,9 @@ export default function InventoryPage() {
 
               {/* 3D Model Upload */}
               <div className="space-y-2">
-                <Label className="text-gray-300">Update 3D Model (OBJ File)</Label>
-                <div className="border-2 border-dashed border-blue-700 rounded-lg p-6 text-center bg-blue-900/10">
-                  <div className="mx-auto h-12 w-12 text-blue-400 mb-4 flex items-center justify-center">
+                <Label className="text-foreground">Update 3D Model (OBJ File)</Label>
+                <div className="border-2 border-dashed border-blue-200 dark:border-blue-700 rounded-lg p-6 text-center bg-blue-50 dark:bg-blue-900/10">
+                  <div className="mx-auto h-12 w-12 text-blue-600 dark:text-blue-400 mb-4 flex items-center justify-center">
                     <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
                       <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                     </svg>
@@ -1814,7 +2074,7 @@ export default function InventoryPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      className="border-blue-600 text-blue-400 hover:bg-blue-900/20"
+                      className="border-blue-200 dark:border-blue-600 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                       onClick={() => document.getElementById('edit-model-upload')?.click()}
                       disabled={uploading3DModel}
                     >
@@ -1845,7 +2105,7 @@ export default function InventoryPage() {
                         }
                       }}
                     />
-                    <p className="text-sm text-blue-300">
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
                       {formData.model_3d_url && !remove3DModel 
                         ? "Upload new 3D model to replace current one" 
                         : "Upload 3D model for this product"}
@@ -1853,7 +2113,7 @@ export default function InventoryPage() {
                   </div>
                   {selected3DModel && (
                     <div className="mt-4">
-                      <p className="text-sm text-green-400">
+                      <p className="text-sm text-green-600 dark:text-green-400">
                         New model selected: {Array.isArray(selected3DModel) ? 
                           selected3DModel.map(f => f.name).join(', ') : 
                           selected3DModel.name}
@@ -1865,7 +2125,7 @@ export default function InventoryPage() {
 
               {/* Product Options */}
               <div className="space-y-4">
-                <h4 className="text-md font-semibold text-white">Product Options</h4>
+                <h4 className="text-md font-semibold text-foreground">Product Options</h4>
                 
                 <div className="flex flex-wrap gap-4">
                   <div className="flex items-center space-x-2">
@@ -1874,7 +2134,7 @@ export default function InventoryPage() {
                       checked={formData.is_new}
                       onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_new: !!checked }))}
                     />
-                    <Label htmlFor="edit_is_new" className="text-gray-300">New Product</Label>
+                    <Label htmlFor="edit_is_new" className="text-foreground">New Product</Label>
                   </div>
                   
                   <div className="flex items-center space-x-2">
@@ -1883,7 +2143,7 @@ export default function InventoryPage() {
                       checked={formData.is_sale}
                       onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_sale: !!checked }))}
                     />
-                    <Label htmlFor="edit_is_sale" className="text-gray-300">On Sale</Label>
+                    <Label htmlFor="edit_is_sale" className="text-foreground">On Sale</Label>
                   </div>
                   
                   <div className="flex items-center space-x-2">
@@ -1892,29 +2152,29 @@ export default function InventoryPage() {
                       checked={formData.is_active}
                       onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: !!checked }))}
                     />
-                    <Label htmlFor="edit_is_active" className="text-gray-300">Active</Label>
+                    <Label htmlFor="edit_is_active" className="text-foreground">Active</Label>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit_low_stock_threshold" className="text-gray-300">Low Stock Threshold</Label>
+                  <Label htmlFor="edit_low_stock_threshold" className="text-foreground">Low Stock Threshold</Label>
                   <Input
                     id="edit_low_stock_threshold"
                     type="number"
                     value={formData.low_stock_threshold}
                     onChange={(e) => setFormData(prev => ({ ...prev, low_stock_threshold: parseInt(e.target.value) || 0 }))}
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-background border-border"
                     placeholder="10"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit_status" className="text-gray-300">Status</Label>
+                  <Label htmlFor="edit_status" className="text-foreground">Status</Label>
                   <Select
                     value={formData.status || 'Active'}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
                   >
-                    <SelectTrigger className="bg-gray-800 border-gray-700">
+                    <SelectTrigger className="bg-background border-border">
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1934,13 +2194,14 @@ export default function InventoryPage() {
               onClick={() => {
                 setIsEditDialogOpen(false)
               }}
+              className="bg-secondary hover:bg-secondary/80 border-border text-secondary-foreground"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSubmit}
               disabled={!formData.name || !formData.category || !formData.brand || uploadingImages || uploading3DModel}
-              className="bg-yellow-600 hover:bg-yellow-700"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               {uploadingImages || uploading3DModel ? (
                 <>
@@ -1957,20 +2218,20 @@ export default function InventoryPage() {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent className="bg-gray-900 border-gray-800">
+        <AlertDialogContent className="bg-background border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-red-500">Delete Product</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
+            <AlertDialogTitle className="text-destructive">Delete Product</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
               Are you sure you want to delete "{productToDelete?.name}"? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-gray-800 border-gray-700 text-gray-300">
+            <AlertDialogCancel className="bg-secondary hover:bg-secondary/80 border-border text-secondary-foreground">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
             >
               Delete
             </AlertDialogAction>
@@ -1980,22 +2241,22 @@ export default function InventoryPage() {
 
       {/* Quick Stock Update Dialog */}
       <Dialog open={isStockUpdateDialogOpen} onOpenChange={setIsStockUpdateDialogOpen}>
-        <DialogContent className="bg-gray-900 border-gray-800 max-w-md">
+        <DialogContent className="bg-background border-border max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-white">Quick Stock Update</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle className="text-foreground">Quick Stock Update</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
               Update stock for {stockUpdateProduct?.name}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label className="text-gray-300">Current Stock</Label>
-              <div className="text-lg font-semibold text-white">
+              <Label className="text-foreground">Current Stock</Label>
+              <div className="text-lg font-semibold text-foreground">
                 {stockUpdateProduct?.stock_quantity || 0} units
               </div>
             </div>
             <div>
-              <Label htmlFor="stockAdjustment" className="text-gray-300">
+              <Label htmlFor="stockAdjustment" className="text-foreground">
                 Stock Adjustment
               </Label>
               <Input
@@ -2004,14 +2265,14 @@ export default function InventoryPage() {
                 value={stockAdjustment}
                 onChange={(e) => setStockAdjustment(parseInt(e.target.value) || 0)}
                 placeholder="Enter adjustment (+/-)"
-                className="bg-gray-800 border-gray-700 text-white"
+                className="bg-background border-border"
               />
-              <div className="text-sm text-gray-400 mt-1">
+              <div className="text-sm text-muted-foreground mt-1">
                 New quantity: {(stockUpdateProduct?.stock_quantity || 0) + stockAdjustment}
               </div>
             </div>
             <div>
-              <Label htmlFor="stockReason" className="text-gray-300">
+              <Label htmlFor="stockReason" className="text-foreground">
                 Reason (Optional)
               </Label>
               <Textarea
@@ -2019,7 +2280,7 @@ export default function InventoryPage() {
                 value={stockUpdateReason}
                 onChange={(e) => setStockUpdateReason(e.target.value)}
                 placeholder="Reason for stock adjustment..."
-                className="bg-gray-800 border-gray-700 text-white"
+                className="bg-background border-border"
                 rows={3}
               />
             </div>
@@ -2028,15 +2289,109 @@ export default function InventoryPage() {
             <Button
               variant="outline"
               onClick={() => setIsStockUpdateDialogOpen(false)}
-              className="bg-gray-800 border-gray-700 text-gray-300"
+              className="bg-secondary hover:bg-secondary/80 border-border text-secondary-foreground"
             >
               Cancel
             </Button>
             <Button
               onClick={handleStockUpdate}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               Update Stock
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Variant Stock Management Dialog */}
+      <Dialog open={isVariantStockDialogOpen} onOpenChange={setIsVariantStockDialogOpen}>
+        <DialogContent className="bg-background border-border max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Manage Size Stock</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Update stock quantities for each size of {variantStockProduct?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6">
+            {variantStockProduct?.colors && variantStockProduct.colors.length > 0 ? (
+              variantStockProduct.colors.map((color) => (
+                <div key={color} className="space-y-4">
+                  <h4 className="text-lg font-semibold text-foreground capitalize">{color}</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {variantStockProduct.sizes?.map((size) => {
+                      const currentStock = variantStockData[color]?.[size] || 0
+                      return (
+                        <div key={`${color}-${size}`} className="space-y-2">
+                          <Label className="text-foreground">Size {size}</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={currentStock}
+                            onChange={(e) => {
+                              const newStock = parseInt(e.target.value) || 0
+                              setVariantStockData(prev => ({
+                                ...prev,
+                                [color]: {
+                                  ...prev[color],
+                                  [size]: newStock
+                                }
+                              }))
+                            }}
+                            className="bg-background border-border"
+                            placeholder="0"
+                          />
+                          <div className="text-xs text-muted-foreground">
+                            Current: {variantStockProduct.variants?.[color]?.[size] || 0}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-muted-foreground mb-4">
+                  No colors or sizes defined for this product.
+                </div>
+                <div className="text-sm text-muted-foreground/70">
+                  Please edit the product to add colors and sizes first.
+                </div>
+              </div>
+            )}
+            
+            {variantStockProduct?.colors && variantStockProduct.colors.length > 0 && (
+              <div className="bg-muted p-4 rounded-lg">
+                <h4 className="text-foreground font-semibold mb-2">Total Stock Summary</h4>
+                <div className="text-muted-foreground">
+                  Total Units: {Object.values(variantStockData).reduce((total, colorStocks) => 
+                    total + Object.values(colorStocks).reduce((sum, qty) => sum + qty, 0), 0
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsVariantStockDialogOpen(false)}
+              className="bg-secondary hover:bg-secondary/80 border-border text-secondary-foreground"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleVariantStockSave}
+              disabled={updatingVariantStock}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              {updatingVariantStock ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                "Save Stock Changes"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

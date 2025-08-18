@@ -143,7 +143,7 @@ export function ReviewForm({ productName, productId, onSubmitReview, onCancel }:
   }
 
   return (
-    <Card className="shadow-lg bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+    <Card className="shadow-lg bg-card border-border">
       <CardHeader className="pb-4">
         <CardTitle className="text-2xl font-bold text-gray-900 dark:text-yellow-400">Write Your Review</CardTitle>
       </CardHeader>

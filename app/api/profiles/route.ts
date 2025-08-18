@@ -6,17 +6,25 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret'
 
 // Helper function to get user from token
 async function getUserFromToken(request: NextRequest) {
+  const authHeader = request.headers.get('authorization')
+  
   try {
-    const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('🚫 PROFILES: No valid authorization header found')
       return null
     }
 
     const token = authHeader.substring(7)
+    console.log('🔍 PROFILES: Token received:', token.substring(0, 50) + '...')
+    console.log('🔍 PROFILES: Token length:', token.length)
+    console.log('🔍 PROFILES: Token parts:', token.split('.').length)
+    
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, email: string }
+    console.log('✅ PROFILES: Token verified successfully for user:', decoded.userId)
     return { id: decoded.userId, email: decoded.email }
   } catch (error) {
-    console.error('Token verification failed:', error)
+    console.error('❌ PROFILES: Token verification failed:', error)
+    console.error('❌ PROFILES: Token that failed:', authHeader?.substring(7, 57) + '...')
     return null
   }
 }
@@ -230,39 +238,74 @@ export async function PUT(request: NextRequest) {
       preferences: body.preferences
     })
 
-    // Update profile in database
-    const updateQuery = `
-      UPDATE profiles 
-      SET first_name = ?, last_name = ?, phone = ?, birthdate = ?, gender = ?, bio = ?, avatar_url = ?, preferences = ?
-      WHERE id = ?`
+    // Check if profile exists first
+    const checkQuery = 'SELECT id FROM profiles WHERE id = ?'
+    const existingProfile = await executeQuery(checkQuery, [user.id])
+    const profileExists = (existingProfile as any[]).length > 0
+    
+    console.log('🔍 API: Profile exists check:', profileExists)
     
     const preferencesString = typeof body.preferences === 'object' 
       ? JSON.stringify(body.preferences) 
       : body.preferences
     
-    const updateParams = [
-      body.first_name || '',
-      body.last_name || '',
-      body.phone || '',
-      body.birthdate || null,
-      body.gender || '',
-      body.bio || '',
-      body.avatar_url || '',
-      preferencesString || JSON.stringify({
-        newsletter: true,
-        sms_notifications: false,
-        email_notifications: true,
-        preferred_language: 'en',
-        currency: 'PHP'
-      }),
-      user.id
-    ]
+    let result
+    if (profileExists) {
+      // Update existing profile
+      const updateQuery = `
+        UPDATE profiles 
+        SET first_name = ?, last_name = ?, phone = ?, birthdate = ?, gender = ?, bio = ?, avatar_url = ?, preferences = ?, updated_at = NOW()
+        WHERE id = ?`
+      
+      const updateParams = [
+        body.first_name || '',
+        body.last_name || '',
+        body.phone || '',
+        body.birthdate || null,
+        body.gender || '',
+        body.bio || '',
+        body.avatar_url || '',
+        preferencesString || JSON.stringify({
+          newsletter: true,
+          sms_notifications: false,
+          email_notifications: true,
+          preferred_language: 'en',
+          currency: 'PHP'
+        }),
+        user.id
+      ]
+      
+      console.log('💾 API: Updating existing profile with params:', updateParams)
+      result = await executeQuery(updateQuery, updateParams)
+    } else {
+      // Create new profile
+      const insertQuery = `
+        INSERT INTO profiles (id, first_name, last_name, phone, birthdate, gender, bio, avatar_url, preferences, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`
+      
+      const insertParams = [
+        user.id,
+        body.first_name || '',
+        body.last_name || '',
+        body.phone || '',
+        body.birthdate || null,
+        body.gender || '',
+        body.bio || '',
+        body.avatar_url || '',
+        preferencesString || JSON.stringify({
+          newsletter: true,
+          sms_notifications: false,
+          email_notifications: true,
+          preferred_language: 'en',
+          currency: 'PHP'
+        })
+      ]
+      
+      console.log('💾 API: Creating new profile with params:', insertParams)
+      result = await executeQuery(insertQuery, insertParams)
+    }
     
-    console.log('💾 API: Executing update with params:', updateParams)
-    
-    const result = await executeQuery(updateQuery, updateParams)
-    
-    console.log('✅ API: Update result:', result)
+    console.log('✅ API: Operation result:', result)
 
     console.log('✅ API: Successfully updated profile')
     return NextResponse.json({ 

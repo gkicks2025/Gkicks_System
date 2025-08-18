@@ -179,7 +179,7 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-900">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto mb-4"></div>
           <p className="text-yellow-400">Loading dashboard...</p>
@@ -190,14 +190,14 @@ export default function AdminDashboard() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-900">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <Card className="w-full max-w-md bg-gray-800 border-gray-700">
           <CardHeader>
             <CardTitle className="text-red-400">Error Loading Dashboard</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-gray-300">{error}</p>
-            <Button onClick={fetchDashboardData} className="w-full bg-yellow-500 hover:bg-yellow-600 text-black">
+            <Button onClick={fetchDashboardData} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
               <RefreshCw className="h-4 w-4 mr-2" />
               Try Again
             </Button>
@@ -209,11 +209,11 @@ export default function AdminDashboard() {
 
   if (!stats) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-900">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center">
-          <Package className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400">No data available</p>
-          <Button onClick={fetchDashboardData} className="mt-4 bg-yellow-500 hover:bg-yellow-600 text-black">
+          <Package className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">No data available</p>
+          <Button onClick={fetchDashboardData} className="mt-4 bg-primary hover:bg-primary/90 text-primary-foreground">
             <RefreshCw className="h-4 w-4 mr-2" />
             Load Data
           </Button>
@@ -223,18 +223,18 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 p-2">
+    <div className="min-h-screen bg-background p-2">
       <div className="w-full space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-yellow-500">Admin Dashboard</h1>
-            <p className="text-gray-400">Welcome to your GKicks admin dashboard</p>
+            <p className="text-gray-600 dark:text-gray-400">Welcome to your GKicks admin dashboard</p>
           </div>
           <Button
             onClick={fetchDashboardData}
             variant="outline"
-            className="border-gray-600 hover:bg-gray-700 bg-transparent text-gray-300"
+            className="border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 bg-transparent text-gray-600 dark:text-gray-300"
           >
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh Data
@@ -243,103 +243,103 @@ export default function AdminDashboard() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className="bg-card border-border">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-300">Total Revenue</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Revenue</CardTitle>
               <DollarSign className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-yellow-500">₱{stats.totalRevenue.toLocaleString()}</div>
-              <p className="text-xs text-gray-400">From {stats.totalOrders} orders</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">From {stats.totalOrders} orders</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className="bg-card border-border">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-300">Total Orders</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Orders</CardTitle>
               <ShoppingCart className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-yellow-500">{stats.totalOrders}</div>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 {stats.pendingOrders} pending, {stats.completedOrders} completed
               </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className="bg-card border-border">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-300">Total Products</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Products</CardTitle>
               <Package className="h-4 w-4 text-purple-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-yellow-500">{stats.totalProducts}</div>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 {stats.activeProducts} active, {stats.outOfStockProducts} out of stock
               </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className="bg-card border-border">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-300">Total Users</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Users</CardTitle>
               <Users className="h-4 w-4 text-orange-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-yellow-500">{stats.totalUsers}</div>
-              <p className="text-xs text-gray-400">Registered customers</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Registered customers</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Stock Status Cards */}
         <div className="grid gap-4 md:grid-cols-3">
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className="bg-card border-border">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-300">In Stock</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">In Stock</CardTitle>
               <CheckCircle className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-500">
                 {stats.totalProducts - stats.lowStockProducts - stats.outOfStockProducts}
               </div>
-              <p className="text-xs text-gray-400">Products with adequate stock</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Products with adequate stock</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className="bg-card border-border">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-300">Low Stock</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">Low Stock</CardTitle>
               <AlertTriangle className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-yellow-500">{stats.lowStockProducts}</div>
-              <p className="text-xs text-gray-400">Products need restocking</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Products need restocking</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className="bg-card border-border">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-300">Out of Stock</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">Out of Stock</CardTitle>
               <AlertTriangle className="h-4 w-4 text-red-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-500">{stats.outOfStockProducts}</div>
-              <p className="text-xs text-gray-400">Products unavailable</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Products unavailable</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Charts and Tables */}
         <Tabs defaultValue="analytics" className="space-y-4">
-          <TabsList className="bg-gray-800 border-gray-700">
-            <TabsTrigger value="analytics" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
+          <TabsList className="bg-muted border-border">
+            <TabsTrigger value="analytics" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               Analytics
             </TabsTrigger>
-            <TabsTrigger value="orders" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
+            <TabsTrigger value="orders" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               Recent Orders
             </TabsTrigger>
-            <TabsTrigger value="products" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">
+            <TabsTrigger value="products" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               Top Products
             </TabsTrigger>
           </TabsList>
@@ -347,24 +347,24 @@ export default function AdminDashboard() {
           <TabsContent value="analytics" className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Sales Chart */}
-              <Card className="bg-gray-800 border-gray-700">
+              <Card className="bg-card border-border">
                 <CardHeader>
                   <CardTitle className="text-yellow-500">Sales Overview</CardTitle>
-                  <CardDescription className="text-gray-400">Revenue and orders for the last 7 days</CardDescription>
+                  <CardDescription className="text-gray-600 dark:text-gray-400">Revenue and orders for the last 7 days</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {stats.salesData.length > 0 ? (
                     <ResponsiveContainer width="100%" height={300}>
                       <LineChart data={stats.salesData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                        <XAxis dataKey="date" stroke="#9CA3AF" />
-                        <YAxis stroke="#9CA3AF" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" className="dark:stroke-gray-600" />
+                        <XAxis dataKey="date" stroke="#6B7280" className="dark:stroke-gray-400" />
+                        <YAxis stroke="#6B7280" className="dark:stroke-gray-400" />
                         <Tooltip
                           contentStyle={{
-                            backgroundColor: "#1F2937",
-                            border: "1px solid #374151",
+                            backgroundColor: "var(--background)",
+                            border: "1px solid var(--border)",
                             borderRadius: "8px",
-                            color: "#F3F4F6",
+                            color: "var(--foreground)",
                           }}
                         />
                         <Line type="monotone" dataKey="revenue" stroke="#FBBF24" strokeWidth={2} />
@@ -374,8 +374,8 @@ export default function AdminDashboard() {
                   ) : (
                     <div className="flex items-center justify-center h-[300px]">
                       <div className="text-center">
-                        <Package className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-                        <p className="text-gray-400">No sales data available</p>
+                        <Package className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+                        <p className="text-gray-600 dark:text-gray-400">No sales data available</p>
                       </div>
                     </div>
                   )}
@@ -383,10 +383,10 @@ export default function AdminDashboard() {
               </Card>
 
               {/* Category Distribution */}
-              <Card className="bg-gray-800 border-gray-700">
+              <Card className="bg-card border-border">
                 <CardHeader>
                   <CardTitle className="text-yellow-500">Product Categories</CardTitle>
-                  <CardDescription className="text-gray-400">Distribution of products by category</CardDescription>
+                  <CardDescription className="text-gray-600 dark:text-gray-400">Distribution of products by category</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {stats.categoryData.length > 0 ? (
@@ -407,10 +407,10 @@ export default function AdminDashboard() {
                         </Pie>
                         <Tooltip
                           contentStyle={{
-                            backgroundColor: "#1F2937",
-                            border: "1px solid #374151",
+                            backgroundColor: "var(--background)",
+                            border: "1px solid var(--border)",
                             borderRadius: "8px",
-                            color: "#F3F4F6",
+                            color: "var(--foreground)",
                           }}
                         />
                       </PieChart>
@@ -418,8 +418,8 @@ export default function AdminDashboard() {
                   ) : (
                     <div className="flex items-center justify-center h-[300px]">
                       <div className="text-center">
-                        <Package className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-                        <p className="text-gray-400">No category data available</p>
+                        <Package className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+                        <p className="text-gray-600 dark:text-gray-400">No category data available</p>
                       </div>
                     </div>
                   )}
@@ -429,47 +429,47 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="orders">
-            <Card className="bg-gray-800 border-gray-700">
+            <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle className="text-yellow-500">Recent Orders</CardTitle>
-                <CardDescription className="text-gray-400">Latest orders from customers</CardDescription>
+                <CardDescription className="text-gray-600 dark:text-gray-400">Latest orders from customers</CardDescription>
               </CardHeader>
               <CardContent>
                 {stats.recentOrders.length > 0 ? (
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow className="border-gray-700">
-                          <TableHead className="text-gray-300">Order ID</TableHead>
-                          <TableHead className="text-gray-300">Amount</TableHead>
-                          <TableHead className="text-gray-300">Status</TableHead>
-                          <TableHead className="text-gray-300">Date</TableHead>
-                          <TableHead className="text-gray-300">Actions</TableHead>
+                        <TableRow className="border-gray-200 dark:border-gray-700">
+                          <TableHead className="text-gray-700 dark:text-gray-300">Order ID</TableHead>
+                          <TableHead className="text-gray-700 dark:text-gray-300">Amount</TableHead>
+                          <TableHead className="text-gray-700 dark:text-gray-300">Status</TableHead>
+                          <TableHead className="text-gray-700 dark:text-gray-300">Date</TableHead>
+                          <TableHead className="text-gray-700 dark:text-gray-300">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {stats.recentOrders.map((order) => (
-                          <TableRow key={order.id} className="border-gray-700">
-                            <TableCell className="font-medium text-gray-300">#{order.id.slice(0, 8)}</TableCell>
-                            <TableCell className="text-gray-300">₱{order.total_amount?.toLocaleString()}</TableCell>
+                          <TableRow key={order.id} className="border-gray-200 dark:border-gray-700">
+                            <TableCell className="font-medium text-gray-700 dark:text-gray-300">#{order.id.slice(0, 8)}</TableCell>
+                            <TableCell className="text-gray-700 dark:text-gray-300">₱{order.total_amount?.toLocaleString()}</TableCell>
                             <TableCell>
                               <Badge
                                 className={
                                   order.status === "delivered"
                                     ? "bg-green-500 text-white"
                                     : order.status === "pending"
-                                      ? "bg-yellow-500 text-black"
+                                      ? "bg-primary text-primary-foreground"
                                       : "bg-gray-500 text-white"
                                 }
                               >
                                 {order.status}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-gray-300">
+                            <TableCell className="text-gray-700 dark:text-gray-300">
                               {new Date(order.created_at).toLocaleDateString()}
                             </TableCell>
                             <TableCell>
-                              <Button variant="ghost" size="sm" asChild className="text-gray-400 hover:text-yellow-500">
+                              <Button variant="ghost" size="sm" asChild className="text-gray-600 dark:text-gray-400 hover:text-yellow-500">
                                 <Link href={`/admin/orders`}>
                                   <Eye className="h-4 w-4" />
                                 </Link>
@@ -482,9 +482,9 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   <div className="text-center py-12">
-                    <ShoppingCart className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2 text-gray-300">No orders yet</h3>
-                    <p className="text-gray-500">Orders will appear here when customers make purchases</p>
+                    <ShoppingCart className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">No orders yet</h3>
+                    <p className="text-gray-600 dark:text-gray-500">Orders will appear here when customers make purchases</p>
                   </div>
                 )}
               </CardContent>
@@ -492,40 +492,40 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="products">
-            <Card className="bg-gray-800 border-gray-700">
+            <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle className="text-yellow-500">Top Products</CardTitle>
-                <CardDescription className="text-gray-400">Products with highest stock levels</CardDescription>
+                <CardDescription className="text-gray-600 dark:text-gray-400">Products with highest stock levels</CardDescription>
               </CardHeader>
               <CardContent>
                 {stats.topProducts.length > 0 ? (
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow className="border-gray-700">
-                          <TableHead className="text-gray-300">Product Name</TableHead>
-                          <TableHead className="text-gray-300">Brand</TableHead>
-                          <TableHead className="text-gray-300">Category</TableHead>
-                          <TableHead className="text-gray-300">Price</TableHead>
-                          <TableHead className="text-gray-300">Stock</TableHead>
-                          <TableHead className="text-gray-300">Status</TableHead>
+                        <TableRow className="border-gray-200 dark:border-gray-700">
+                          <TableHead className="text-gray-700 dark:text-gray-300">Product Name</TableHead>
+                          <TableHead className="text-gray-700 dark:text-gray-300">Brand</TableHead>
+                          <TableHead className="text-gray-700 dark:text-gray-300">Category</TableHead>
+                          <TableHead className="text-gray-700 dark:text-gray-300">Price</TableHead>
+                          <TableHead className="text-gray-700 dark:text-gray-300">Stock</TableHead>
+                          <TableHead className="text-gray-700 dark:text-gray-300">Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {stats.topProducts.map((product) => (
-                          <TableRow key={product.id} className="border-gray-700">
-                            <TableCell className="font-medium text-gray-300">{product.name}</TableCell>
-                            <TableCell className="text-gray-300">{product.brand}</TableCell>
-                            <TableCell className="text-gray-300 capitalize">{product.category}</TableCell>
-                            <TableCell className="text-gray-300">₱{product.price?.toLocaleString()}</TableCell>
-                            <TableCell className="text-gray-300">{product.stock_quantity}</TableCell>
+                          <TableRow key={product.id} className="border-gray-200 dark:border-gray-700">
+                            <TableCell className="font-medium text-gray-700 dark:text-gray-300">{product.name}</TableCell>
+                            <TableCell className="text-gray-700 dark:text-gray-300">{product.brand}</TableCell>
+                            <TableCell className="text-gray-700 dark:text-gray-300 capitalize">{product.category}</TableCell>
+                            <TableCell className="text-gray-700 dark:text-gray-300">₱{product.price?.toLocaleString()}</TableCell>
+                            <TableCell className="text-gray-700 dark:text-gray-300">{product.stock_quantity}</TableCell>
                             <TableCell>
                               <Badge
                                 className={
                                   product.stock_quantity > 5
                                     ? "bg-green-500 text-white"
                                     : product.stock_quantity > 0
-                                      ? "bg-yellow-500 text-black"
+                                      ? "bg-primary text-primary-foreground"
                                       : "bg-red-500 text-white"
                                 }
                               >
@@ -543,9 +543,9 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   <div className="text-center py-12">
-                    <Package className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2 text-gray-300">No products found</h3>
-                    <p className="text-gray-500">Products will appear here when added to inventory</p>
+                    <Package className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">No products found</h3>
+                    <p className="text-gray-600 dark:text-gray-500">Products will appear here when added to inventory</p>
                   </div>
                 )}
               </CardContent>

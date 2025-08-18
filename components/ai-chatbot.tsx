@@ -34,7 +34,7 @@ export function AIChatbot() {
   }
 
   return (
-    <Card className="fixed bottom-6 right-6 w-96 shadow-2xl z-50 bg-white dark:bg-gray-800 border-2 border-yellow-400 dark:border-yellow-500">
+    <Card className="fixed bottom-6 right-6 w-96 shadow-2xl z-50 bg-card border-2 border-yellow-400 dark:border-yellow-500">
       <CardHeader className="pb-3 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black rounded-t-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -159,7 +159,7 @@ export function AIChatbot() {
               )}
             </ScrollArea>
 
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="p-4 border-t border-border">
               <form onSubmit={handleSubmit} className="flex space-x-2">
                 <Input
                   value={input}

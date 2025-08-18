@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { SessionProvider } from "next-auth/react"
 
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
@@ -14,18 +15,24 @@ import { AuthProvider } from "@/contexts/auth-context" // Adjust import path
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-      <AuthProvider>
-        <AdminProvider>
-          <CartProvider>
-            <WishlistProvider>
-              <OrdersProvider>
-                {children}
-                <Toaster />
-              </OrdersProvider>
-            </WishlistProvider>
-          </CartProvider>
-        </AdminProvider>
-      </AuthProvider>
+      <SessionProvider 
+        refetchInterval={0}
+        refetchOnWindowFocus={false}
+        refetchWhenOffline={false}
+      >
+        <AuthProvider>
+          <AdminProvider>
+            <CartProvider>
+              <WishlistProvider>
+                <OrdersProvider>
+                  {children}
+                  <Toaster />
+                </OrdersProvider>
+              </WishlistProvider>
+            </CartProvider>
+          </AdminProvider>
+        </AuthProvider>
+      </SessionProvider>
     </ThemeProvider>
   )
 }

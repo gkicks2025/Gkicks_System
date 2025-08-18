@@ -1,32 +1,14 @@
 "use client"
 
-import Link from "next/link"
-
-import type React from "react"
-
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Mail, Lock, User, Eye, EyeOff } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 export default function AuthPage() {
-  const [activeTab, setActiveTab] = useState("signIn")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [firstName, setFirstName] = useState("")
-  const [lastName, setLastName] = useState("")
-  const [signInError, setSignInError] = useState<string | null>(null)
-  const [signUpError, setSignUpError] = useState<string | null>(null)
-  const [resetPasswordMessage, setResetPasswordMessage] = useState<string | null>(null)
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-
-  const { signIn, signUp, resetPasswordForEmail, user, loading } = useAuth()
+  const { signInWithGoogle, user, loading } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
 
@@ -41,89 +23,15 @@ export default function AuthPage() {
     }
   }, [user, loading, router])
 
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSignInError(null)
-    setResetPasswordMessage(null)
-    const { error } = await signIn(email, password)
-    if (error) {
-      setSignInError(error.message)
+  const handleGoogleSignIn = async () => {
+    try {
+      await signInWithGoogle()
+    } catch (error) {
+      console.error("Google sign-in error:", error)
       toast({
         title: "Sign In Error",
-        description: error.message,
+        description: "Failed to sign in with Google. Please try again.",
         variant: "destructive",
-      })
-    } else {
-      toast({
-        title: "Signed In",
-        description: "You have successfully signed in.",
-      })
-      // Check if user is admin and redirect accordingly
-      if (email === "gkcksdmn@gmail.com") {
-        router.push("/admin")
-      } else {
-        router.push("/")
-      }
-    }
-  }
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSignUpError(null)
-    setResetPasswordMessage(null)
-    if (password !== confirmPassword) {
-      setSignUpError("Passwords do not match.")
-      toast({
-        title: "Sign Up Error",
-        description: "Passwords do not match.",
-        variant: "destructive",
-      })
-      return
-    }
-    const { error } = await signUp(email, password, firstName, lastName)
-    if (error) {
-      setSignUpError(error.message)
-      toast({
-        title: "Sign Up Error",
-        description: error.message,
-        variant: "destructive",
-      })
-    } else {
-      toast({
-        title: "Account Created",
-        description: "Please check your email to confirm your account.",
-      })
-      // Optionally redirect to a confirmation message page or home
-      router.push("/")
-    }
-  }
-
-  const handleForgotPassword = async () => {
-    setSignInError(null)
-    setSignUpError(null)
-    setResetPasswordMessage(null)
-    if (!email) {
-      setSignInError("Please enter your email to reset password.")
-      toast({
-        title: "Forgot Password Error",
-        description: "Please enter your email to reset password.",
-        variant: "destructive",
-      })
-      return
-    }
-    const { error } = await resetPasswordForEmail(email)
-    if (error) {
-      setSignInError(error.message)
-      toast({
-        title: "Forgot Password Error",
-        description: error.message,
-        variant: "destructive",
-      })
-    } else {
-      setResetPasswordMessage("Password reset email sent. Check your inbox!")
-      toast({
-        title: "Password Reset Email Sent",
-        description: "Check your inbox for instructions to reset your password.",
       })
     }
   }
@@ -137,7 +45,7 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background text-white p-4">
       <div className="text-center mb-8">
         <Image src="/images/gkicks-new-logo.png" alt="GKicks Logo" width={100} height={100} className="mx-auto mb-4" />
         <h1 className="text-3xl font-bold text-yellow-400 mb-2">Welcome to GKicks</h1>
@@ -145,235 +53,50 @@ export default function AuthPage() {
       </div>
 
       <div className="w-full max-w-md bg-gray-800 rounded-lg shadow-lg p-6 sm:p-8">
-        <div className="flex mb-6 border-b border-gray-700">
-          <Button
-            variant="ghost"
-            className={`flex-1 py-3 text-lg font-semibold rounded-t-lg ${
-              activeTab === "signIn"
-                ? "text-yellow-400 border-b-2 border-yellow-400"
-                : "text-gray-400 hover:text-yellow-300"
-            }`}
-            onClick={() => setActiveTab("signIn")}
-          >
-            Sign In
-          </Button>
-          <Button
-            variant="ghost"
-            className={`flex-1 py-3 text-lg font-semibold rounded-t-lg ${
-              activeTab === "signUp"
-                ? "text-yellow-400 border-b-2 border-yellow-400"
-                : "text-gray-400 hover:text-yellow-300"
-            }`}
-            onClick={() => setActiveTab("signUp")}
-          >
-            Sign Up
-          </Button>
+        <div className="text-center mb-6">
+          <h2 className="text-xl font-bold text-yellow-400 mb-2">Sign In</h2>
+          <p className="text-gray-400 text-sm">Sign in with your Google account to continue</p>
         </div>
 
-        {activeTab === "signIn" && (
-          <form onSubmit={handleSignIn} className="space-y-6">
-            <h2 className="text-xl font-bold text-yellow-400">Sign In</h2>
-            <p className="text-gray-400 text-sm">Enter your credentials to access your account</p>
+        <Button
+          onClick={handleGoogleSignIn}
+          className="w-full bg-white hover:bg-gray-100 text-gray-900 font-semibold py-3 px-4 rounded-lg flex items-center justify-center space-x-3 transition-colors"
+          disabled={loading}
+        >
+          <svg className="w-5 h-5" viewBox="0 0 24 24">
+            <path
+              fill="#4285F4"
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+            />
+            <path
+              fill="#34A853"
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+            />
+            <path
+              fill="#EA4335"
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+            />
+          </svg>
+          <span>Continue with Google</span>
+        </Button>
 
-            <div>
-              <label htmlFor="signInEmail" className="block text-sm font-medium text-yellow-400 mb-2">
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input
-                  id="signInEmail"
-                  type="email"
-                  placeholder="your@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-500 focus:ring-yellow-400 focus:border-yellow-400"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="signInPassword" className="block text-sm font-medium text-yellow-400 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input
-                  id="signInPassword"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full pl-10 pr-10 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-500 focus:ring-yellow-400 focus:border-yellow-400"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-yellow-400"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </Button>
-              </div>
-              <Button
-                variant="link"
-                className="text-sm text-yellow-400 hover:text-yellow-300 mt-2 p-0 h-auto"
-                onClick={handleForgotPassword}
-              >
-                Forgot password?
-              </Button>
-            </div>
-
-            {signInError && <p className="text-red-500 text-sm">{signInError}</p>}
-            {resetPasswordMessage && <p className="text-green-500 text-sm">{resetPasswordMessage}</p>}
-
-            <Button
-              type="submit"
-              className="w-full bg-yellow-400 text-gray-900 hover:bg-yellow-500 py-3 rounded-md text-lg font-semibold transition-colors"
-            >
-              Sign In
-            </Button>
-          </form>
-        )}
-
-        {activeTab === "signUp" && (
-          <form onSubmit={handleSignUp} className="space-y-6">
-            <h2 className="text-xl font-bold text-yellow-400">Sign Up</h2>
-            <p className="text-gray-400 text-sm">Create your account to get started</p>
-
-            <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-yellow-400 mb-2">
-                First Name
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input
-                  id="firstName"
-                  type="text"
-                  placeholder="John"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  required
-                  className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-500 focus:ring-yellow-400 focus:border-yellow-400"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-yellow-400 mb-2">
-                Last Name
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input
-                  id="lastName"
-                  type="text"
-                  placeholder="Doe"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  required
-                  className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-500 focus:ring-yellow-400 focus:border-yellow-400"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="signUpEmail" className="block text-sm font-medium text-yellow-400 mb-2">
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input
-                  id="signUpEmail"
-                  type="email"
-                  placeholder="your@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-500 focus:ring-yellow-400 focus:border-yellow-400"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="signUpPassword" className="block text-sm font-medium text-yellow-400 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input
-                  id="signUpPassword"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full pl-10 pr-10 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-500 focus:ring-yellow-400 focus:border-yellow-400"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-yellow-400"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </Button>
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-yellow-400 mb-2">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  className="w-full pl-10 pr-10 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-500 focus:ring-yellow-400 focus:border-yellow-400"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-yellow-400"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </Button>
-              </div>
-            </div>
-
-            {signUpError && <p className="text-red-500 text-sm">{signUpError}</p>}
-
-            <Button
-              type="submit"
-              className="w-full bg-yellow-400 text-gray-900 hover:bg-yellow-500 py-3 rounded-md text-lg font-semibold transition-colors"
-            >
-              Sign Up
-            </Button>
-          </form>
-        )}
+        <div className="mt-6 text-center">
+          <p className="text-gray-400 text-sm">
+            By signing in, you agree to our{" "}
+            <a href="#" className="text-yellow-400 hover:text-yellow-300 underline">
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a href="#" className="text-yellow-400 hover:text-yellow-300 underline">
+              Privacy Policy
+            </a>
+          </p>
+        </div>
       </div>
-
-      <p className="text-gray-500 text-xs mt-6 text-center">
-        By continuing, you agree to our{" "}
-        <Link href="#" className="text-yellow-400 hover:underline">
-          Terms of Service
-        </Link>{" "}
-        and{" "}
-        <Link href="#" className="text-yellow-400 hover:underline">
-          Privacy Policy
-        </Link>
-      </p>
     </div>
   )
 }

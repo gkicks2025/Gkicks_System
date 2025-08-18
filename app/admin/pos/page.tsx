@@ -278,37 +278,36 @@ export default function POSPage() {
     setSelectedSize("")
   }
 
-  const updateCartItemQuantity = (index: number, newQuantity: number) => {
+
+
+  const updateCartItemQuantity = async (index: number, newQuantity: number) => {
     if (newQuantity <= 0) {
       removeFromCart(index)
       return
     }
-    const yourFunction = async () => {
+    
     const item = cart[index]
     const stock = await getCurrentStock(
-  inventory.find((p) => p.id === Number(item.productId))!,
-  item.color,
-  item.size
-);
+      inventory.find((p) => p.id === Number(item.productId))!,
+      item.color,
+      item.size
+    );
 
-if (newQuantity > stock) {
-  toast.error("Cannot exceed available stock");
-  return;
-}
+    if (newQuantity > stock) {
+      toast.error("Cannot exceed available stock");
+      return;
+    }
 
     const updatedCart = [...cart];
     updatedCart[index].quantity = newQuantity;
     setCart(updatedCart);
-      await updateStock(
-      inventory.find((p) => p.id === Number(item.productId))?.id ?? 0,  // Get the product id or 0 fallback
+    await updateStock(
+      inventory.find((p) => p.id === Number(item.productId))?.id ?? 0,
       item.color,
       item.size,
       newQuantity
     );
-
-    };
-    yourFunction();
-  };
+  }
 
   const removeFromCart = (index: number) => {
     const updatedCart = cart.filter((_, i) => i !== index)
@@ -402,23 +401,23 @@ if (newQuantity > stock) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+    <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-white">Point of Sale</h1>
-              <p className="text-lg text-gray-600 dark:text-gray-300 mt-2">Process sales and manage transactions</p>
+              <h1 className="text-4xl font-bold text-foreground">Point of Sale</h1>
+              <p className="text-lg text-muted-foreground mt-2">Process sales and manage transactions</p>
             </div>
             <div className="flex items-center gap-6">
-              <Card className="p-4 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              <Card className="p-4 bg-card border-border">
                 <div className="text-center">
                   <p className="text-sm text-gray-600 dark:text-gray-400">Daily Sales</p>
                   <p className="text-2xl font-bold text-green-600 dark:text-green-400">{formatCurrency(dailySales)}</p>
                 </div>
               </Card>
-              <Card className="p-4 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              <Card className="p-4 bg-card border-border">
                 <div className="text-center">
                   <p className="text-sm text-gray-600 dark:text-gray-400">Transactions</p>
                   <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{transactions.length}</p>
@@ -431,17 +430,17 @@ if (newQuantity > stock) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Product Selection */}
           <div className="lg:col-span-2">
-            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            <Card className="bg-card border-border">
               <CardHeader>
                 <div className="flex justify-between items-center">
-                  <CardTitle className="text-gray-900 dark:text-white">Products</CardTitle>
+                  <CardTitle className="text-foreground">Products</CardTitle>
                   <div className="relative w-80">
                     <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-5 w-5" />
                     <Input
                       placeholder="Search products..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-12 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                      className="pl-12 bg-background border-border text-foreground placeholder-muted-foreground"
                     />
                   </div>
                 </div>
@@ -459,11 +458,11 @@ if (newQuantity > stock) {
                       {filteredInventory.map((product) => (
                         <Card
                           key={product.id}
-                          className="cursor-pointer hover:shadow-lg transition-shadow bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:border-yellow-400 dark:hover:border-yellow-500"
+                          className="cursor-pointer hover:shadow-lg transition-shadow bg-card border-border hover:border-yellow-400"
                           onClick={() => openProductDialog(product)}
                         >
                           <CardContent className="p-4">
-                            <div className="aspect-square bg-gray-100 dark:bg-gray-600 rounded-lg mb-3 overflow-hidden">
+                            <div className="aspect-square bg-muted rounded-lg mb-3 overflow-hidden">
                               <img
                                 src={
                                   (product.gallery_images && product.gallery_images.length > 0 
@@ -480,16 +479,16 @@ if (newQuantity > stock) {
                             </div>
                             <div className="space-y-2">
                               <div className="flex items-center gap-2">
-                                <h3 className="font-semibold text-gray-900 dark:text-white truncate">{product.name}</h3>
+                                <h3 className="font-semibold text-foreground truncate">{product.name}</h3>
                                 {product.is_new && <Badge className="bg-green-500 text-xs">New</Badge>}
                                 {product.is_sale && <Badge className="bg-red-500 text-xs">Sale</Badge>}
                               </div>
                               <p className="text-sm text-gray-600 dark:text-gray-300">{product.brand}</p>
                               <div className="flex justify-between items-center">
                                 <div>
-                                  <p className="text-lg font-bold text-gray-900 dark:text-white">
-                                    {formatCurrency(product.price)}
-                                  </p>
+                                  <p className="text-lg font-bold text-foreground">
+                          {formatCurrency(product.price)}
+                        </p>
                                   {product.originalPrice && product.originalPrice > product.price && (
                                     <p className="text-sm text-gray-500 dark:text-gray-400 line-through">
                                       {formatCurrency(product.originalPrice)}
@@ -553,10 +552,10 @@ if (newQuantity > stock) {
           {/* Cart and Checkout */}
           <div className="space-y-6">
             {/* Cart */}
-            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            <Card className="bg-card border-border">
               <CardHeader>
                 <div className="flex justify-between items-center">
-                  <CardTitle className="text-gray-900 dark:text-white">Cart ({getCartItemCount()})</CardTitle>
+                  <CardTitle className="text-foreground">Cart ({getCartItemCount()})</CardTitle>
                   {cart.length > 0 && (
                     <Button
                       variant="outline"
@@ -582,11 +581,11 @@ if (newQuantity > stock) {
                       {cart.map((item, index) => (
                         <div
                           key={`${item.productId}-${item.color}-${item.size}`}
-                          className="border border-gray-200 dark:border-gray-600 rounded-lg p-3 bg-gray-50 dark:bg-gray-700"
+                          className="border border-border rounded-lg p-3 bg-muted"
                         >
                           <div className="flex justify-between items-start mb-2">
                             <div className="flex-1">
-                              <h4 className="font-medium text-sm text-gray-900 dark:text-white">{item.name}</h4>
+                              <h4 className="font-medium text-sm text-foreground">{item.name}</h4>
                               <p className="text-xs text-gray-600 dark:text-gray-300">
                                 {item.brand} • {item.color} • Size {item.size}
                               </p>
@@ -613,9 +612,9 @@ if (newQuantity > stock) {
                               >
                                 <Minus className="h-3 w-3" />
                               </Button>
-                              <span className="text-sm font-medium w-8 text-center text-gray-900 dark:text-white">
-                                {item.quantity}
-                              </span>
+                              <span className="text-sm font-medium w-8 text-center text-foreground">
+                          {item.quantity}
+                        </span>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -625,9 +624,9 @@ if (newQuantity > stock) {
                                 <Plus className="h-3 w-3" />
                               </Button>
                             </div>
-                            <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                              {formatCurrency(item.price * item.quantity)}
-                            </p>
+                            <p className="text-sm font-semibold text-foreground">
+                          {formatCurrency(item.price * item.quantity)}
+                        </p>
                           </div>
                         </div>
                       ))}
@@ -637,59 +636,59 @@ if (newQuantity > stock) {
                 {cart.length > 0 && (
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
                     <div className="flex justify-between items-center mb-4">
-                      <span className="text-lg font-semibold text-gray-900 dark:text-white">Total:</span>
-                      <span className="text-xl font-bold text-gray-900 dark:text-white">
-                        {formatCurrency(getCartTotal())}
-                      </span>
+                      <span className="text-lg font-semibold text-foreground">Total:</span>
+                    <span className="text-xl font-bold text-foreground">
+                      {formatCurrency(getCartTotal())}
+                    </span>
                     </div>
                     <Dialog open={isCheckoutDialogOpen} onOpenChange={setIsCheckoutDialogOpen}>
                       <DialogTrigger asChild>
-                        <Button className="w-full bg-yellow-500 hover:bg-yellow-600 text-black" size="lg">
+                        <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" size="lg">
                           <CreditCard className="h-5 w-5 mr-2" />
                           Checkout
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="max-w-md bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                      <DialogContent className="max-w-md bg-card border-border">
                         <DialogHeader>
-                          <DialogTitle className="text-gray-900 dark:text-white">Checkout</DialogTitle>
+                          <DialogTitle className="text-foreground">Checkout</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4">
                           <div>
-                            <Label htmlFor="customer-name" className="text-gray-900 dark:text-white">
-                              Customer Name (Optional)
-                            </Label>
+                            <Label htmlFor="customer-name" className="text-foreground">
+              Customer Name (Optional)
+            </Label>
                             <Input
                               id="customer-name"
                               value={customerName}
                               onChange={(e) => setCustomerName(e.target.value)}
                               placeholder="Enter customer name"
-                              className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                              className="bg-background border-border text-foreground placeholder-muted-foreground"
                             />
                           </div>
                           <div>
-                            <Label htmlFor="payment-method" className="text-gray-900 dark:text-white">
-                              Payment Method
-                            </Label>
+                            <Label htmlFor="payment-method" className="text-foreground">
+                Payment Method
+              </Label>
                             <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                              <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
+                              <SelectTrigger className="bg-background border-border text-foreground">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                              <SelectContent className="bg-card border-border">
                                 <SelectItem
                                   value="cash"
-                                  className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                                  className="text-foreground hover:bg-accent"
                                 >
                                   Cash
                                 </SelectItem>
                                 <SelectItem
                                   value="gcash"
-                                  className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                                  className="text-foreground hover:bg-accent"
                                 >
                                   GCash
                                 </SelectItem>
                                 <SelectItem
                                   value="maya"
-                                  className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                                  className="text-foreground hover:bg-accent"
                                 >
                                   Maya
                                 </SelectItem>
@@ -698,7 +697,7 @@ if (newQuantity > stock) {
                           </div>
                           {paymentMethod === "cash" && (
                             <div>
-                              <Label htmlFor="amount-paid" className="text-gray-900 dark:text-white">
+                              <Label htmlFor="amount-paid" className="text-foreground">
                                 Amount Paid
                               </Label>
                               <Input
@@ -709,10 +708,10 @@ if (newQuantity > stock) {
                                 placeholder="0.00"
                                 min="0"
                                 step="0.01"
-                                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                                className="bg-background border-border text-foreground placeholder-muted-foreground"
                               />
                               {amountPaid > 0 && (
-                                <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                                <div className="mt-2 text-sm text-foreground">
                                   <p>Total: {formatCurrency(getCartTotal())}</p>
                                   <p>Change: {formatCurrency(getChange())}</p>
                                 </div>
@@ -728,16 +727,16 @@ if (newQuantity > stock) {
                               </p>
                             </div>
                           )}
-                          <div className="pt-4 border-t border-gray-200 dark:border-gray-600">
+                          <div className="pt-4 border-t border-border">
                             <div className="flex justify-between items-center mb-4">
-                              <span className="font-semibold text-gray-900 dark:text-white">Total Amount:</span>
-                              <span className="text-xl font-bold text-gray-900 dark:text-white">
-                                {formatCurrency(getCartTotal())}
-                              </span>
+                              <span className="font-semibold text-foreground">Total Amount:</span>
+              <span className="text-xl font-bold text-foreground">
+                {formatCurrency(getCartTotal())}
+              </span>
                             </div>
                             <Button
                               onClick={processCheckout}
-                              className="w-full bg-yellow-500 hover:bg-yellow-600 text-black"
+                              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                               size="lg"
                             >
                               <Receipt className="h-5 w-5 mr-2" />
@@ -753,9 +752,9 @@ if (newQuantity > stock) {
             </Card>
 
             {/* Recent Transactions */}
-            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-gray-900 dark:text-white">Recent Transactions</CardTitle>
+                <CardTitle className="text-foreground">Recent Transactions</CardTitle>
               </CardHeader>
               <CardContent>
                 <ScrollArea className="h-60">
@@ -769,11 +768,11 @@ if (newQuantity > stock) {
                       {transactions.slice(0, 10).map((transaction) => (
                         <div
                           key={transaction.id}
-                          className="border border-gray-200 dark:border-gray-600 rounded-lg p-3 bg-gray-50 dark:bg-gray-700"
+                          className="border border-border rounded-lg p-3 bg-muted"
                         >
                           <div className="flex justify-between items-start">
                             <div>
-                              <p className="font-medium text-sm text-gray-900 dark:text-white">{transaction.id}</p>
+                              <p className="font-medium text-sm text-foreground">{transaction.id}</p>
                               <p className="text-xs text-gray-600 dark:text-gray-300">
                                 {formatDate(transaction.timestamp)}
                               </p>
@@ -782,9 +781,9 @@ if (newQuantity > stock) {
                               )}
                             </div>
                             <div className="text-right">
-                              <p className="font-semibold text-gray-900 dark:text-white">
-                                {formatCurrency(transaction.total)}
-                              </p>
+                              <p className="font-semibold text-foreground">
+                  {formatCurrency(transaction.total)}
+                </p>
                               <Badge
                                 variant="outline"
                                 className="text-xs border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
@@ -808,14 +807,14 @@ if (newQuantity > stock) {
 
         {/* Product Selection Dialog */}
         <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
-          <DialogContent className="max-w-2xl bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          <DialogContent className="max-w-2xl bg-card border-border">
             <DialogHeader>
-              <DialogTitle className="text-gray-900 dark:text-white">Select Product Options</DialogTitle>
+              <DialogTitle className="text-foreground">Select Product Options</DialogTitle>
             </DialogHeader>
             {selectedProduct && (
               <div className="space-y-6">
                 <div className="flex gap-6">
-                  <div className="w-32 h-32 bg-gray-100 dark:bg-gray-600 rounded-lg overflow-hidden">
+                  <div className="w-32 h-32 bg-muted rounded-lg overflow-hidden">
                     <img
                       src={
                         (selectedProduct.gallery_images && selectedProduct.gallery_images.length > 0 
@@ -831,11 +830,11 @@ if (newQuantity > stock) {
                     />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{selectedProduct.name}</h3>
+                    <h3 className="text-xl font-semibold text-foreground">{selectedProduct.name}</h3>
                     <p className="text-gray-600 dark:text-gray-300">{selectedProduct.brand}</p>
-                    <p className="text-2xl font-bold mt-2 text-gray-900 dark:text-white">
-                      {formatCurrency(selectedProduct.price)}
-                    </p>
+                    <p className="text-2xl font-bold mt-2 text-foreground">
+                    {formatCurrency(selectedProduct.price)}
+                  </p>
                     {selectedProduct.originalPrice && selectedProduct.originalPrice > selectedProduct.price && (
                       <p className="text-lg text-gray-500 dark:text-gray-400 line-through">
                         {formatCurrency(selectedProduct.originalPrice)}
@@ -845,7 +844,7 @@ if (newQuantity > stock) {
                 </div>
 
                 <div>
-                  <Label className="text-base font-medium text-gray-900 dark:text-white">Available Colors</Label>
+                  <Label className="text-base font-medium text-foreground">Available Colors</Label>
                   <div className="grid grid-cols-4 gap-3 mt-2">
                     {getAvailableColors(selectedProduct).map((color) => (
                       <Button
@@ -857,7 +856,7 @@ if (newQuantity > stock) {
                         }}
                         className={`h-12 justify-start ${
                           selectedColor === color
-                            ? "bg-yellow-500 hover:bg-yellow-600 text-black"
+                            ? "bg-primary hover:bg-primary/90 text-primary-foreground"
                             : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                         }`}
                       >
@@ -892,7 +891,7 @@ if (newQuantity > stock) {
 
                 {selectedColor && (
                   <div>
-                    <Label className="text-base font-medium text-gray-900 dark:text-white">Available Sizes</Label>
+                    <Label className="text-base font-medium text-foreground">Available Sizes</Label>
                     <div className="grid grid-cols-6 gap-2 mt-2">
                       {getAvailableSizes(selectedProduct, selectedColor).map((size) => {
                           const stock = stockMap[size] ?? 0; // default to 0 if not loaded yet
@@ -905,7 +904,7 @@ if (newQuantity > stock) {
                               disabled={stock <= 0}
                               className={`h-12 ${
                                 selectedSize === size
-                                  ? "bg-yellow-500 hover:bg-yellow-600 text-black"
+                                  ? "bg-primary hover:bg-primary/90 text-primary-foreground"
                                   : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                               }`}
                             >
@@ -921,17 +920,17 @@ if (newQuantity > stock) {
                 )}
 
                 {selectedColor && selectedSize && (
-                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                  <div className="bg-muted p-4 rounded-lg border border-border">
                     <div className="flex justify-between items-center">
                       <div>
-                        <p className="font-medium text-gray-900 dark:text-white">
+                        <p className="font-medium text-foreground">
                           {selectedProduct.name} - {selectedColor} - Size {selectedSize}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-muted-foreground">
                           Stock: {getCurrentStock(selectedProduct, selectedColor, selectedSize)}
                         </p>
                       </div>
-                      <p className="text-xl font-bold text-gray-900 dark:text-white">
+                      <p className="text-xl font-bold text-foreground">
                         {formatCurrency(selectedProduct.price)}
                       </p>
                     </div>
@@ -949,7 +948,7 @@ if (newQuantity > stock) {
                   <Button
                     onClick={addToCart}
                     disabled={!selectedColor || !selectedSize}
-                    className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black"
+                    className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add to Cart
@@ -962,67 +961,67 @@ if (newQuantity > stock) {
 
         {/* Receipt Dialog */}
         <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
-          <DialogContent className="max-w-md bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          <DialogContent className="max-w-md bg-card border-border">
             <DialogHeader>
-              <DialogTitle className="text-gray-900 dark:text-white">Transaction Receipt</DialogTitle>
+              <DialogTitle className="text-foreground">Transaction Receipt</DialogTitle>
             </DialogHeader>
             {lastTransaction && (
               <div className="space-y-4">
                 <div className="text-center border-b border-gray-200 dark:border-gray-600 pb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">GKicks Store</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Transaction Receipt</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">{formatDate(lastTransaction.timestamp)}</p>
+                  <h3 className="text-lg font-semibold text-foreground">GKicks Store</h3>
+                  <p className="text-sm text-muted-foreground">Transaction Receipt</p>
+                  <p className="text-xs text-muted-foreground">{formatDate(lastTransaction.timestamp)}</p>
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-700 dark:text-gray-300">Transaction ID:</span>
-                    <span className="font-mono text-gray-900 dark:text-white">{lastTransaction.id}</span>
+                    <span className="text-muted-foreground">Transaction ID:</span>
+                    <span className="font-mono text-foreground">{lastTransaction.id}</span>
                   </div>
                   {lastTransaction.customerName && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-700 dark:text-gray-300">Customer:</span>
-                      <span className="text-gray-900 dark:text-white">{lastTransaction.customerName}</span>
+                      <span className="text-muted-foreground">Customer:</span>
+                      <span className="text-foreground">{lastTransaction.customerName}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-700 dark:text-gray-300">Payment Method:</span>
-                    <span className="capitalize text-gray-900 dark:text-white">{lastTransaction.paymentMethod}</span>
+                    <span className="text-muted-foreground">Payment Method:</span>
+                    <span className="capitalize text-foreground">{lastTransaction.paymentMethod}</span>
                   </div>
                 </div>
 
-                <Separator className="bg-gray-200 dark:bg-gray-600" />
+                <Separator />
 
                 <div className="space-y-2">
                   {lastTransaction.items.map((item, index) => (
                     <div key={index} className="text-sm">
                       <div className="flex justify-between">
-                        <span className="font-medium text-gray-900 dark:text-white">{item.name}</span>
-                        <span className="text-gray-900 dark:text-white">
+                        <span className="font-medium text-foreground">{item.name}</span>
+                        <span className="text-foreground">
                           {formatCurrency(item.price * item.quantity)}
                         </span>
                       </div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400 ml-2">
+                      <div className="text-xs text-muted-foreground ml-2">
                         {item.color} • Size {item.size} • Qty: {item.quantity}
                       </div>
                     </div>
                   ))}
                 </div>
 
-                <Separator className="bg-gray-200 dark:bg-gray-600" />
+                <Separator />
 
                 <div className="flex justify-between font-semibold">
-                  <span className="text-gray-900 dark:text-white">Total:</span>
-                  <span className="text-gray-900 dark:text-white">{formatCurrency(lastTransaction.total)}</span>
+                  <span className="text-foreground">Total:</span>
+                  <span className="text-foreground">{formatCurrency(lastTransaction.total)}</span>
                 </div>
 
                 <div className="text-center pt-4">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Thank you for your purchase!</p>
+                  <p className="text-sm text-muted-foreground">Thank you for your purchase!</p>
                 </div>
 
                 <Button
                   onClick={() => setIsReceiptDialogOpen(false)}
-                  className="w-full bg-yellow-500 hover:bg-yellow-600 text-black"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   Close
                 </Button>

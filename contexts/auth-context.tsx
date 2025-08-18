@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useReducer, useEffect } from "react";
+import { useSession, signIn as nextAuthSignIn, signOut as nextAuthSignOut } from "next-auth/react";
 import { useToast } from "@/hooks/use-toast";
 
 export interface User {
@@ -15,20 +16,22 @@ export interface User {
 interface AuthState {
   user: User | null;
   loading: boolean;
+  tokenReady: boolean;
 }
 
 type AuthAction =
   | { type: "SET_USER"; payload: User | null }
-  | { type: "SET_LOADING"; payload: boolean };
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_TOKEN_READY"; payload: boolean };
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error?: Error }>;
-  signUp: (email: string, password: string, firstName?: string, lastName?: string) => Promise<{ error?: Error }>;
+  tokenReady: boolean;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
-  resetPasswordForEmail: (email: string) => Promise<{ error?: Error }>;
+  updateUserData: (updates: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,173 +42,186 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
       return { ...state, user: action.payload };
     case "SET_LOADING":
       return { ...state, loading: action.payload };
+    case "SET_TOKEN_READY":
+      return { ...state, tokenReady: action.payload };
     default:
       return state;
   }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const { data: session, status } = useSession();
   const [state, dispatch] = useReducer(authReducer, {
     user: null,
-    loading: true, // Set to true initially while checking auth status
+    loading: status === "loading",
+    tokenReady: false,
   });
   const { toast } = useToast();
 
-  const signIn = async (email: string, password: string) => {
+  // Fetch complete user profile data
+  const fetchUserProfile = async (token: string, abortController?: AbortController) => {
+    console.log('🔄 AUTH CONTEXT: fetchUserProfile called with token:', token ? 'present' : 'missing');
     try {
-      dispatch({ type: "SET_LOADING", payload: true });
-      
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
+      const response = await fetch('/api/profiles', {
+        method: 'GET',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        signal: abortController?.signal,
       });
-      
-      let data;
-      try {
-        data = await response.json();
-      } catch (jsonError) {
-        console.error('Failed to parse login response:', jsonError);
-        const error = new Error('Invalid response from server');
-        return { error };
+
+      if (response.ok) {
+        const profileData = await response.json();
+        if (profileData && state.user) {
+          // Update user with complete profile data, prioritizing saved profile data over Gmail data
+          const updatedUser: User = {
+            ...state.user,
+            firstName: profileData.first_name || state.user.firstName,
+            lastName: profileData.last_name || state.user.lastName,
+            avatar: profileData.avatar_url || state.user.avatar,
+          };
+          
+          // If we have saved profile data, use it instead of Gmail fallbacks
+          if (profileData.first_name && profileData.first_name.trim()) {
+            updatedUser.firstName = profileData.first_name.trim();
+          }
+          if (profileData.last_name && profileData.last_name.trim()) {
+            updatedUser.lastName = profileData.last_name.trim();
+          }
+          if (profileData.avatar_url && profileData.avatar_url.trim()) {
+            updatedUser.avatar = profileData.avatar_url.trim();
+          }
+          
+          dispatch({ type: "SET_USER", payload: updatedUser });
+          console.log('✅ User profile updated:', {
+            firstName: updatedUser.firstName,
+            lastName: updatedUser.lastName,
+            avatar: updatedUser.avatar
+          });
+        }
       }
-      
-      if (!response.ok) {
-        const error = new Error(data.error || 'Login failed');
-        return { error };
-      }
-      
-      const user: User = {
-        id: data.user.id.toString(),
-        email: data.user.email,
-        firstName: data.user.first_name || '',
-        lastName: data.user.last_name || '',
-        role: data.user.is_admin ? 'admin' : 'customer',
-        avatar: data.user.avatar_url || '',
-      };
-      
+    } catch (error) {
+      console.error('❌ Error fetching user profile:', error);
+    }
+  };
+
+  // Sync NextAuth session with our auth state and generate JWT token
+  useEffect(() => {
+    dispatch({ type: "SET_LOADING", payload: status === "loading" });
+    
+    if (session?.user) {
+      const user = session.user as User;
       dispatch({ type: "SET_USER", payload: user });
+      dispatch({ type: "SET_TOKEN_READY", payload: false });
       
-      // Store token if provided
-      if (data.token) {
-        localStorage.setItem('auth_token', data.token);
+      // Generate JWT token for API calls
+      generateJWTToken();
+    } else {
+      dispatch({ type: "SET_USER", payload: null });
+      dispatch({ type: "SET_TOKEN_READY", payload: false });
+      // Clear token when user signs out
+      if (typeof window !== "undefined") {
+        localStorage.removeItem('auth_token');
+      }
+    }
+  }, [session, status]);
+
+  // Check if we need to fetch profile on app initialization (when token exists but profile wasn't fetched)
+  useEffect(() => {
+    let isMounted = true;
+    const abortController = new AbortController();
+    
+    const fetchProfileOnAppInit = async () => {
+      if (state.tokenReady && state.user && typeof window !== "undefined" && isMounted) {
+        const token = localStorage.getItem('auth_token');
+        // Always fetch profile data to ensure we have the latest saved profile information
+        // This is important for users who log in with Google but have saved custom profile data
+        if (token && isMounted) {
+          console.log('🔄 App initialization: fetching user profile for existing token');
+          try {
+            await fetchUserProfile(token, abortController);
+          } catch (error) {
+            if (error instanceof Error && error.name !== 'AbortError') {
+              console.log('⚠️ Profile fetch failed during app init:', error);
+            }
+          }
+        }
+      }
+    };
+
+    fetchProfileOnAppInit();
+    
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
+  }, [state.tokenReady, state.user?.id]); // Use user.id instead of entire user object to prevent unnecessary re-runs
+
+
+
+  // Generate JWT token from NextAuth session
+  const generateJWTToken = async () => {
+    try {
+      // Clear any existing malformed token first
+      if (typeof window !== "undefined") {
+        localStorage.removeItem('auth_token');
       }
       
-      return {};
+      const response = await fetch('/api/auth/session-to-jwt', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (typeof window !== "undefined" && data.token) {
+          console.log('✅ New JWT token generated and stored');
+          localStorage.setItem('auth_token', data.token);
+          dispatch({ type: "SET_TOKEN_READY", payload: true });
+          
+          // Fetch complete user profile data after token is ready
+          console.log('🔄 About to fetch user profile with token');
+          await fetchUserProfile(data.token);
+        }
+      } else {
+        console.error('Failed to generate JWT token:', response.status, response.statusText);
+        dispatch({ type: "SET_TOKEN_READY", payload: false });
+      }
     } catch (error) {
-      console.error("Sign in error:", error);
-      const authError = error instanceof Error ? error : new Error("An error occurred");
-      return { error: authError };
+      console.error('Error generating JWT token:', error);
+      dispatch({ type: "SET_TOKEN_READY", payload: false });
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    try {
+      await nextAuthSignIn('google', { callbackUrl: '/' });
+    } catch (error) {
+      console.error("Google sign in error:", error);
+      toast({
+        title: "Sign In Error",
+        description: "Failed to sign in with Google. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       dispatch({ type: "SET_LOADING", payload: false });
     }
   };
 
-  const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
-    try {
-      dispatch({ type: "SET_LOADING", payload: true });
-      
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          email, 
-          password, 
-          firstName: firstName || '', 
-          lastName: lastName || '' 
-        }),
-      });
-      
-      let data;
-      try {
-        data = await response.json();
-      } catch (jsonError) {
-        console.error('Failed to parse register response:', jsonError);
-        const error = new Error('Invalid response from server');
-        return { error };
-      }
-      
-      if (!response.ok) {
-        const error = new Error(data.error || 'Registration failed');
-        return { error };
-      }
-      
-      toast({
-        title: "Account created!",
-        description: "Your account has been created successfully. Please sign in.",
-      });
-      
-      return {};
-    } catch (error) {
-      console.error("Sign up error:", error);
-      const authError = error instanceof Error ? error : new Error("An error occurred");
-      return { error: authError };
-    } finally {
-      dispatch({ type: "SET_LOADING", payload: false });
-    }
-  };
 
-  const resetPasswordForEmail = async (email: string) => {
-    try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
-      
-      let data;
-      try {
-        data = await response.json();
-      } catch (jsonError) {
-        console.error('Failed to parse reset password response:', jsonError);
-        const error = new Error('Invalid response from server');
-        return { error };
-      }
-      
-      if (!response.ok) {
-        const error = new Error(data.error || 'Password reset failed');
-        return { error };
-      }
-      
-      toast({
-        title: "Password reset email sent",
-        description: "Check your email for password reset instructions.",
-      });
-      
-      return {};
-    } catch (error) {
-      console.error("Reset password error:", error);
-      const authError = error instanceof Error ? error : new Error("An error occurred");
-      return { error: authError };
-    }
-  };
 
   const signOut = async () => {
     try {
-      // Clear local storage
-      localStorage.removeItem('auth_token');
-      
-      // Make logout API call if needed
-      try {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-      } catch (apiError) {
-        // Continue with logout even if API call fails
-        console.warn('Logout API call failed:', apiError);
+      // Clear JWT token from localStorage
+      if (typeof window !== "undefined") {
+        localStorage.removeItem('auth_token');
       }
       
+      await nextAuthSignOut({ callbackUrl: '/auth' });
       dispatch({ type: "SET_USER", payload: null });
-      
       toast({
         title: "Signed out",
         description: "You have been signed out successfully.",
@@ -214,7 +230,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Sign out error:", error);
       toast({
         title: "Sign out failed",
-        description: error instanceof Error ? error.message : "An error occurred",
+        description: "Failed to sign out. Please try again.",
         variant: "destructive",
       });
     }
@@ -269,71 +285,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Initialize and check for existing authentication
-  useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        dispatch({ type: "SET_LOADING", payload: true });
-        
-        const token = localStorage.getItem('auth_token');
-        console.log('🔐 Auth Context: Initializing auth, token exists:', !!token);
-        if (!token) {
-          dispatch({ type: "SET_LOADING", payload: false });
-          return;
-        }
-        
-        // Validate token with server
-        console.log('🔐 Auth Context: Calling /api/auth/me');
-        const response = await fetch('/api/auth/me', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-        
-        if (response.ok) {
-          try {
-            const data = await response.json();
-            console.log('🔐 Auth Context: Received user data from /api/auth/me:', data.user);
-            const user: User = {
-              id: data.user.id.toString(),
-              email: data.user.email,
-              firstName: data.user.first_name || '',
-              lastName: data.user.last_name || '',
-              role: data.user.role || (data.user.is_admin ? 'admin' : 'customer'),
-              avatar: data.user.avatar_url || '',
-            };
-            console.log('🔐 Auth Context: Setting user in context:', user);
-            dispatch({ type: "SET_USER", payload: user });
-          } catch (jsonError) {
-            console.error('Failed to parse auth response:', jsonError);
-            localStorage.removeItem('auth_token');
-          }
-        } else {
-          // Token is invalid, remove it
-          localStorage.removeItem('auth_token');
-        }
-      } catch (error) {
-        console.error('Auth initialization error:', error);
-        localStorage.removeItem('auth_token');
-      } finally {
-        dispatch({ type: "SET_LOADING", payload: false });
-      }
-    };
+  const updateUserData = (updates: Partial<User>) => {
+    if (!state.user) return;
     
-    initializeAuth();
-  }, []);
+    const updatedUser = { ...state.user, ...updates };
+    dispatch({ type: "SET_USER", payload: updatedUser });
+    console.log('✅ User data updated in auth context:', updatedUser);
+  };
+
+  // Initialize and check for existing authentication
+
 
   return (
     <AuthContext.Provider
       value={{
         user: state.user,
         loading: state.loading,
-        signIn,
-        signUp,
+        tokenReady: state.tokenReady,
+        signInWithGoogle,
         signOut,
         updateProfile,
-        resetPasswordForEmail,
+        updateUserData,
       }}
     >
       {children}

@@ -64,13 +64,13 @@ const getStatusColor = (status: string) => {
 }
 
 export default function OrdersPage() {
-  const { user } = useAuth()
-  const isAuthenticated = Boolean(user)
+  const { user, tokenReady } = useAuth()
+  const isAuthenticated = Boolean(user && tokenReady)
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && tokenReady) {
       const fetchOrders = async () => {
         setLoading(true)
         try {
@@ -101,7 +101,7 @@ export default function OrdersPage() {
     } else {
       setLoading(false)
     }
-  }, [isAuthenticated, user?.id])
+  }, [isAuthenticated, tokenReady, user?.id])
 
   if (loading) {
     return (

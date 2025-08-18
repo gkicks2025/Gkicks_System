@@ -11,6 +11,7 @@ export interface Product {
   price: number;
   originalPrice?: number;
   image: string;
+  image_url: string;
   gallery_images?: string[];
   model_3d_url?: string;
   model_3d_filename?: string;
@@ -143,6 +144,7 @@ export async function fetchProductByIdFromAPI(id: number): Promise<Product | nul
       originalPrice: data.original_price,
       description: data.description || "",
       image: data.image_url || `/images/${data.name.toLowerCase().replace(/\s+/g, "-")}.png`,
+      image_url: data.image_url || `/images/${data.name.toLowerCase().replace(/\s+/g, "-")}.png`,
       gallery_images: data.gallery_images || [],
       model_3d_url: data.model_3d_url,
       model_3d_filename: data.model_3d_filename,

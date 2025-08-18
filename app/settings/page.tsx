@@ -76,7 +76,7 @@ export default function SettingsPage() {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-background">
         <div className="animate-pulse">
           <div className="h-20 bg-gray-200"></div>
           <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -96,10 +96,10 @@ export default function SettingsPage() {
   const isDarkMode = resolvedTheme === "dark"
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors">
+    <div className="min-h-screen bg-background transition-colors">
      
 
-      <div className="bg-gray-50 dark:bg-gray-800 min-h-screen transition-colors">
+      <div className="bg-background min-h-screen transition-colors">
         <div className="container mx-auto px-4 py-8 max-w-4xl">
           {/* Header */}
           <div className="mb-8">
@@ -112,7 +112,7 @@ export default function SettingsPage() {
 
           <div className="space-y-6">
             {/* Notifications Section */}
-            <Card className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600">
+            <Card className="bg-card border-border">
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <Bell className="h-5 w-5 text-gray-700 dark:text-yellow-400" />
@@ -156,7 +156,7 @@ export default function SettingsPage() {
             </Card>
 
             {/* Appearance Section */}
-            <Card className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600">
+            <Card className="bg-card border-border">
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <Palette className="h-5 w-5 text-gray-700 dark:text-yellow-400" />

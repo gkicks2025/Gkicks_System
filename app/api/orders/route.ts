@@ -83,6 +83,75 @@ export async function POST(request: NextRequest) {
 
     console.log('🔍 API: Creating new order for:', customer_email)
 
+    // Validate stock availability for all items before creating order
+    for (const item of items) {
+      const productResult = await executeQuery(
+        'SELECT variants, stock_quantity FROM products WHERE id = ?',
+        [item.product_id]
+      )
+
+      if (productResult.length === 0) {
+        return NextResponse.json(
+          { error: `Product not found: ${item.product_name}` },
+          { status: 400 }
+        )
+      }
+
+      const product = productResult[0]
+      let variants: Record<string, Record<string, number>>
+      
+      try {
+        variants = product.variants ? JSON.parse(product.variants) : {}
+      } catch (e) {
+        variants = {}
+      }
+
+      const availableStock = variants[item.color]?.[item.size] || 0
+      
+      if (availableStock < item.quantity) {
+        return NextResponse.json(
+          { 
+            error: 'Insufficient stock', 
+            message: `Only ${availableStock} items available for ${item.product_name} (${item.color}, ${item.size})`,
+            product: item.product_name,
+            color: item.color,
+            size: item.size,
+            availableStock,
+            requestedQuantity: item.quantity
+          },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Process stock reduction for all items
+    for (const item of items) {
+      const stockResponse = await fetch(`${request.nextUrl.origin}/api/products/stock?id=${item.product_id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': request.headers.get('authorization') || ''
+        },
+        body: JSON.stringify({
+          color: item.color,
+          size: item.size,
+          quantity: item.quantity
+        })
+      })
+
+      if (!stockResponse.ok) {
+        const stockError = await stockResponse.json()
+        return NextResponse.json(
+          { 
+            error: 'Stock update failed', 
+            message: stockError.message || `Failed to update stock for ${item.product_name}`,
+            product: item.product_name
+          },
+          { status: 400 }
+        )
+      }
+    }
+
     // Generate order number
     const orderNumber = `GK${Date.now()}`
 

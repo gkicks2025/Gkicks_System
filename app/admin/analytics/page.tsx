@@ -33,7 +33,7 @@ const categoryData = [
 
 export default function AnalyticsPage() {
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 bg-background min-h-screen">
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-yellow-400">Analytics Dashboard</h2>
         <div className="flex items-center space-x-2">
@@ -59,7 +59,7 @@ export default function AnalyticsPage() {
 
       {/* Key Metrics */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+        <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-900 dark:text-gray-100">Total Revenue</CardTitle>
             <DollarSign className="h-4 w-4 text-gray-600 dark:text-gray-400" />
@@ -71,7 +71,7 @@ export default function AnalyticsPage() {
             </p>
           </CardContent>
         </Card>
-        <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+        <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-900 dark:text-gray-100">Total Orders</CardTitle>
             <ShoppingCart className="h-4 w-4 text-gray-600 dark:text-gray-400" />
