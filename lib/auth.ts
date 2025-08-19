@@ -21,14 +21,26 @@ export const authOptions: NextAuthOptions = {
       // Send properties to the client, like an access_token and user id from a provider.
       if (session.user) {
         // Map NextAuth session to our User interface
+        let role: 'admin' | 'staff' | 'customer' = 'admin' // Temporarily set all users as admin for testing
+        
+        // Assign roles based on email
+        if (session.user.email === 'gkcksdmn@gmail.com') {
+          role = 'admin'
+        } else if (session.user.email === 'gkicksstaff@gmail.com') {
+          role = 'staff'
+        }
+        // For testing: all users get admin access
+        
         const user: User = {
           id: token.sub || '',
           email: session.user.email || '',
           firstName: session.user.name?.split(' ')[0] || '',
           lastName: session.user.name?.split(' ').slice(1).join(' ') || '',
-          role: session.user.email === 'gkcksdmn@gmail.com' ? 'admin' : 'customer',
+          role: role,
           avatar: session.user.image || '',
         }
+        
+        console.log('🔍 Auth: User session created -', user.email, 'role:', user.role)
         
         // Store user in database if needed
         await storeUserInDatabase(user)

@@ -5,11 +5,13 @@ import { authOptions } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 API: Fetching POS inventory data from MySQL database...')
+    console.log('🔍 POS INVENTORY API: Request received - fetching data from MySQL database...')
     
     // Check authentication
     const session = await getServerSession(authOptions)
+    console.log('🔍 POS INVENTORY API: Session check -', session?.user ? 'authenticated' : 'not authenticated', 'role:', (session?.user as any)?.role)
     if (!session?.user || (session.user as any).role !== 'admin') {
+      console.log('❌ POS INVENTORY API: Unauthorized access attempt')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     
@@ -39,22 +41,41 @@ export async function GET(request: NextRequest) {
     
     // Format the inventory data for POS use
     const inventoryArray = Array.isArray(inventory) ? inventory : []
-    const formattedInventory = inventoryArray.map((product: any) => ({
-      id: product.id,
-      name: product.name,
-      category: product.category || 'Other',
-      brand: product.brand || 'Unknown',
-      price: parseFloat(product.price) || 0,
-      originalPrice: parseFloat(product.original_price) || parseFloat(product.price) || 0,
-      image: product.image_url,
-      description: product.description,
-      is_new: Boolean(product.is_new),
-      is_sale: Boolean(product.is_sale),
-      is_active: Boolean(product.is_active),
-      stock_quantity: parseInt(product.stock_quantity) || 0,
-      colors: product.colors ? JSON.parse(product.colors) : [],
-      sizes: product.sizes ? JSON.parse(product.sizes) : []
-    }))
+    const formattedInventory = inventoryArray.map((product: any) => {
+      const colors = product.colors ? JSON.parse(product.colors) : []
+      const sizes = product.sizes ? JSON.parse(product.sizes) : []
+      
+      // Create variants structure for POS compatibility
+      const variants: { [color: string]: { [size: string]: number } } = {}
+      
+      colors.forEach((color: string) => {
+        variants[color] = {}
+        sizes.forEach((size: string) => {
+          // For now, assign equal stock to each variant based on total stock
+          // In a real scenario, you'd have individual variant stock tracking
+          const stockPerVariant = Math.floor(product.stock_quantity / (colors.length * sizes.length)) || 1
+          variants[color][size] = stockPerVariant
+        })
+      })
+      
+      return {
+        id: product.id,
+        name: product.name,
+        category: product.category || 'Other',
+        brand: product.brand || 'Unknown',
+        price: parseFloat(product.price) || 0,
+        originalPrice: parseFloat(product.original_price) || parseFloat(product.price) || 0,
+        image_url: product.image_url,
+        description: product.description,
+        is_new: Boolean(product.is_new),
+        is_sale: Boolean(product.is_sale),
+        is_active: Boolean(product.is_active),
+        stock_quantity: parseInt(product.stock_quantity) || 0,
+        colors: colors,
+        sizes: sizes,
+        variants: variants
+      }
+    })
     
     console.log(`✅ API: Successfully returned ${formattedInventory.length} inventory items`)
     
@@ -124,7 +145,7 @@ export async function PUT(request: NextRequest) {
     }
     
     // Get updated stock quantity
-    const [updatedProduct] = await executeQuery(
+    const updatedProduct = await executeQuery(
       'SELECT stock_quantity FROM products WHERE id = ?',
       [productId]
     )
@@ -132,7 +153,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({
       success: true,
       productId,
-      newQuantity: updatedProduct?.stock_quantity || 0
+      newQuantity: (updatedProduct as any[])[0]?.stock_quantity || 0
     })
   } catch (error) {
     console.error('❌ API: Error updating stock:', error)

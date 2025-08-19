@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     const params: any[] = []
 
     if (date) {
-      whereClause += ' AND transaction_date = ?'
+      whereClause += ' AND DATE(t.created_at) = ?'
       params.push(date)
     }
 
@@ -76,7 +76,8 @@ export async function GET(request: NextRequest) {
       FROM pos_transactions t
       ${whereClause}
     `
-    const [{ total }] = await executeQuery(countQuery, params)
+    const countResult = await executeQuery(countQuery, params) as any[]
+    const total = countResult[0]?.total || 0
 
     return NextResponse.json({
       transactions,

@@ -23,13 +23,16 @@ export default function AdminLayout({
 
     if (!loading && user) {
       // Check if user has admin or staff access
-      const hasAdminAccess = user.email === "gkcksdmn@gmail.com"
-      const hasStaffAccess = user.email === "gkicksstaff@gmail.com"
+      const hasAdminAccess = user.role === "admin"
+      const hasStaffAccess = user.role === "staff"
 
       if (!hasAdminAccess && !hasStaffAccess) {
+        console.log('❌ Admin Layout: User does not have admin/staff role:', user.role)
         router.push("/")
         return
       }
+      
+      console.log('✅ Admin Layout: User has access, role:', user.role)
     }
   }, [user, loading, router])
 
