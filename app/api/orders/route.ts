@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       [user.id]
     ) as any[]
 
-    console.log(`✅ API: Successfully fetched ${Array.isArray(orders) ? orders.length : 0} orders`)
+    console.log(`✅ API: Successfully fetched ${orders.length} orders`)
     return NextResponse.json(orders)
 
   } catch (error) {
