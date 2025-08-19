@@ -38,7 +38,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated: false,
   })
 
-  const { user: authUser, signIn, signOut } = useAuth()
+  const { user: authUser, signInWithGoogle, signOut } = useAuth()
 
   // Check if current authenticated user is an admin
   useEffect(() => {

@@ -103,7 +103,20 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const adminUserId = session.user.id || 1 // Fallback to admin ID 1
+    
+    // Get admin user ID from database using email
+    let adminUserId = 1 // Default fallback
+    try {
+      const userResult = await executeQuery(
+        'SELECT id FROM users WHERE email = ?',
+        [session.user.email]
+      )
+      if (Array.isArray(userResult) && userResult.length > 0) {
+        adminUserId = (userResult[0] as any).id
+      }
+    } catch (error) {
+      console.error('Error fetching user ID:', error)
+    }
 
     // Check if this is a close session request
     if ('sessionId' in body) {
@@ -193,14 +206,14 @@ async function closeSession(body: CloseSessionRequest) {
 
   const sessionData = await executeQuery(sessionQuery, [sessionId])
 
-  if (sessionData.length === 0) {
+  if (!Array.isArray(sessionData) || sessionData.length === 0) {
     return NextResponse.json(
       { error: 'Active session not found' },
       { status: 404 }
     )
   }
 
-  const sessionInfo = sessionData[0]
+  const sessionInfo = sessionData[0] as any
 
   // Update session
   const updateSessionQuery = `

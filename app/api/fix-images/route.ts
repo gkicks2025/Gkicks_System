@@ -26,11 +26,13 @@ export async function POST(request: NextRequest) {
         WHERE name = ? AND (image_url LIKE '%placeholder%' OR image_url LIKE '%svg%')
       `
       
-      const [result] = await executeQuery(updateQuery, [update.image, update.name])
-      console.log(`✅ Updated ${update.name} image:`, result.affectedRows, 'rows affected')
+      const queryResult = await executeQuery(updateQuery, [update.image, update.name])
+      const result = Array.isArray(queryResult) ? queryResult[0] : queryResult
+      const affectedRows = (result as any)?.affectedRows || 0
+      console.log(`✅ Updated ${update.name} image:`, affectedRows, 'rows affected')
       results.push({
         product: update.name,
-        affectedRows: result.affectedRows,
+        affectedRows: affectedRows,
         newImage: update.image
       })
     }

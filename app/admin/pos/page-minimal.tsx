@@ -12,10 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator"
 import { Search, Plus, Minus, ShoppingCart, CreditCard, QrCode, Receipt, Trash2 } from "lucide-react"
 import {
-  getInventoryData,
-  updateStock,
-  getDailySales,
-  updateDailySales,
   type ProductInventory,
 } from "@/lib/admin-data"
 import { toast } from "sonner"
@@ -84,65 +80,153 @@ export default function POSPage() {
 
   const refreshInventory = async () => {
     try {
-      const data = await getInventoryData()
-      if (Array.isArray(data)) {
-        const activeProducts = data.filter((product) => {
-          if (!product || product.is_active === false) return false
-          return true
-        })
-        setInventory(activeProducts)
-        console.log('✅ POS: Loaded', activeProducts.length, 'active products')
+      const response = await fetch('/api/pos/inventory')
+      if (response.ok) {
+        const data = await response.json()
+        if (Array.isArray(data)) {
+          const activeProducts = data.filter((product) => {
+            if (!product || product.is_active === false) return false
+            return true
+          })
+          setInventory(activeProducts)
+          console.log('✅ POS: Loaded', activeProducts.length, 'active products')
+        } else {
+          console.error('❌ POS: Invalid inventory data format')
+          setInventory([])
+        }
       } else {
-        console.warn("Invalid inventory data received:", data)
-        setInventory([])
+        throw new Error('Failed to fetch inventory')
       }
     } catch (error) {
-      console.error("Error refreshing inventory:", error)
+      console.error('❌ POS: Error loading inventory:', error)
       setInventory([])
-      toast.error("Failed to load inventory data")
+      toast.error('Failed to load inventory')
     }
   }
 
   const loadDailySales = async () => {
     try {
-      const sales = await getDailySales()
-      setDailySales(sales)
+      const response = await fetch('/api/pos/daily-sales')
+      if (response.ok) {
+        const data = await response.json()
+        setDailySales(data.totalGrossSales || 0)
+      } else {
+        console.error('Failed to fetch daily sales')
+      }
     } catch (error) {
-      console.error("Error loading daily sales:", error)
-      setDailySales(0)
+      console.error('Error loading daily sales:', error)
     }
   }
 
-  const loadTransactions = () => {
+  const loadTransactions = async () => {
     try {
-      if (typeof window !== "undefined") {
-        const stored = window.localStorage.getItem("pos-transactions")
-        if (stored) {
-          const parsedTransactions = JSON.parse(stored)
-          if (Array.isArray(parsedTransactions)) {
-            setTransactions(parsedTransactions)
-          }
-        }
+      const response = await fetch('/api/pos/transactions')
+      if (response.ok) {
+        const data = await response.json()
+        const formattedTransactions = data.map((transaction: any) => ({
+          id: transaction.transaction_id,
+          items: JSON.parse(transaction.items || '[]'),
+          total: transaction.total_amount,
+          paymentMethod: transaction.payment_method,
+          timestamp: transaction.created_at,
+          customerName: transaction.customer_name
+        }))
+        setTransactions(formattedTransactions)
+      } else {
+        console.error('Failed to fetch transactions')
       }
     } catch (error) {
-      console.error("Error loading transactions:", error)
-      setTransactions([])
+      console.error('Error loading transactions:', error)
     }
   }
 
   const saveTransaction = async (transaction: Transaction) => {
     try {
-      const updatedTransactions = [...transactions, transaction]
-      setTransactions(updatedTransactions)
+      const response = await fetch('/api/pos/transactions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: transaction.items,
+          total: transaction.total,
+          paymentMethod: transaction.paymentMethod,
+          customerName: transaction.customerName
+        }),
+      })
       
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem("pos-transactions", JSON.stringify(updatedTransactions))
+      if (response.ok) {
+        await loadTransactions()
+        await refreshInventory()
+        toast.success('Transaction saved successfully')
+      } else {
+        throw new Error('Failed to save transaction')
       }
-      
-      console.log("Transaction saved:", transaction)
     } catch (error) {
-      console.error("Error saving transaction:", error)
+      console.error('Error saving transaction:', error)
+      toast.error('Failed to save transaction')
     }
+  }
+
+  const getCurrentStock = (product: ProductInventory): number => {
+    try {
+      return getTotalStock(product)
+    } catch (error) {
+      console.error('Error getting current stock:', error)
+      return 0
+    }
+  }
+
+  const refreshData = async () => {
+    try {
+      console.log('🔄 POS: Refreshing all data...')
+      await Promise.all([
+        refreshInventory(),
+        loadDailySales(),
+        loadTransactions()
+      ])
+      console.log('✅ POS: All data refreshed successfully')
+    } catch (error) {
+      console.error('❌ POS: Error refreshing data:', error)
+    }
+  }
+
+  // Load initial data
+  useEffect(() => {
+    refreshData()
+  }, [])
+
+  const handleCheckout = async () => {
+    if (cart.length === 0) {
+      toast.error('Cart is empty')
+      return
+    }
+
+    if (!paymentMethod) {
+      toast.error('Please select a payment method')
+      return
+    }
+
+    const transaction: Transaction = {
+      id: `TXN-${Date.now()}`,
+      items: cart,
+      total: getCartTotal(),
+      paymentMethod,
+      timestamp: new Date().toISOString(),
+      customerName: customerName || undefined
+    }
+
+    await saveTransaction(transaction)
+    
+    // Clear cart and reset form
+    setCart([])
+    setPaymentMethod('')
+    setCustomerName('')
+    setAmountPaid(0)
+// Remove setChangeGiven since it's not defined and not needed
+    setIsCheckoutDialogOpen(false)
+    
+    toast.success('Transaction completed successfully!')
   }
 
   const filteredInventory = inventory.filter((product) => {
@@ -174,7 +258,7 @@ export default function POSPage() {
       .sort((a, b) => Number(a) - Number(b))
   }
 
-  const getCurrentStock = (product: ProductInventory, color: string, size: string): number => {
+  const getCurrentStockForVariant = (product: ProductInventory, color: string, size: string): number => {
     try {
       if (!product?.variants || !color || !size) return 0
       
@@ -196,13 +280,13 @@ export default function POSPage() {
     setIsProductDialogOpen(true)
   }
 
-  const addToCart = () => {
+  const addToCartFromDialog = () => {
     if (!selectedProduct || !selectedColor || !selectedSize) {
       toast.error("Please select color and size")
       return
     }
 
-    const stock = getCurrentStock(selectedProduct, selectedColor, selectedSize)
+    const stock = getCurrentStockForVariant(selectedProduct, selectedColor, selectedSize)
     if (stock <= 0) {
       toast.error("Product is out of stock")
       return
@@ -239,7 +323,7 @@ export default function POSPage() {
         color: selectedColor,
         size: selectedSize,
         quantity: 1,
-        image: `/images/${selectedProduct.name.toLowerCase().replace(/\s+/g, "-")}.png`,
+        image: selectedProduct.image_url || `/images/${selectedProduct.name.toLowerCase().replace(/\s+/g, "-")}.png`,
       }
 
       setCart([...cart, newItem])
@@ -261,7 +345,7 @@ export default function POSPage() {
     // Find the product to check stock
     const product = inventory.find(p => String(p.id) === item.productId)
     if (product) {
-      const stock = getCurrentStock(product, item.color, item.size)
+      const stock = getCurrentStockForVariant(product, item.color, item.size)
       if (newQuantity > stock) {
         toast.error(`Only ${stock} items available in stock`)
         return
@@ -300,7 +384,19 @@ export default function POSPage() {
     try {
       // Update inventory stock
       cart.forEach((item) => {
-        updateStock(Number(item.productId), item.color, item.size, -item.quantity)
+        // Update stock through API call
+        fetch('/api/pos/update-stock', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            productId: Number(item.productId),
+            color: item.color,
+            size: item.size,
+            quantity: -item.quantity // Negative to reduce stock
+          })
+        });
       })
 
       // Create transaction
@@ -315,7 +411,14 @@ export default function POSPage() {
 
       // Update daily sales
       const newDailySales = dailySales + getCartTotal()
-      updateDailySales(newDailySales)
+      // Update daily sales through API
+      await fetch('/api/pos/daily-sales', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ totalSales: newDailySales })
+      })
       setDailySales(newDailySales)
 
       // Save transaction
@@ -627,7 +730,7 @@ export default function POSPage() {
                       <div className="p-3 bg-muted rounded-lg">
                         <p className="text-sm">
                           <span className="font-medium">Stock available:</span>{" "}
-                          <span className="font-bold">{getCurrentStock(selectedProduct, selectedColor, selectedSize)}</span>
+                          <span className="font-bold">{getCurrentStockForVariant(selectedProduct, selectedColor, selectedSize)}</span>
                         </p>
                       </div>
                     )}
@@ -637,7 +740,7 @@ export default function POSPage() {
                     <Button variant="outline" onClick={() => setIsProductDialogOpen(false)} className="flex-1">
                       Cancel
                     </Button>
-                    <Button onClick={addToCart} className="flex-1" disabled={!selectedColor || !selectedSize}>
+                    <Button onClick={addToCartFromDialog} className="flex-1" disabled={!selectedColor || !selectedSize}>
                       Add to Cart
                     </Button>
                   </div>

@@ -119,8 +119,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Payment method required' }, { status: 400 })
     }
 
-    // Get admin user ID (assuming it's stored in session)
-    const adminUserId = session.user.id || 1 // Fallback to admin ID 1
+    // Get admin user ID from database using email
+    let adminUserId = 1 // Default fallback
+    try {
+      const userResult = await executeQuery(
+        'SELECT id FROM users WHERE email = ?',
+        [session.user.email]
+      )
+      if (Array.isArray(userResult) && userResult.length > 0) {
+        adminUserId = (userResult[0] as any).id
+      }
+    } catch (error) {
+      console.error('Error fetching user ID:', error)
+    }
 
     // Generate transaction ID
     const transactionId = `POS-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`

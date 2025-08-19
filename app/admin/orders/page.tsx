@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { getOrders, updateOrder, type Order } from "@/lib/admin-data"
+import { type Order } from "@/lib/admin-data"
 import { Search, Eye, Package, Truck, CheckCircle, XCircle, Clock, Filter, RefreshCw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
@@ -28,14 +28,20 @@ export default function AdminOrdersPage() {
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
-  const loadOrders = () => {
+  const loadOrders = async () => {
     setIsLoading(true)
     try {
-      const allOrders = getOrders()
-      setOrders(allOrders)
-      console.log("Loaded orders:", allOrders)
+      const response = await fetch('/api/admin/orders')
+      if (response.ok) {
+        const allOrders = await response.json()
+        setOrders(allOrders || [])
+        console.log("Loaded orders:", allOrders)
+      } else {
+        throw new Error('Failed to fetch orders')
+      }
     } catch (error) {
       console.error("Error loading orders:", error)
+      setOrders([])
       toast({
         title: "Error",
         description: "Failed to load orders",
@@ -81,18 +87,31 @@ export default function AdminOrdersPage() {
     setFilteredOrders(filtered)
   }, [orders, searchTerm, statusFilter])
 
-  const handleStatusUpdate = (orderId: string, newStatus: Order["status"]) => {
-    const updatedOrder = updateOrder(orderId, { status: newStatus })
-    if (updatedOrder) {
-      setOrders((prevOrders) => prevOrders.map((order) => (order.id === orderId ? updatedOrder : order)))
-      if (selectedOrder?.id === orderId) {
-        setSelectedOrder(updatedOrder)
-      }
-      toast({
-        title: "Order Updated",
-        description: `Order status changed to ${newStatus}`,
+  const handleStatusUpdate = async (orderId: string, newStatus: Order["status"]) => {
+    try {
+      const response = await fetch(`/api/admin/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
       })
-    } else {
+      
+      if (response.ok) {
+        const updatedOrder = await response.json()
+        setOrders((prevOrders) => prevOrders.map((order) => (order.id === orderId ? updatedOrder : order)))
+        if (selectedOrder?.id === orderId) {
+          setSelectedOrder(updatedOrder)
+        }
+        toast({
+          title: "Order Updated",
+          description: `Order status changed to ${newStatus}`,
+        })
+      } else {
+        throw new Error('Failed to update order')
+      }
+    } catch (error) {
+      console.error('Error updating order:', error)
       toast({
         title: "Error",
         description: "Failed to update order status",

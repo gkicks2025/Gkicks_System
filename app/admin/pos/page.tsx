@@ -12,11 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator"
 import { Search, Plus, Minus, ShoppingCart, CreditCard, QrCode, Receipt, Trash2 } from "lucide-react"
 import {
-  getInventoryData,
-  checkStock,
-  updateStock,
-  getDailySales,
-  updateDailySales,
   type ProductInventory,
 } from "@/lib/admin-data"
 import { toast } from "sonner"
@@ -97,16 +92,15 @@ export default function POSPage() {
     loadTransactions()
   }, [])
 
-  const refreshInventory = () => {
+  const refreshInventory = async () => {
     try {
-      const data = getInventoryData()
+      const response = await fetch('/api/pos/inventory')
+      if (!response.ok) {
+        throw new Error('Failed to fetch inventory')
+      }
+      const data = await response.json()
       if (Array.isArray(data)) {
-        // Filter only active products with stock
-        const activeProducts = data.filter((product) => {
-          if (!product || product.isActive === false) return false
-          return getTotalStock(product) > 0
-        })
-        setInventory(activeProducts)
+        setInventory(data)
       } else {
         console.warn("Invalid inventory data received:", data)
         setInventory([])
@@ -118,29 +112,41 @@ export default function POSPage() {
     }
   }
     
-    const loadDailySales = async () => {
+  const loadDailySales = async () => {
     try {
-      const salesArray: Sale[] = await getDailySales();
-      const totalSales = salesArray.reduce((sum, sale) => sum + sale.amount, 0); // example to get total
-      setDailySales(totalSales);
+      const response = await fetch('/api/pos/daily-sales')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.summary) {
+          setDailySales(data.summary.totalGrossSales || 0)
+        }
+      }
     } catch (error) {
-      console.error("Error loading daily sales:", error);
-      setDailySales(0);
+      console.error("Error loading daily sales:", error)
+      setDailySales(0)
     }
   }
 
 
 
 
-  const loadTransactions = () => {
+  const loadTransactions = async () => {
     try {
-      if (typeof window !== "undefined") {
-        const stored = window.localStorage.getItem("pos-transactions")
-        if (stored) {
-          const parsedTransactions = JSON.parse(stored)
-          if (Array.isArray(parsedTransactions)) {
-            setTransactions(parsedTransactions)
-          }
+      const today = new Date().toISOString().split('T')[0]
+      const response = await fetch(`/api/pos/transactions?date=${today}`)
+      if (response.ok) {
+        const data = await response.json()
+        if (Array.isArray(data)) {
+          // Convert API format to component format
+          const formattedTransactions = data.map((t: any) => ({
+            id: t.transactionId || t.id,
+            items: t.items || [],
+            total: t.totalAmount || t.total || 0,
+            paymentMethod: t.paymentMethod || 'cash',
+            timestamp: t.createdAt || new Date().toISOString(),
+            customerName: t.customerInfo?.name || t.customerName
+          }))
+          setTransactions(formattedTransactions)
         }
       }
     } catch (error) {
@@ -149,15 +155,44 @@ export default function POSPage() {
     }
   }
 
-  const saveTransaction = (transaction: Transaction) => {
+  const saveTransaction = async (transaction: Transaction) => {
     try {
-      if (typeof window !== "undefined") {
-        const updatedTransactions = [transaction, ...transactions].slice(0, 100) // Keep last 100 transactions
-        setTransactions(updatedTransactions)
-        window.localStorage.setItem("pos-transactions", JSON.stringify(updatedTransactions))
+      // Convert transaction format for API
+      const transactionData = {
+        items: transaction.items.map(item => ({
+          productId: item.productId.toString(),
+          name: item.name,
+          brand: item.brand,
+          price: item.price,
+          color: item.color,
+          size: item.size,
+          quantity: item.quantity,
+          image: item.image
+        })),
+        total: transaction.total,
+        paymentMethod: transaction.paymentMethod,
+        customerName: transaction.customerName
+      }
+      
+      const response = await fetch('/api/pos/transactions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(transactionData)
+      })
+      
+      if (response.ok) {
+        // Refresh transactions and inventory after successful save
+        await loadTransactions()
+        await refreshInventory()
+        toast.success('Transaction saved successfully')
+      } else {
+        throw new Error('Failed to save transaction')
       }
     } catch (error) {
       console.error("Error saving transaction:", error)
+      toast.error('Failed to save transaction')
     }
   }
 
@@ -203,13 +238,17 @@ export default function POSPage() {
   }
 
   const getCurrentStock = async (product: ProductInventory, color: string, size: string): Promise<number> => {
-  try {
-    return await checkStock(product.id, color, size)
-  } catch (error) {
-    console.error("Error getting current stock:", error)
-    return 0
+    try {
+      // For now, return the total stock quantity from the product
+      // In a more complex system, this could check variant-specific stock
+      if (!product?.variants?.[color]?.sizes || !(size in (product.variants[color]?.sizes || {}))) return 0
+      const sizes = product.variants[color]?.sizes;
+      return (sizes && typeof sizes[size] === 'number') ? sizes[size] : 0;
+    } catch (error) {
+      console.error("Error getting current stock:", error)
+      return 0
+    }
   }
-}
 
 
   const openProductDialog = (product: ProductInventory) => {
@@ -301,12 +340,6 @@ export default function POSPage() {
     const updatedCart = [...cart];
     updatedCart[index].quantity = newQuantity;
     setCart(updatedCart);
-    await updateStock(
-      inventory.find((p) => p.id === Number(item.productId))?.id ?? 0,
-      item.color,
-      item.size,
-      newQuantity
-    );
   }
 
   const removeFromCart = (index: number) => {
@@ -323,7 +356,7 @@ export default function POSPage() {
     return cart.reduce((total, item) => total + item.quantity, 0)
   }
 
-  const processCheckout = () => {
+  const processCheckout = async () => {
     if (cart.length === 0) {
       toast.error("Cart is empty")
       return
@@ -335,12 +368,6 @@ export default function POSPage() {
     }
 
     try {
-      // Update inventory stock
-      cart.forEach((item) => {
-       updateStock(item.productId, item.color, item.size, -item.quantity)
-
-      })
-
       // Create transaction
       const transaction: Transaction = {
         id: `TXN-${Date.now()}`,
@@ -351,13 +378,8 @@ export default function POSPage() {
         customerName: customerName || undefined,
       }
 
-      // Update daily sales
-      const newDailySales = dailySales + getCartTotal()
-      updateDailySales()
-      setDailySales(newDailySales)
-
-      // Save transaction
-      saveTransaction(transaction)
+      // Save transaction (this will handle stock updates and daily sales via API)
+      await saveTransaction(transaction)
       setLastTransaction(transaction)
 
       // Clear cart and form

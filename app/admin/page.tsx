@@ -60,115 +60,24 @@ export default function AdminDashboard() {
 
       console.log("Fetching dashboard data...")
 
-      // Initialize default stats
-      const dashboardStats: DashboardStats = {
-        totalProducts: 0,
-        activeProducts: 0,
-        lowStockProducts: 0,
-        outOfStockProducts: 0,
-        totalOrders: 0,
-        pendingOrders: 0,
-        completedOrders: 0,
-        totalRevenue: 0,
-        totalUsers: 0,
-        recentOrders: [],
-        topProducts: [],
-        salesData: [],
-        categoryData: [],
+      const response = await fetch('/api/admin/dashboard')
+      if (!response.ok) {
+        throw new Error('Failed to fetch dashboard data')
       }
-
-      // Fetch products data
-      try {
-        const response = await fetch('/api/products')
-        if (!response.ok) {
-          throw new Error('Failed to fetch products')
-        }
-        const products = await response.json()
-
-        if (products && Array.isArray(products)) {
-          console.log("Products fetched:", products.length)
-          dashboardStats.totalProducts = products.length
-          dashboardStats.activeProducts = products.filter((p) => p.is_active).length
-          dashboardStats.lowStockProducts = products.filter((p) => p.stock_quantity > 0 && p.stock_quantity <= 5).length
-          dashboardStats.outOfStockProducts = products.filter((p) => p.stock_quantity === 0).length
-
-          // Top products by stock quantity
-          dashboardStats.topProducts = products
-            .filter((p) => p.is_active)
-            .sort((a, b) => (b.stock_quantity || 0) - (a.stock_quantity || 0))
-            .slice(0, 5)
-
-          // Category data
-          const categoryStats = products.reduce(
-            (acc, product) => {
-              const category = product.category || "Other"
-              acc[category] = (acc[category] || 0) + 1
-              return acc
-            },
-            {} as Record<string, number>,
-          )
-
-          dashboardStats.categoryData = Object.entries(categoryStats).map(([name, value]) => ({
-            name,
-            value,
-          }))
-        }
-      } catch (error) {
-        console.warn("Error fetching products:", error)
-      }
-
-      // Fetch orders data
-      try {
-        const ordersResponse = await fetch('/api/admin/orders')
-        if (ordersResponse.ok) {
-          const orders = await ordersResponse.json()
-          if (orders && Array.isArray(orders)) {
-            console.log("Orders fetched:", orders.length)
-            dashboardStats.totalOrders = orders.length
-            dashboardStats.totalRevenue = orders.reduce((sum, order) => sum + (order.total_amount || 0), 0)
-            dashboardStats.pendingOrders = orders.filter((o) => o.status === "pending").length
-            dashboardStats.completedOrders = orders.filter((o) => o.status === "delivered").length
-            dashboardStats.recentOrders = orders.slice(0, 10)
-
-            // Sales data for the last 7 days
-            const salesData = []
-            for (let i = 6; i >= 0; i--) {
-              const date = new Date()
-              date.setDate(date.getDate() - i)
-              const dateStr = date.toISOString().split("T")[0]
-
-              const dayOrders = orders.filter((order) => order.created_at?.startsWith(dateStr)) || []
-              const dayRevenue = dayOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0)
-
-              salesData.push({
-                date: date.toLocaleDateString("en-US", { weekday: "short" }),
-                revenue: dayRevenue,
-                orders: dayOrders.length,
-              })
-            }
-            dashboardStats.salesData = salesData
-          }
-        }
-      } catch (error) {
-        console.warn("Error fetching orders:", error)
-      }
-
-      // Fetch users data
-      try {
-        const usersResponse = await fetch('/api/admin/users')
-        if (usersResponse.ok) {
-          const users = await usersResponse.json()
-          if (users && Array.isArray(users)) {
-            console.log("Users fetched:", users.length)
-            dashboardStats.totalUsers = users.length
-          }
-        }
-      } catch (error) {
-        console.warn("Error fetching users:", error)
+      
+      const dashboardStats = await response.json()
+      
+      // Format sales data for chart display
+      if (dashboardStats.salesData && Array.isArray(dashboardStats.salesData)) {
+        dashboardStats.salesData = dashboardStats.salesData.map((item: any) => ({
+          date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          revenue: parseFloat(item.revenue) || 0,
+          orders: parseInt(item.orders) || 0
+        }))
       }
 
       setStats(dashboardStats)
-      console.log("Dashboard stats loaded:", dashboardStats)
+      console.log("Dashboard data loaded:", dashboardStats)
     } catch (error) {
       console.error("Error fetching dashboard data:", error)
       setError(error instanceof Error ? error.message : "Failed to fetch dashboard data")
