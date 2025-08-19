@@ -82,12 +82,17 @@ export default function CartPage() {
         let addressData = null
         if (addressResponse.ok) {
           const addresses = await addressResponse.json()
+          console.log('🏠 CART: Received addresses:', addresses)
           addressData = addresses.find((addr: any) => addr.is_default)
+          console.log('🏠 CART: Default address found:', addressData)
         } else {
           console.error("Error loading address:", await addressResponse.text())
         }
 
-        setShippingInfo({
+        console.log('👤 CART: Profile data:', profileData)
+        console.log('🏠 CART: Address data:', addressData)
+
+        const newShippingInfo = {
           fullName: profileData ? `${profileData.first_name} ${profileData.last_name}`.trim() : "",
           phone: profileData?.phone || "",
           street: addressData?.address_line_1 || "",
@@ -95,7 +100,10 @@ export default function CartPage() {
           province: addressData?.state || "",
           zipCode: addressData?.postal_code || "",
           country: addressData?.country || "",
-        })
+        }
+        
+        console.log('📋 CART: Setting shipping info:', newShippingInfo)
+        setShippingInfo(newShippingInfo)
       } catch (error) {
         console.error("Error loading user data:", error)
       }
@@ -716,16 +724,29 @@ export default function CartPage() {
                     {/* Payment Screenshot Upload for Digital Payments */}
                     {(paymentMethod === "GCash" || paymentMethod === "Maya") && (
                       <div className="space-y-2">
-                        <Label htmlFor="paymentScreenshot" className="text-sm text-gray-700 dark:text-gray-300">
+                        <Label className="text-sm text-gray-700 dark:text-gray-300">
                           Payment Screenshot *
                         </Label>
-                        <Input
-                          id="paymentScreenshot"
-                          type="file"
-                          accept="image/*"
-                          onChange={handleScreenshotUpload}
-                          className="h-10 sm:h-12 bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                        />
+                        <div className="relative">
+                          <input
+                            id="paymentScreenshot"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleScreenshotUpload}
+                            className="hidden"
+                          />
+                          <label
+                            htmlFor="paymentScreenshot"
+                            className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                          >
+                            <div className="flex flex-col items-center justify-center py-2">
+                              <Upload className="w-6 h-6 mb-1 text-gray-500 dark:text-gray-400" />
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                <span className="font-semibold">Click to upload</span> screenshot
+                              </p>
+                            </div>
+                          </label>
+                        </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           Please upload a screenshot of your {paymentMethod} payment confirmation
                         </p>
@@ -796,16 +817,30 @@ export default function CartPage() {
               
               {/* Screenshot Upload in QR Dialog */}
               <div className="w-full space-y-2">
-                <Label htmlFor="qrPaymentScreenshot" className="text-sm text-gray-700 dark:text-gray-300">
+                <Label className="text-sm text-gray-700 dark:text-gray-300">
                   Payment Screenshot *
                 </Label>
-                <Input
-                  id="qrPaymentScreenshot"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleScreenshotUpload}
-                  className="w-full bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                />
+                <div className="relative">
+                  <input
+                    id="qrPaymentScreenshot"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleScreenshotUpload}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="qrPaymentScreenshot"
+                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Upload className="w-8 h-8 mb-2 text-gray-500 dark:text-gray-400" />
+                      <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                        <span className="font-semibold">Click to upload</span> payment screenshot
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG or JPEG (MAX. 10MB)</p>
+                    </div>
+                  </label>
+                </div>
                 {screenshotPreview && (
                   <div className="mt-2">
                     <img

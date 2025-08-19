@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
-import { executeQuery } from '../../../lib/database/sqlite'
+import { executeQuery } from '../../../lib/database'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret'
 
@@ -38,9 +38,9 @@ export async function GET(request: NextRequest) {
        WHERE user_id = ? 
        ORDER BY created_at DESC`,
       [user.id]
-    )
+    ) as any[]
 
-    console.log(`✅ API: Successfully fetched ${orders.length} orders`)
+    console.log(`✅ API: Successfully fetched ${Array.isArray(orders) ? orders.length : 0} orders`)
     return NextResponse.json(orders)
 
   } catch (error) {
@@ -88,16 +88,16 @@ export async function POST(request: NextRequest) {
       const productResult = await executeQuery(
         'SELECT variants, stock_quantity FROM products WHERE id = ?',
         [item.product_id]
-      )
+      ) as any[]
 
-      if (productResult.length === 0) {
+      if (!Array.isArray(productResult) || productResult.length === 0) {
         return NextResponse.json(
           { error: `Product not found: ${item.product_name}` },
           { status: 400 }
         )
       }
 
-      const product = productResult[0]
+      const product = productResult[0] as any
       let variants: Record<string, Record<string, number>>
       
       try {
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
          user_id, order_number, status, total_amount, 
          shipping_address, payment_method, customer_email,
          items, created_at, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
       [
         user_id || null,
         orderNumber,
@@ -172,15 +172,15 @@ export async function POST(request: NextRequest) {
         customer_email,
         JSON.stringify(items)
       ]
-    )
+    ) as any
 
     // Fetch the created order
     const newOrder = await executeQuery(
-      `SELECT * FROM orders WHERE rowid = ?`,
-      [(result as any).lastID]
-    )
+      `SELECT * FROM orders WHERE id = ?`,
+      [(result as any).insertId]
+    ) as any[]
 
-    const order = newOrder[0]
+    const order = newOrder[0] as any
     // Parse JSON fields
     const parsedOrder = {
       ...order,
@@ -235,12 +235,12 @@ export async function PUT(request: NextRequest) {
 
     const result = await executeQuery(
       `UPDATE orders 
-       SET status = ?, tracking_number = ?, updated_at = datetime('now')
+       SET status = ?, tracking_number = ?, updated_at = NOW()
        WHERE id = ? AND user_id = ?`,
       [status, tracking_number || null, id, user.id]
-    )
+    ) as any
 
-    if ((result as any).changes === 0) {
+    if ((result as any).affectedRows === 0) {
       return NextResponse.json(
         { error: 'Order not found or unauthorized' },
         { status: 404 }
@@ -251,9 +251,15 @@ export async function PUT(request: NextRequest) {
     const updatedOrder = await executeQuery(
       `SELECT * FROM orders WHERE id = ? AND user_id = ?`,
       [id, user.id]
-    )
+    ) as any[]
 
-    const order = updatedOrder[0]
+    const order = Array.isArray(updatedOrder) && updatedOrder.length > 0 ? updatedOrder[0] as any : null;
+    if (!order) {
+      return NextResponse.json(
+        { error: 'Order not found' },
+        { status: 404 }
+      );
+    }
     const parsedOrder = {
       ...order,
       shipping_address: order.shipping_address ? JSON.parse(order.shipping_address) : null,
