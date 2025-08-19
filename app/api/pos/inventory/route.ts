@@ -41,22 +41,56 @@ export async function GET(request: NextRequest) {
     
     // Format the inventory data for POS use
     const inventoryArray = Array.isArray(inventory) ? inventory : []
-    const formattedInventory = inventoryArray.map((product: any) => {
+    const formattedInventory = await Promise.all(inventoryArray.map(async (product: any) => {
       const colors = product.colors ? JSON.parse(product.colors) : []
       const sizes = product.sizes ? JSON.parse(product.sizes) : []
       
-      // Create variants structure for POS compatibility
-      const variants: { [color: string]: { [size: string]: number } } = {}
+      // Get actual variants from product_variants table or use JSON variants
+      let variants: { [color: string]: { [size: string]: number } } = {}
       
-      colors.forEach((color: string) => {
-        variants[color] = {}
-        sizes.forEach((size: string) => {
-          // For now, assign equal stock to each variant based on total stock
-          // In a real scenario, you'd have individual variant stock tracking
-          const stockPerVariant = Math.floor(product.stock_quantity / (colors.length * sizes.length)) || 1
-          variants[color][size] = stockPerVariant
+      try {
+        // First try to get variants from the variants JSON field
+        if (product.variants) {
+          const parsedVariants = typeof product.variants === 'string' 
+            ? JSON.parse(product.variants) 
+            : product.variants
+          variants = parsedVariants
+        } else {
+          // Fallback: get variants from product_variants table
+          const variantResults = await executeQuery(
+            'SELECT size, color, stock_quantity FROM product_variants WHERE product_id = ? AND is_active = TRUE',
+            [product.id]
+          ) as { size: string; color: string; stock_quantity: number }[]
+          
+          variantResults.forEach((variant) => {
+            if (!variants[variant.color]) {
+              variants[variant.color] = {}
+            }
+            variants[variant.color][variant.size] = variant.stock_quantity || 0
+          })
+        }
+        
+        // If no variants found, create default structure
+        if (Object.keys(variants).length === 0) {
+          colors.forEach((color: string) => {
+            variants[color] = {}
+            sizes.forEach((size: string) => {
+              const stockPerVariant = Math.floor(product.stock_quantity / (colors.length * sizes.length)) || 0
+              variants[color][size] = stockPerVariant
+            })
+          })
+        }
+      } catch (error) {
+        console.error('Error parsing variants for product', product.id, ':', error)
+        // Create fallback variants structure
+        colors.forEach((color: string) => {
+          variants[color] = {}
+          sizes.forEach((size: string) => {
+            const stockPerVariant = Math.floor(product.stock_quantity / (colors.length * sizes.length)) || 0
+            variants[color][size] = stockPerVariant
+          })
         })
-      })
+      }
       
       return {
         id: product.id,
@@ -75,7 +109,7 @@ export async function GET(request: NextRequest) {
         sizes: sizes,
         variants: variants
       }
-    })
+    }))
     
     console.log(`✅ API: Successfully returned ${formattedInventory.length} inventory items`)
     

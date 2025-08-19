@@ -192,21 +192,77 @@ export async function POST(request: NextRequest) {
           item.price * item.quantity
         ])
 
-        // Update product stock
-        const updateStockQuery = `
-          UPDATE products 
+        // Update variant stock in product_variants table
+        const updateVariantStockQuery = `
+          UPDATE product_variants 
           SET stock_quantity = stock_quantity - ?
-          WHERE id = ? AND stock_quantity >= ?
+          WHERE product_id = ? AND size = ? AND color = ? AND stock_quantity >= ?
         `
         
-        const stockResult = await executeQuery(updateStockQuery, [
+        const variantStockResult = await executeQuery(updateVariantStockQuery, [
           item.quantity,
           item.productId,
+          item.size,
+          item.color,
           item.quantity
         ])
 
-        if ((stockResult as any).affectedRows === 0) {
-          throw new Error(`Insufficient stock for product: ${item.name}`)
+        // Also update the variants JSON field in products table
+        const getProductQuery = 'SELECT variants FROM products WHERE id = ?'
+        const productResult = await executeQuery(getProductQuery, [item.productId])
+        
+        if (productResult.length > 0) {
+          let variants = {}
+          try {
+            variants = productResult[0].variants ? JSON.parse(productResult[0].variants) : {}
+          } catch (e) {
+            console.warn('Failed to parse variants JSON for product', item.productId)
+            variants = {}
+          }
+          
+          // Update variant stock in JSON
+          if (variants[item.color] && variants[item.color][item.size] !== undefined) {
+            variants[item.color][item.size] = Math.max(0, variants[item.color][item.size] - item.quantity)
+          }
+          
+          // Calculate total stock from all variants
+          let totalStock = 0
+          Object.values(variants).forEach((sizeStocks: any) => {
+            totalStock += Object.values(sizeStocks).reduce((sum: number, qty: any) => sum + (typeof qty === 'number' ? qty : 0), 0)
+          })
+          
+          // Update products table with new variants and total stock
+          const updateProductQuery = `
+            UPDATE products 
+            SET variants = ?, stock_quantity = ?
+            WHERE id = ?
+          `
+          
+          await executeQuery(updateProductQuery, [
+            JSON.stringify(variants),
+            totalStock,
+            item.productId
+          ])
+        }
+
+        // Check if stock was successfully deducted
+        if ((variantStockResult as any).affectedRows === 0) {
+          // If variant table update failed, check if we can still deduct from main stock
+          const fallbackStockQuery = `
+            UPDATE products 
+            SET stock_quantity = stock_quantity - ?
+            WHERE id = ? AND stock_quantity >= ?
+          `
+          
+          const fallbackResult = await executeQuery(fallbackStockQuery, [
+            item.quantity,
+            item.productId,
+            item.quantity
+          ])
+          
+          if ((fallbackResult as any).affectedRows === 0) {
+            throw new Error(`Insufficient stock for product: ${item.name} (${item.color} ${item.size})`)
+          }
         }
       }
 
