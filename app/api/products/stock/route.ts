@@ -112,7 +112,7 @@ const product = Array.isArray(productResult) ? productResult[0] : productResult
 
     // Update database
     const result = await executeQuery(
-      'UPDATE products SET variants = ?, stock_quantity = ?, updated_at = datetime(\'now\') WHERE id = ?',
+      'UPDATE products SET variants = ?, stock_quantity = ?, updated_at = NOW() WHERE id = ?',
       [JSON.stringify(variants), totalStock, productId]
     )
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
-import { executeQuery } from '../../../lib/database'
+import { executeQuery } from '../../../lib/database/mysql'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret'
 
@@ -13,8 +13,8 @@ async function getUserFromToken(request: NextRequest) {
     }
 
     const token = authHeader.substring(7)
-    const decoded = jwt.verify(token, JWT_SECRET) as any
-    return decoded
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, email: string }
+    return { id: decoded.userId, email: decoded.email }
   } catch (error) {
     return null
   }
@@ -159,33 +159,54 @@ export async function POST(request: NextRequest) {
     const result = await executeQuery(
       `INSERT INTO orders (
          user_id, order_number, status, total_amount, 
-         shipping_address, payment_method, customer_email,
-         items, created_at, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+         shipping_address, payment_method
+       ) VALUES (?, ?, ?, ?, ?, ?)`,
       [
         user_id || null,
         orderNumber,
-        status,
-        total,
-        JSON.stringify(shipping_address),
-        payment_method,
-        customer_email,
-        JSON.stringify(items)
+        status || 'pending',
+        total || 0, // total_amount
+        JSON.stringify(shipping_address || {}),
+        payment_method || null
       ]
     ) as any
 
-    // Fetch the created order
+    const orderId = (result as any).insertId
+
+    // Insert order items
+    for (const item of items) {
+      await executeQuery(
+        `INSERT INTO order_items (
+           order_id, product_id, quantity, size, color, price
+         ) VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          orderId,
+          item.product_id,
+          item.quantity,
+          item.size || null,
+          item.color || null,
+          item.price
+        ]
+      )
+    }
+
+    // Fetch the created order with items
     const newOrder = await executeQuery(
       `SELECT * FROM orders WHERE id = ?`,
-      [(result as any).insertId]
+      [orderId]
+    ) as any[]
+
+    const orderItems = await executeQuery(
+      `SELECT * FROM order_items WHERE order_id = ?`,
+      [orderId]
     ) as any[]
 
     const order = newOrder[0] as any
-    // Parse JSON fields
+    // Parse JSON fields and add items
     const parsedOrder = {
       ...order,
       shipping_address: order.shipping_address ? JSON.parse(order.shipping_address) : null,
-      items: order.items ? JSON.parse(order.items) : []
+      items: orderItems
     }
 
     console.log('✅ API: Successfully created order:', orderNumber)

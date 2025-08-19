@@ -88,7 +88,7 @@ export default function OrdersPage() {
           }
 
           const data = await response.json()
-          setOrders(data.orders || [])
+          setOrders(data || [])
         } catch (error) {
           console.error("Failed to load orders:", error)
           setOrders([])

@@ -262,8 +262,8 @@ export default function CartPage() {
                state: shippingInfo.province,
                postal_code: shippingInfo.zipCode,
                country: shippingInfo.country,
-               first_name: firstName || null,
-               last_name: lastName || null,
+               first_name: firstName || 'Customer',
+               last_name: lastName || 'Name',
                phone: shippingInfo.phone,
              })
            })
@@ -285,8 +285,8 @@ export default function CartPage() {
               state: shippingInfo.province,
               postal_code: shippingInfo.zipCode,
               country: shippingInfo.country,
-              first_name: firstName || null,
-              last_name: lastName || null,
+              first_name: firstName || 'Customer',
+              last_name: lastName || 'Name',
               phone: shippingInfo.phone,
               is_default: true,
             })
@@ -364,7 +364,7 @@ export default function CartPage() {
     }
   }
 
-  const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+  const subtotal = items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 0)), 0)
   const vat = subtotal * 0.12 // 12% VAT in Philippines
   const shipping = subtotal > 2000 ? 0 : 150 // Free shipping over ₱2000
   const total = subtotal + vat + shipping
@@ -444,7 +444,7 @@ export default function CartPage() {
                       )}
                       <div className="flex items-center gap-2 mt-2">
                         <span className="font-semibold text-sm sm:text-base text-gray-900 dark:text-yellow-400">
-                          ₱{item.price.toLocaleString()}
+                          ₱{(item.price || 0).toLocaleString()}
                         </span>
                       </div>
                     </div>
@@ -769,7 +769,7 @@ export default function CartPage() {
                     className="w-full bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white"
                     size="lg"
                   >
-                    {isProcessing ? "Processing..." : `Place Order - ₱${total.toLocaleString()}`}
+                    {isProcessing ? "Processing..." : `Place Order - ₱${(total || 0).toLocaleString()}`}
                   </Button>
                 </CardContent>
               </Card>
@@ -806,7 +806,7 @@ export default function CartPage() {
                 )}
               </div>
               <div className="text-center">
-                <p className="text-lg font-semibold text-gray-900 dark:text-yellow-400">₱{total.toLocaleString()}</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-yellow-400">₱{(total || 0).toLocaleString()}</p>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 px-4">
                   Scan this QR code with your {qrPaymentMethod === "gcash" ? "GCash" : "PayMaya"} app
                 </p>
@@ -909,7 +909,7 @@ export default function CartPage() {
                       <div className="flex justify-between">
                         <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Amount:</span>
                         <span className="text-xs sm:text-sm font-bold text-green-600 dark:text-green-400">
-                          ₱{completedOrder.total.toLocaleString()}
+                          ₱{(completedOrder?.total || 0).toLocaleString()}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -937,7 +937,7 @@ export default function CartPage() {
                           {item.quantity}x {item.product_name}
                         </span>
                         <span className="flex-shrink-0 text-gray-900 dark:text-white">
-                          ₱{(item.price * item.quantity).toLocaleString()}
+                          ₱{((item.price || 0) * (item.quantity || 0)).toLocaleString()}
                         </span>
                       </div>
                     ))}

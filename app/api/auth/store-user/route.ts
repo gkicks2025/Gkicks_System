@@ -1,29 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
-import mysql from 'mysql2/promise'
+import { executeQuery } from '@/lib/database'
 
-const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'gkicks_shop',
-}
+// Use the centralized database connection
 
 export async function POST(request: NextRequest) {
   try {
     const user = await request.json()
     
-    const connection = await mysql.createConnection(dbConfig)
-    
     // Check if user already exists
-    const [existingUsers] = await connection.execute(
+    const existingUsers = await executeQuery(
       'SELECT id FROM users WHERE email = ?',
       [user.email]
-    )
+    ) as any[]
     
-    if ((existingUsers as any[]).length === 0) {
+    if (existingUsers.length === 0) {
       // Insert new user
-      await connection.execute(
-        'INSERT INTO users (email, first_name, last_name, avatar_url, is_admin, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
+      await executeQuery(
+        'INSERT INTO users (email, first_name, last_name, avatar_url, is_admin) VALUES (?, ?, ?, ?, ?)',
         [
           user.email,
           user.firstName,
@@ -34,13 +27,11 @@ export async function POST(request: NextRequest) {
       )
     } else {
       // Update existing user
-      await connection.execute(
-        'UPDATE users SET first_name = ?, last_name = ?, avatar_url = ?, updated_at = NOW() WHERE email = ?',
+      await executeQuery(
+        'UPDATE users SET first_name = ?, last_name = ?, avatar_url = ? WHERE email = ?',
         [user.firstName, user.lastName, user.avatar, user.email]
       )
     }
-    
-    await connection.end()
     
     return NextResponse.json({ success: true })
   } catch (error) {
