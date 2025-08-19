@@ -104,12 +104,8 @@ export default function InventoryPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [isStockUpdateDialogOpen, setIsStockUpdateDialogOpen] = useState(false)
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null)
   const [productToDelete, setProductToDelete] = useState<Product | null>(null)
-  const [stockUpdateProduct, setStockUpdateProduct] = useState<Product | null>(null)
-  const [stockAdjustment, setStockAdjustment] = useState<number>(0)
-  const [stockUpdateReason, setStockUpdateReason] = useState<string>("")
   const [isVariantStockDialogOpen, setIsVariantStockDialogOpen] = useState(false)
   const [variantStockProduct, setVariantStockProduct] = useState<Product | null>(null)
   const [variantStockData, setVariantStockData] = useState<Record<string, Record<string, number>>>({})
@@ -131,7 +127,6 @@ export default function InventoryPage() {
     is_new: false,
     is_sale: false,
     is_active: true,
-    stock_quantity: 0,
     low_stock_threshold: 10,
     colors: [],
     sizes: [],
@@ -158,16 +153,22 @@ export default function InventoryPage() {
     const token = localStorage.getItem('auth_token')
     console.log('🔍 Token in localStorage:', token)
     
+    // Only redirect if we're sure the user is not authenticated and not loading
     if (!adminState.isLoading && !adminState.isAuthenticated) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in as admin to access inventory management",
-        variant: "destructive",
-      })
-      // Redirect to admin login page
-      router.push('/admin/login')
+      // Add a small delay to prevent rapid redirects and race conditions
+      const redirectTimer = setTimeout(() => {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in as admin to access inventory management",
+          variant: "destructive",
+        })
+        // Use replace instead of push to prevent back button issues
+        router.replace('/admin/login')
+      }, 100)
+      
+      return () => clearTimeout(redirectTimer)
     }
-  }, [adminState, toast])
+  }, [adminState.isLoading, adminState.isAuthenticated, router, toast])
 
   const categories = ["Men", "Women", "Kids", "Unisex"]
   const brands = ["Nike", "Adidas", "Converse", "New Balance", "ASICS"]
@@ -408,12 +409,7 @@ export default function InventoryPage() {
     setIsEditDialogOpen(true)
   }
 
-  const handleQuickStockUpdate = (product: Product) => {
-    setStockUpdateProduct(product)
-    setStockAdjustment(0)
-    setStockUpdateReason("")
-    setIsStockUpdateDialogOpen(true)
-  }
+
 
   const handleVariantStockUpdate = (product: Product) => {
     setVariantStockProduct(product)
@@ -434,6 +430,10 @@ export default function InventoryPage() {
         totalStock += Object.values(sizeStocks).reduce((sum, qty) => sum + qty, 0)
       })
 
+      console.log('Updating variant stock for product:', variantStockProduct.id)
+      console.log('Variant stock data:', variantStockData)
+      console.log('Total stock calculated:', totalStock)
+
       const response = await fetch(`/api/products/${variantStockProduct.id}`, {
         method: 'PATCH',
         headers: {
@@ -447,7 +447,9 @@ export default function InventoryPage() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to update variant stock')
+        const errorData = await response.text()
+        console.error('API Error Response:', response.status, errorData)
+        throw new Error(`Failed to update variant stock: ${response.status} - ${errorData}`)
       }
 
       toast({
@@ -471,67 +473,7 @@ export default function InventoryPage() {
     }
   }
 
-  const handleStockUpdate = async () => {
-    if (!stockUpdateProduct) return
 
-    try {
-      const token = localStorage.getItem('auth_token')
-      if (!token) {
-        toast({
-          title: "Authentication Error",
-          description: "Please log in again to update stock",
-          variant: "destructive",
-        })
-        return
-      }
-
-      const newStockQuantity = (stockUpdateProduct.stock_quantity || 0) + stockAdjustment
-      if (newStockQuantity < 0) {
-        toast({
-          title: "Invalid Stock Adjustment",
-          description: "Stock quantity cannot be negative",
-          variant: "destructive",
-        })
-        return
-      }
-
-      const response = await fetch(`/api/products/${stockUpdateProduct.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          stock_quantity: newStockQuantity,
-          stock_update_reason: stockUpdateReason
-        }),
-      })
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: `Stock updated successfully. New quantity: ${newStockQuantity}`,
-        })
-        
-        // Dispatch inventory update event for real-time updates
-        window.dispatchEvent(new CustomEvent('inventoryUpdate', {
-          detail: { productId: stockUpdateProduct.id }
-        }))
-        
-        loadProducts()
-        setIsStockUpdateDialogOpen(false)
-      } else {
-        throw new Error('Failed to update stock')
-      }
-    } catch (error) {
-      console.error('Error updating stock:', error)
-      toast({
-        title: "Error",
-        description: "Failed to update stock",
-        variant: "destructive",
-      })
-    }
-  }
 
   const handleDelete = async () => {
     if (!productToDelete) return
@@ -661,6 +603,80 @@ export default function InventoryPage() {
 
   const outOfStockProducts = products.filter(p => (p.stock_quantity ?? 0) === 0)
 
+  // Excel export function
+  const exportToExcel = () => {
+    try {
+      // Prepare data for Excel export
+      const exportData = products.map(product => ({
+        'Product ID': product.id,
+        'Name': product.name,
+        'SKU': product.sku || 'N/A',
+        'Category': product.category,
+        'Brand': product.brand,
+        'Price': `$${product.price}`,
+        'Original Price': product.originalPrice ? `$${product.originalPrice}` : 'N/A',
+        'Stock Quantity': product.stock_quantity ?? 0,
+        'Low Stock Threshold': product.low_stock_threshold ?? 10,
+        'Status': product.is_active ? 'Active' : 'Inactive',
+        'New Product': product.is_new ? 'Yes' : 'No',
+        'On Sale': product.is_sale ? 'Yes' : 'No',
+        'Stock Status': (() => {
+          const stock = product.stock_quantity ?? 0
+          const threshold = product.low_stock_threshold ?? 10
+          if (stock === 0) return 'Out of Stock'
+          if (stock <= threshold) return 'Low Stock'
+          return 'In Stock'
+        })()
+      }))
+
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new()
+      const ws = XLSX.utils.json_to_sheet(exportData)
+
+      // Set column widths
+      const colWidths = [
+        { wch: 10 }, // Product ID
+        { wch: 30 }, // Name
+        { wch: 15 }, // SKU
+        { wch: 15 }, // Category
+        { wch: 15 }, // Brand
+        { wch: 12 }, // Price
+        { wch: 15 }, // Original Price
+        { wch: 15 }, // Stock Quantity
+        { wch: 18 }, // Low Stock Threshold
+        { wch: 10 }, // Status
+        { wch: 12 }, // New Product
+        { wch: 10 }, // On Sale
+        { wch: 15 }  // Stock Status
+      ]
+      ws['!cols'] = colWidths
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'Stock Data')
+
+      // Generate Excel file
+      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+      const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      
+      // Save file with current date
+      const currentDate = new Date().toISOString().split('T')[0]
+      saveAs(data, `stock-data-${currentDate}.xlsx`)
+      
+      toast({
+        title: "✅ Export Successful",
+        description: `Stock data exported successfully! File: stock-data-${currentDate}.xlsx`,
+        variant: "default",
+      })
+    } catch (error) {
+      console.error('Export error:', error)
+      toast({
+        title: "❌ Export Failed",
+        description: "Failed to export stock data. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
   // Show toast notifications for stock alerts
   useEffect(() => {
     if (products.length > 0) {
@@ -724,6 +740,14 @@ export default function InventoryPage() {
           <p className="text-muted-foreground">Manage your product stock levels and details</p>
         </div>
         <div className="flex gap-2">
+          <Button
+            onClick={exportToExcel}
+            variant="outline"
+            className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export Excel
+          </Button>
           <Button
             onClick={() => {
               resetForm()
@@ -975,15 +999,7 @@ export default function InventoryPage() {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleQuickStockUpdate(product)}
-                        title="Quick Stock Update"
-                        className="bg-primary hover:bg-primary/90 border-primary text-primary-foreground"
-                      >
-                        <RefreshCw className="h-4 w-4" />
-                      </Button>
+
                       <Button
                         size="sm"
                         variant="outline"
@@ -1127,21 +1143,7 @@ export default function InventoryPage() {
               </div>
 
               {/* Stock Management Section */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="stock_quantity" className="text-gray-900 dark:text-white">Stock Quantity *</Label>
-                  <Input
-                    id="stock_quantity"
-                    type="number"
-                    min="0"
-                    value={formData.stock_quantity}
-                    onChange={(e) => setFormData(prev => ({ ...prev, stock_quantity: parseInt(e.target.value) || 0 }))}
-                    className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
-                    placeholder="0"
-                  />
-                </div>
-
-                <div className="space-y-2">
+              <div className="space-y-2">
                   <Label htmlFor="low_stock_threshold" className="text-gray-900 dark:text-white">Low Stock Threshold</Label>
                   <Input
                     id="low_stock_threshold"
@@ -1153,7 +1155,6 @@ export default function InventoryPage() {
                     placeholder="10"
                   />
                 </div>
-              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="description" className="text-gray-900 dark:text-white">Description</Label>
@@ -1697,21 +1698,7 @@ export default function InventoryPage() {
               </div>
 
               {/* Stock Management Section */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-stock_quantity" className="text-gray-900 dark:text-white">Stock Quantity *</Label>
-                  <Input
-                    id="edit-stock_quantity"
-                    type="number"
-                    min="0"
-                    value={formData.stock_quantity}
-                    onChange={(e) => setFormData(prev => ({ ...prev, stock_quantity: parseInt(e.target.value) || 0 }))}
-                    className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
-                    placeholder="0"
-                  />
-                </div>
-
-                <div className="space-y-2">
+              <div className="space-y-2">
                   <Label htmlFor="edit-low_stock_threshold" className="text-gray-900 dark:text-white">Low Stock Threshold</Label>
                   <Input
                     id="edit-low_stock_threshold"
@@ -1723,7 +1710,6 @@ export default function InventoryPage() {
                     placeholder="10"
                   />
                 </div>
-              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="edit-description" className="text-gray-900 dark:text-white">Description</Label>
@@ -2239,69 +2225,7 @@ export default function InventoryPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Quick Stock Update Dialog */}
-      <Dialog open={isStockUpdateDialogOpen} onOpenChange={setIsStockUpdateDialogOpen}>
-        <DialogContent className="bg-background border-border max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-foreground">Quick Stock Update</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Update stock for {stockUpdateProduct?.name}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label className="text-foreground">Current Stock</Label>
-              <div className="text-lg font-semibold text-foreground">
-                {stockUpdateProduct?.stock_quantity || 0} units
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="stockAdjustment" className="text-foreground">
-                Stock Adjustment
-              </Label>
-              <Input
-                id="stockAdjustment"
-                type="number"
-                value={stockAdjustment}
-                onChange={(e) => setStockAdjustment(parseInt(e.target.value) || 0)}
-                placeholder="Enter adjustment (+/-)"
-                className="bg-background border-border"
-              />
-              <div className="text-sm text-muted-foreground mt-1">
-                New quantity: {(stockUpdateProduct?.stock_quantity || 0) + stockAdjustment}
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="stockReason" className="text-foreground">
-                Reason (Optional)
-              </Label>
-              <Textarea
-                id="stockReason"
-                value={stockUpdateReason}
-                onChange={(e) => setStockUpdateReason(e.target.value)}
-                placeholder="Reason for stock adjustment..."
-                className="bg-background border-border"
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsStockUpdateDialogOpen(false)}
-              className="bg-secondary hover:bg-secondary/80 border-border text-secondary-foreground"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleStockUpdate}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
-            >
-              Update Stock
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
 
       {/* Variant Stock Management Dialog */}
       <Dialog open={isVariantStockDialogOpen} onOpenChange={setIsVariantStockDialogOpen}>

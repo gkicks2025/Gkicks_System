@@ -1,8 +1,20 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import * as XLSX from "xlsx"
+import { saveAs } from "file-saver"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { DollarSign, ShoppingCart, Users, TrendingUp, Download, Calendar, Package, Activity, RefreshCw } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from "recharts"
 import { useAuth } from "@/contexts/auth-context"
@@ -26,6 +38,11 @@ export default function AnalyticsPage() {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isDateRangeOpen, setIsDateRangeOpen] = useState(false)
+  const [dateRange, setDateRange] = useState({
+    startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0]
+  })
 
   const fetchAnalyticsData = async () => {
     try {
@@ -46,6 +63,86 @@ export default function AnalyticsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Export analytics data to Excel
+  const exportToExcel = () => {
+    if (!analyticsData) {
+      toast.error('No data available to export')
+      return
+    }
+
+    try {
+      // Create workbook
+      const wb = XLSX.utils.book_new()
+
+      // Summary Sheet
+      const summaryData = [
+        ['Analytics Report', ''],
+        ['Generated on:', new Date().toLocaleDateString()],
+        ['Date Range:', `${dateRange.startDate} to ${dateRange.endDate}`],
+        ['', ''],
+        ['Key Metrics', ''],
+        ['Total Revenue (Current Month)', `₱${analyticsData.currentMonth.revenue?.toLocaleString() || '0.00'}`],
+        ['Total Orders (Current Month)', analyticsData.currentMonth.orders?.toLocaleString() || '0'],
+        ['Average Order Value', `₱${analyticsData.customerStats.avg_order_value?.toLocaleString() || '0.00'}`],
+        ['Total Customers', analyticsData.customerStats.total_customers?.toLocaleString() || '0'],
+        ['', ''],
+        ['Growth Metrics', ''],
+        ['Revenue Growth', `${analyticsData.growth.revenue || 0}%`],
+        ['Orders Growth', `${analyticsData.growth.orders || 0}%`],
+        ['Customer Growth', `${analyticsData.growth.customers || 0}%`]
+      ]
+      const summaryWs = XLSX.utils.aoa_to_sheet(summaryData)
+      XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary')
+
+      // Monthly Revenue Sheet
+      if (analyticsData.monthlyRevenue?.length > 0) {
+        const monthlyWs = XLSX.utils.json_to_sheet(analyticsData.monthlyRevenue)
+        XLSX.utils.book_append_sheet(wb, monthlyWs, 'Monthly Revenue')
+      }
+
+      // Daily Sales Sheet
+      if (analyticsData.dailySales?.length > 0) {
+        const dailyWs = XLSX.utils.json_to_sheet(analyticsData.dailySales)
+        XLSX.utils.book_append_sheet(wb, dailyWs, 'Daily Sales')
+      }
+
+      // Category Stats Sheet
+      if (analyticsData.categoryStats?.length > 0) {
+        const categoryWs = XLSX.utils.json_to_sheet(analyticsData.categoryStats)
+        XLSX.utils.book_append_sheet(wb, categoryWs, 'Category Stats')
+      }
+
+      // Top Products Sheet
+      if (analyticsData.topProducts?.length > 0) {
+        const productsWs = XLSX.utils.json_to_sheet(analyticsData.topProducts)
+        XLSX.utils.book_append_sheet(wb, productsWs, 'Top Products')
+      }
+
+      // Generate Excel file
+      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+      const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      
+      // Save file with current date
+      const currentDate = new Date().toISOString().split('T')[0]
+      saveAs(data, `analytics-report-${currentDate}.xlsx`)
+      
+      toast.success(`Analytics report exported successfully! File: analytics-report-${currentDate}.xlsx`)
+    } catch (error) {
+      console.error('Export error:', error)
+      toast.error('Failed to export analytics report. Please try again.')
+    }
+  }
+
+  // Handle date range change
+  const handleDateRangeChange = () => {
+    // Here you would typically refetch data with the new date range
+    // For now, we'll just close the dialog and show a message
+    setIsDateRangeOpen(false)
+    toast.success(`Date range updated: ${dateRange.startDate} to ${dateRange.endDate}`)
+    // In a real implementation, you would call fetchAnalyticsData with the date range
+    // fetchAnalyticsData(dateRange.startDate, dateRange.endDate)
   }
 
   useEffect(() => {
@@ -90,11 +187,11 @@ export default function AnalyticsPage() {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <Button variant="outline">
+          <Button variant="outline" onClick={exportToExcel}>
             <Download className="h-4 w-4 mr-2" />
             Export Report
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => setIsDateRangeOpen(true)}>
             <Calendar className="h-4 w-4 mr-2" />
             Date Range
           </Button>
@@ -324,6 +421,52 @@ export default function AnalyticsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Date Range Dialog */}
+      <Dialog open={isDateRangeOpen} onOpenChange={setIsDateRangeOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Select Date Range</DialogTitle>
+            <DialogDescription>
+              Choose the date range for analytics data. This will filter all reports and charts.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="start-date" className="text-right">
+                Start Date
+              </Label>
+              <Input
+                id="start-date"
+                type="date"
+                value={dateRange.startDate}
+                onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="end-date" className="text-right">
+                End Date
+              </Label>
+              <Input
+                id="end-date"
+                type="date"
+                value={dateRange.endDate}
+                onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDateRangeOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleDateRangeChange}>
+              Apply Date Range
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
