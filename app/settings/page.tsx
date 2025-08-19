@@ -33,6 +33,16 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setMounted(true)
+    // Load notification preferences from localStorage
+    const savedPushNotifications = localStorage.getItem('pushNotifications')
+    const savedEmailUpdates = localStorage.getItem('emailUpdates')
+    
+    if (savedPushNotifications !== null) {
+      setPushNotifications(JSON.parse(savedPushNotifications))
+    }
+    if (savedEmailUpdates !== null) {
+      setEmailUpdates(JSON.parse(savedEmailUpdates))
+    }
   }, [])
 
   const handleDeleteAccount = () => {
@@ -48,6 +58,7 @@ export default function SettingsPage() {
   const handleNotificationChange = (type: string, enabled: boolean) => {
     if (type === "push") {
       setPushNotifications(enabled)
+      localStorage.setItem('pushNotifications', JSON.stringify(enabled))
       toast({
         title: enabled ? "Push Notifications Enabled" : "Push Notifications Disabled",
         description: enabled
@@ -56,6 +67,7 @@ export default function SettingsPage() {
       })
     } else if (type === "email") {
       setEmailUpdates(enabled)
+      localStorage.setItem('emailUpdates', JSON.stringify(enabled))
       toast({
         title: enabled ? "Email Updates Enabled" : "Email Updates Disabled",
         description: enabled

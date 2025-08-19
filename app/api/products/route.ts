@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { executeQuery } from '../../../lib/database/sqlite';
+import { executeQuery } from '../../../lib/database/mysql';
 import { executeQuery as executeQueryMySQL } from '../../../lib/database/mysql';
 import jwt from 'jsonwebtoken';
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';

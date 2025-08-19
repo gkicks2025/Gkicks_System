@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { executeQuery } from '@/lib/database/sqlite'
+import { executeQuery } from '@/lib/database/mysql'
 import jwt from 'jsonwebtoken'
 
 interface JWTPayload {
@@ -64,18 +64,18 @@ export async function PUT(request: NextRequest) {
       [productId]
     )
 
-    if (productResult.length === 0) {
+    if (!productResult || (Array.isArray(productResult) && productResult.length === 0)) {
       return NextResponse.json(
         { error: 'Product not found' },
         { status: 404 }
       )
     }
 
-    const product = productResult[0]
+const product = Array.isArray(productResult) ? productResult[0] : productResult
     let variants: Record<string, Record<string, number>>
     
     try {
-      variants = product.variants ? JSON.parse(product.variants) : {}
+      variants = (product as any).variants ? JSON.parse((product as any).variants) : {}
     } catch (e) {
       console.warn('Failed to parse variants for product', productId, ':', e)
       variants = {}

@@ -38,6 +38,23 @@ interface Product {
   updated_at: string;
 }
 
+interface User {
+  id: number;
+  email: string;
+  full_name?: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  postal_code?: string;
+  country?: string;
+  is_admin: boolean;
+  avatar_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 interface DatabaseStats {
   totalProducts: number;
   activeProducts: number;
@@ -45,15 +62,41 @@ interface DatabaseStats {
   brands: string[];
 }
 
+interface TableSchema {
+  name: string;
+  rows: number;
+  structure: {
+    Field: string;
+    Type: string;
+    Null: string;
+    Key: string;
+    Default: any;
+    Extra: string;
+  }[];
+}
+
+interface DatabaseInfo {
+  connection: string;
+  database: string;
+  host: string;
+  port: string;
+  tables: TableSchema[];
+  totalRecords: number;
+}
+
 export default function MySQLAdminPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<DatabaseStats>({ totalProducts: 0, activeProducts: 0, categories: [], brands: [] });
   const [loading, setLoading] = useState(true);
+  const [usersLoading, setUsersLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'testing'>('testing');
+  const [databaseInfo, setDatabaseInfo] = useState<DatabaseInfo | null>(null);
+  const [schemaLoading, setSchemaLoading] = useState(false);
 
   // Form state for creating/editing products
   const [formData, setFormData] = useState({
@@ -70,6 +113,26 @@ export default function MySQLAdminPage() {
     is_active: true
   });
 
+  // Fetch database schema information
+  const fetchDatabaseSchema = async () => {
+    try {
+      setSchemaLoading(true);
+      const response = await fetch('/api/admin/mysql/stats');
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch database schema');
+      }
+      
+      setDatabaseInfo(data);
+    } catch (err) {
+      console.error('Error fetching database schema:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch database schema');
+    } finally {
+      setSchemaLoading(false);
+    }
+  };
+
   // Fetch products from MySQL API
   const fetchProducts = async () => {
     try {
@@ -83,14 +146,16 @@ export default function MySQLAdminPage() {
         throw new Error(data.error || 'Failed to fetch products');
       }
       
-      setProducts(data.products || []);
+      // Handle the correct API response format
+      const products = data.success ? data.data || [] : [];
+      setProducts(products);
       setConnectionStatus('connected');
       
       // Calculate stats
-      const totalProducts = data.products?.length || 0;
-      const activeProducts = data.products?.filter((p: Product) => p.is_active).length || 0;
-      const categories = [...new Set(data.products?.map((p: Product) => p.category) || [])] as string[];
-      const brands = [...new Set(data.products?.map((p: Product) => p.brand) || [])] as string[];
+      const totalProducts = products.length || 0;
+      const activeProducts = products.filter((p: Product) => p.is_active).length || 0;
+      const categories = [...new Set(products.map((p: Product) => p.category) || [])] as string[];
+      const brands = [...new Set(products.map((p: Product) => p.brand) || [])] as string[];
       
       setStats({ totalProducts, activeProducts, categories, brands });
     } catch (err) {
@@ -98,6 +163,30 @@ export default function MySQLAdminPage() {
       setConnectionStatus('disconnected');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch users from API
+  const fetchUsers = async () => {
+    try {
+      setUsersLoading(true);
+      setError(null);
+      
+      const response = await fetch('/api/admin/users');
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch users');
+      }
+      
+      // Handle the correct API response format
+      const users = data.success ? data.data || [] : [];
+      setUsers(users);
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch users');
+    } finally {
+      setUsersLoading(false);
     }
   };
 
@@ -223,6 +312,8 @@ export default function MySQLAdminPage() {
 
   useEffect(() => {
     fetchProducts();
+    fetchUsers();
+    fetchDatabaseSchema();
   }, []);
 
   return (
@@ -240,10 +331,6 @@ export default function MySQLAdminPage() {
           <Badge variant={connectionStatus === 'connected' ? 'default' : 'destructive'}>
             {connectionStatus === 'connected' ? '🟢 Connected' : '🔴 Disconnected'}
           </Badge>
-          <Button onClick={fetchProducts} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
         </div>
       </div>
 
@@ -295,102 +382,14 @@ export default function MySQLAdminPage() {
       <Tabs defaultValue="products" className="space-y-4">
         <TabsList>
           <TabsTrigger value="products">Products</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="structure">Database Structure</TabsTrigger>
         </TabsList>
 
         <TabsContent value="products" className="space-y-4">
-          {/* Actions */}
-          <div className="flex justify-between items-center">
+          {/* Table Header */}
+          <div>
             <h2 className="text-xl font-semibold">Products Table</h2>
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Product
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Create New Product</DialogTitle>
-                </DialogHeader>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="name">Name</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="brand">Brand</Label>
-                    <Input
-                      id="brand"
-                      value={formData.brand}
-                      onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="price">Price</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      step="0.01"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="category">Category</Label>
-                    <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="men">Men</SelectItem>
-                        <SelectItem value="women">Women</SelectItem>
-                        <SelectItem value="kids">Kids</SelectItem>
-                        <SelectItem value="unisex">Unisex</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="col-span-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="colors">Colors (comma-separated)</Label>
-                    <Input
-                      id="colors"
-                      value={formData.colors}
-                      onChange={(e) => setFormData({ ...formData, colors: e.target.value })}
-                      placeholder="Black, White, Red"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="stock">Stock Quantity</Label>
-                    <Input
-                      id="stock"
-                      type="number"
-                      value={formData.stock_quantity}
-                      onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-end space-x-2 mt-4">
-                  <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={createProduct}>
-                    Create Product
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
           </div>
 
           {/* Products Table */}
@@ -406,19 +405,18 @@ export default function MySQLAdminPage() {
                     <TableHead>Category</TableHead>
                     <TableHead>Stock</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8">
+                      <TableCell colSpan={7} className="text-center py-8">
                         Loading products...
                       </TableCell>
                     </TableRow>
                   ) : products.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8">
+                      <TableCell colSpan={7} className="text-center py-8">
                         No products found
                       </TableCell>
                     </TableRow>
@@ -438,23 +436,77 @@ export default function MySQLAdminPage() {
                             {product.is_active ? 'Active' : 'Inactive'}
                           </Badge>
                         </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="users" className="space-y-4">
+          {/* Table Header */}
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Users Table</h2>
+            <Button 
+              onClick={fetchUsers} 
+              disabled={usersLoading}
+              variant="outline"
+              size="sm"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${usersLoading ? 'animate-spin' : ''}`} />
+              Refresh Users
+            </Button>
+          </div>
+
+          {/* Users Table */}
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Created</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {usersLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        Loading users...
+                      </TableCell>
+                    </TableRow>
+                  ) : users.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        No users found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    users.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>{user.id}</TableCell>
+                        <TableCell className="font-medium">{user.email}</TableCell>
                         <TableCell>
-                          <div className="flex space-x-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openEditDialog(product)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => deleteProduct(product.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          {user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'N/A'}
+                        </TableCell>
+                        <TableCell>{user.phone || 'N/A'}</TableCell>
+                        <TableCell>
+                          {user.city && user.country ? `${user.city}, ${user.country}` : user.city || user.country || 'N/A'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={user.is_admin ? 'default' : 'secondary'}>
+                            {user.is_admin ? 'Admin' : 'Customer'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {new Date(user.created_at).toLocaleDateString()}
                         </TableCell>
                       </TableRow>
                     ))
@@ -468,42 +520,100 @@ export default function MySQLAdminPage() {
         <TabsContent value="structure">
           <Card>
             <CardHeader>
-              <CardTitle>Database Schema</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Database Schema</CardTitle>
+                <Button 
+                  onClick={fetchDatabaseSchema} 
+                  disabled={schemaLoading}
+                  variant="outline"
+                  size="sm"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${schemaLoading ? 'animate-spin' : ''}`} />
+                  Refresh Schema
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Products Table Structure</h3>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <pre className="text-sm">
-{`CREATE TABLE products (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  brand VARCHAR(100) NOT NULL,
-  description TEXT,
-  price DECIMAL(10,2) NOT NULL,
-  original_price DECIMAL(10,2),
-  image_url TEXT,
-  rating DECIMAL(3,2) DEFAULT 0,
-  reviews INT DEFAULT 0,
-  colors JSON,
-  color_images JSON,
-  sizes JSON,
-  is_new BOOLEAN DEFAULT FALSE,
-  is_sale BOOLEAN DEFAULT FALSE,
-  views INT DEFAULT 0,
-  category VARCHAR(50) DEFAULT 'unisex',
-  stock_quantity INT DEFAULT 0,
-  sku VARCHAR(100) UNIQUE,
-  is_active BOOLEAN DEFAULT TRUE,
-  is_deleted BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);`}
-                    </pre>
-                  </div>
+              {schemaLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+                  <span>Loading database schema...</span>
                 </div>
-              </div>
+              ) : databaseInfo ? (
+                <div className="space-y-6">
+                  {/* Database Info */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-blue-50 rounded-lg">
+                    <div>
+                      <div className="text-sm font-medium text-gray-600">Database</div>
+                      <div className="text-lg font-semibold">{databaseInfo.database}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-600">Host</div>
+                      <div className="text-lg font-semibold">{databaseInfo.host}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-600">Tables</div>
+                      <div className="text-lg font-semibold">{databaseInfo.tables.length}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-600">Total Records</div>
+                      <div className="text-lg font-semibold">{databaseInfo.totalRecords}</div>
+                    </div>
+                  </div>
+
+                  {/* Tables */}
+                  {databaseInfo.tables.map((table) => (
+                    <div key={table.name} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-lg capitalize">{table.name} Table</h3>
+                        <Badge variant="secondary">{table.rows} rows</Badge>
+                      </div>
+                      <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Field</TableHead>
+                              <TableHead>Type</TableHead>
+                              <TableHead>Null</TableHead>
+                              <TableHead>Key</TableHead>
+                              <TableHead>Default</TableHead>
+                              <TableHead>Extra</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {table.structure.map((column, index) => (
+                              <TableRow key={index}>
+                                <TableCell className="font-medium">{column.Field}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline">{column.Type}</Badge>
+                                </TableCell>
+                                <TableCell>{column.Null}</TableCell>
+                                <TableCell>
+                                  {column.Key && (
+                                    <Badge variant={column.Key === 'PRI' ? 'default' : 'secondary'}>
+                                      {column.Key}
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell>{column.Default || 'NULL'}</TableCell>
+                                <TableCell>{column.Extra}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Database className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No database schema information available</p>
+                  <Button onClick={fetchDatabaseSchema} className="mt-4">
+                    Load Schema
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

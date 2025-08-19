@@ -91,7 +91,7 @@ export default function WishlistPage() {
 
   if (wishlistState.items.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col transition-colors">
+      <div className="min-h-screen bg-background/95 backdrop-blur flex flex-col transition-colors">
         <main className="flex-1 container mx-auto px-4 py-8">
           <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
             <CardContent className="text-center py-8 sm:py-12">
@@ -116,7 +116,7 @@ export default function WishlistPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col transition-colors">
+    <div className="min-h-screen bg-background/95 backdrop-blur flex flex-col transition-colors">
       <main className="flex-1 container mx-auto px-4 py-6 sm:py-8">
         <div className="mb-6 sm:mb-8">
           <Button
@@ -177,7 +177,7 @@ export default function WishlistPage() {
                       type="checkbox"
                       checked={selectedItems.has(item.id.toString())}
                       onChange={() => toggleItemSelection(item.id.toString())}
-                      className="w-4 h-4 text-yellow-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-yellow-400 dark:focus:ring-yellow-500"
+                      className="w-4 h-4 text-yellow-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-yellow-400 dark:focus:ring-yellow-500 focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800"
                     />
                   </div>
 
@@ -197,6 +197,10 @@ export default function WishlistPage() {
                       width={300}
                       height={300}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/placeholder.svg';
+                      }}
                     />
                   </div>
 
@@ -224,7 +228,7 @@ export default function WishlistPage() {
                         {item.colors.slice(0, 4).map((color, index) => (
                           <div
                             key={index}
-                            className="w-4 h-4 rounded-full border-2 border-white dark:border-gray-600 shadow-sm"
+                            className="w-4 h-4 rounded-full border-2 border-white dark:border-gray-600 shadow-sm ring-1 ring-gray-200 dark:ring-gray-500"
                             style={{ backgroundColor: color.toLowerCase() }}
                             title={color}
                           />
@@ -243,7 +247,7 @@ export default function WishlistPage() {
                           {[...Array(5)].map((_, i) => (
                             <Star
                               key={i}
-                              className={`h-3 w-3 ${
+                              className={`h-3 w-3 transition-colors ${
                                 i < Math.floor(item.rating ?? 0)
                                   ? "text-yellow-400 fill-current"
                                   : "text-gray-300 dark:text-gray-600"
@@ -281,7 +285,7 @@ export default function WishlistPage() {
                       <Button
                         variant="outline"
                         onClick={() => router.push(`/product/${item.id}`)}
-                        className="flex-1 text-xs py-2 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                        className="flex-1 text-xs py-2 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 hover:text-gray-900 dark:hover:text-gray-100"
                       >
                         View Details
                       </Button>
@@ -298,7 +302,7 @@ export default function WishlistPage() {
             <Button
               onClick={() => router.push("/")}
               variant="outline"
-              className="flex-1 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+              className="flex-1 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 hover:text-gray-900 dark:hover:text-gray-100"
             >
               Continue Shopping
             </Button>

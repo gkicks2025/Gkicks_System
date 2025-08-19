@@ -95,11 +95,11 @@ export async function executeQuery(query: string, params: any[] = []): Promise<a
     // Handle different query types
     const queryType = query.trim().toUpperCase();
     
-    if (queryType.startsWith('SELECT')) {
-      // SELECT queries - return array of results
+    if (queryType.startsWith('SELECT') || queryType.startsWith('PRAGMA')) {
+      // SELECT and PRAGMA queries - return array of results
       const stmt = database.prepare(query);
       const results = stmt.all(...sqliteParams);
-      console.log(`✅ MySQL Simulator: SELECT query returned ${results.length} rows`);
+      console.log(`✅ MySQL Simulator: ${queryType.split(' ')[0]} query returned ${results.length} rows`);
       return results;
     } else if (queryType.startsWith('INSERT')) {
       // INSERT queries - return insertId and affectedRows
@@ -272,6 +272,12 @@ export async function getTableSchema(tableName: string): Promise<any[]> {
     const query = `PRAGMA table_info(${tableName})`;
     const columns = await executeQuery(query);
     
+    // Check if columns is an array and has data
+    if (!Array.isArray(columns) || columns.length === 0) {
+      console.warn(`⚠️ No schema found for table ${tableName} or table does not exist`);
+      return [];
+    }
+    
     // Convert SQLite schema to MySQL-like format
     return columns.map((col: any) => ({
       Field: col.name,
@@ -282,7 +288,7 @@ export async function getTableSchema(tableName: string): Promise<any[]> {
       Extra: col.pk ? 'auto_increment' : ''
     }));
   } catch (error) {
-    console.error(`Error getting schema for table ${tableName}:`, error);
+    console.error(`❌ Error getting schema for table ${tableName}:`, error);
     return [];
   }
 }
