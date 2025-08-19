@@ -404,26 +404,24 @@ export default function POSPage() {
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-4xl font-bold text-foreground">Point of Sale</h1>
-              <p className="text-lg text-muted-foreground mt-2">Process sales and manage transactions</p>
-            </div>
-            <div className="flex items-center gap-6">
-              <Card className="p-4 bg-card border-border">
-                <div className="text-center">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Daily Sales</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{formatCurrency(dailySales)}</p>
-                </div>
-              </Card>
-              <Card className="p-4 bg-card border-border">
-                <div className="text-center">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Transactions</p>
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{transactions.length}</p>
-                </div>
-              </Card>
-            </div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-yellow-500">Point of Sale</h1>
+            <p className="text-lg text-muted-foreground mt-2">Process sales and manage transactions</p>
+          </div>
+          <div className="flex items-center gap-6">
+            <Card className="p-4">
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">Daily Sales</p>
+                <p className="text-2xl font-bold text-green-600">{formatCurrency(dailySales)}</p>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">Transactions</p>
+                <p className="text-2xl font-bold text-blue-600">{transactions.length}</p>
+              </div>
+            </Card>
           </div>
         </div>
 

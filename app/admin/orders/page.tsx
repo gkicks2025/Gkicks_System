@@ -163,9 +163,9 @@ export default function AdminOrdersPage() {
   return (
     <div className="p-6 space-y-6 bg-background min-h-screen">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Orders Management</h1>
+          <h1 className="text-3xl font-bold text-yellow-500">Orders Management</h1>
           <p className="text-muted-foreground mt-1">Manage and track customer orders from G-Kicks</p>
         </div>
         <div className="flex items-center space-x-2">
