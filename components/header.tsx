@@ -119,7 +119,7 @@ export function Header({ onSearch }: HeaderProps) {
                 alt="GKICKS"
                 width={32}
                 height={32}
-                className="object-contain brightness-0"
+                className={`object-contain ${isDark ? 'invert' : ''}`}
               />
             </div>
             <span className={`text-2xl font-bold select-none ${textColorClass}`}>GKICKS</span>

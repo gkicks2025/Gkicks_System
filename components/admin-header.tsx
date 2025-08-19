@@ -55,7 +55,7 @@ export function AdminHeader() {
   ]
 
   return (
-    <header className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-800">
+    <header className="bg-background border-b border-border">
       <div className="w-full px-4 sm:px-6 lg:px-8 py-2">
         <div className="flex justify-between items-center h-16">
           {/* Empty space for logo removal */}
@@ -68,7 +68,7 @@ export function AdminHeader() {
                 key={item.href}
                 href={item.href}
                 className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  item.active ? "bg-yellow-400/10 text-yellow-400" : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
+                  item.active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-accent"
                 }`}
               >
                 <item.icon className="h-4 w-4 mr-2" />
@@ -84,7 +84,7 @@ export function AdminHeader() {
               variant="outline"
               size="sm"
               asChild
-              className="hidden sm:flex bg-transparent border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="hidden sm:flex"
             >
               <Link href="/">
                 <Home className="h-4 w-4 mr-2" />
@@ -98,7 +98,7 @@ export function AdminHeader() {
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="md:hidden"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
               {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -108,7 +108,7 @@ export function AdminHeader() {
 
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 dark:border-gray-800 py-2">
+          <div className="md:hidden border-t border-border py-2">
             <div className="space-y-1">
               {navigationItems.map((item) => (
                 <Link
@@ -116,8 +116,8 @@ export function AdminHeader() {
                   href={item.href}
                   className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors ${
                     item.active
-                      ? "bg-yellow-400/10 text-yellow-400"
-                      : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
                   }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
@@ -127,7 +127,7 @@ export function AdminHeader() {
               ))}
               <Link
                 href="/"
-                className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="flex items-center px-3 py-2 rounded-md text-base font-medium text-muted-foreground hover:text-foreground hover:bg-accent"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <Home className="h-5 w-5 mr-3" />

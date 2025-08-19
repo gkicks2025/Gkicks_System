@@ -89,14 +89,14 @@ export default function AdminLogin() {
         </div>
 
         {/* Demo Credentials */}
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-lg text-yellow-400">Demo Credentials</CardTitle>
-            <CardDescription className="text-yellow-200">Click to auto-fill login credentials</CardDescription>
+            <CardTitle className="text-lg text-primary">Demo Credentials</CardTitle>
+            <CardDescription className="text-muted-foreground">Click to auto-fill login credentials</CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="admin" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 bg-gray-800">
+              <TabsList className="grid w-full grid-cols-3 bg-muted">
                 <TabsTrigger value="admin" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   Admin
                 </TabsTrigger>
@@ -112,42 +112,42 @@ export default function AdminLogin() {
               </TabsList>
 
               <TabsContent value="admin" className="space-y-4">
-                <div className="p-4 bg-red-400 bg-opacity-10 rounded-lg border border-red-400 border-opacity-30">
+                <div className="p-4 bg-destructive/10 rounded-lg border border-destructive/30">
                   <div className="flex items-center justify-between mb-3">
-                    <Badge className="bg-red-500 text-white font-semibold">Administrator</Badge>
-                    <Shield className="h-5 w-5 text-red-400" />
+                    <Badge className="bg-destructive text-destructive-foreground font-semibold">Administrator</Badge>
+                    <Shield className="h-5 w-5 text-destructive" />
                   </div>
                   <div className="space-y-2 text-sm">
-                    <p className="text-yellow-100">
+                    <p className="text-foreground">
                       <strong>Email:</strong> gkcksdmn@gmail.com
                     </p>
-                    <p className="text-yellow-100">
+                    <p className="text-foreground">
                       <strong>Password:</strong> admingkicks2.0
                     </p>
                   </div>
-                  <div className="mt-3 pt-3 border-t border-red-400 border-opacity-30">
-                    <p className="text-xs text-red-200 mb-2">
+                  <div className="mt-3 pt-3 border-t border-destructive/30">
+                    <p className="text-xs text-muted-foreground mb-2">
                       <strong>Full Access:</strong>
                     </p>
                     <div className="flex flex-wrap gap-1 mb-2">
-                      <Badge variant="outline" className="text-xs border-red-400 text-red-400">
+                      <Badge variant="outline" className="text-xs border-destructive text-destructive">
                         Products
                       </Badge>
-                      <Badge variant="outline" className="text-xs border-red-400 text-red-400">
+                      <Badge variant="outline" className="text-xs border-destructive text-destructive">
                         Orders
                       </Badge>
-                      <Badge variant="outline" className="text-xs border-red-400 text-red-400">
+                      <Badge variant="outline" className="text-xs border-destructive text-destructive">
                         Analytics
                       </Badge>
-                      <Badge variant="outline" className="text-xs border-red-400 text-red-400">
+                      <Badge variant="outline" className="text-xs border-destructive text-destructive">
                         POS
                       </Badge>
                     </div>
-                    <p className="text-xs text-red-300">Administrator has access to all features and settings</p>
+                    <p className="text-xs text-muted-foreground">Administrator has access to all features and settings</p>
                   </div>
                   <Button
                     onClick={() => fillDemoCredentials("admin")}
-                    className="w-full mt-3 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
+                    className="w-full mt-3 font-semibold"
                   >
                     Use Admin Credentials
                   </Button>
@@ -155,38 +155,38 @@ export default function AdminLogin() {
               </TabsContent>
 
               <TabsContent value="staff" className="space-y-4">
-                <div className="p-4 bg-blue-400 bg-opacity-10 rounded-lg border border-blue-400 border-opacity-30">
+                <div className="p-4 bg-primary/10 rounded-lg border border-primary/30">
                   <div className="flex items-center justify-between mb-3">
-                    <Badge className="bg-blue-500 text-white font-semibold">Staff Member</Badge>
-                    <User className="h-5 w-5 text-blue-400" />
+                    <Badge className="bg-primary text-primary-foreground font-semibold">Staff Member</Badge>
+                    <User className="h-5 w-5 text-primary" />
                   </div>
                   <div className="space-y-2 text-sm">
-                    <p className="text-yellow-100">
+                    <p className="text-foreground">
                       <strong>Email:</strong> gkicksstaff@gmail.com
                     </p>
-                    <p className="text-yellow-100">
+                    <p className="text-foreground">
                       <strong>Password:</strong> staffgkicks2.0
                     </p>
                   </div>
-                  <div className="mt-3 pt-3 border-t border-blue-400 border-opacity-30">
-                    <p className="text-xs text-blue-200 mb-2">
+                  <div className="mt-3 pt-3 border-t border-primary/30">
+                    <p className="text-xs text-muted-foreground mb-2">
                       <strong>Limited Access:</strong>
                     </p>
                     <div className="flex items-center gap-2 mb-2">
-                      <Badge variant="outline" className="text-xs border-blue-400 text-blue-400">
+                      <Badge variant="outline" className="text-xs border-primary text-primary">
                         <ShoppingBag className="h-3 w-3 mr-1" />
                         Orders
                       </Badge>
-                      <Badge variant="outline" className="text-xs border-blue-400 text-blue-400">
+                      <Badge variant="outline" className="text-xs border-primary text-primary">
                         <CreditCard className="h-3 w-3 mr-1" />
                         POS
                       </Badge>
                     </div>
-                    <p className="text-xs text-blue-300">Staff can manage orders and process sales</p>
+                    <p className="text-xs text-muted-foreground">Staff can manage orders and process sales</p>
                   </div>
                   <Button
                     onClick={() => fillDemoCredentials("staff")}
-                    className="w-full mt-3 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
+                    className="w-full mt-3 font-semibold"
                   >
                     Use Staff Credentials
                   </Button>
@@ -194,34 +194,34 @@ export default function AdminLogin() {
               </TabsContent>
 
               <TabsContent value="cashier" className="space-y-4">
-                <div className="p-4 bg-green-400 bg-opacity-10 rounded-lg border border-green-400 border-opacity-30">
+                <div className="p-4 bg-secondary/10 rounded-lg border border-secondary/30">
                   <div className="flex items-center justify-between mb-3">
-                    <Badge className="bg-green-500 text-white font-semibold">Cashier</Badge>
-                    <CreditCard className="h-5 w-5 text-green-400" />
+                    <Badge className="bg-secondary text-secondary-foreground font-semibold">Cashier</Badge>
+                    <CreditCard className="h-5 w-5 text-secondary" />
                   </div>
                   <div className="space-y-2 text-sm">
-                    <p className="text-yellow-100">
+                    <p className="text-foreground">
                       <strong>Email:</strong> cashier@gkicks.com
                     </p>
-                    <p className="text-yellow-100">
+                    <p className="text-foreground">
                       <strong>Password:</strong> cashier123
                     </p>
                   </div>
-                  <div className="mt-3 pt-3 border-t border-green-400 border-opacity-30">
-                    <p className="text-xs text-green-200 mb-2">
+                  <div className="mt-3 pt-3 border-t border-secondary/30">
+                    <p className="text-xs text-muted-foreground mb-2">
                       <strong>POS Only:</strong>
                     </p>
                     <div className="flex items-center gap-2 mb-2">
-                      <Badge variant="outline" className="text-xs border-green-400 text-green-400">
+                      <Badge variant="outline" className="text-xs border-secondary text-secondary">
                         <CreditCard className="h-3 w-3 mr-1" />
                         Sales Only
                       </Badge>
                     </div>
-                    <p className="text-xs text-green-300">Cashier can only process sales transactions</p>
+                    <p className="text-xs text-muted-foreground">Cashier can only process sales transactions</p>
                   </div>
                   <Button
                     onClick={() => fillDemoCredentials("cashier")}
-                    className="w-full mt-3 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
+                    className="w-full mt-3 font-semibold"
                   >
                     Use Cashier Credentials
                   </Button>
@@ -232,17 +232,17 @@ export default function AdminLogin() {
         </Card>
 
         {/* Login Form */}
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-yellow-400">Sign In</CardTitle>
-            <CardDescription className="text-yellow-200">
+            <CardTitle className="text-primary">Sign In</CardTitle>
+            <CardDescription className="text-muted-foreground">
               Enter your credentials to access the admin portal
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-yellow-400">
+                <Label htmlFor="email" className="text-foreground">
                   Email
                 </Label>
                 <Input
@@ -252,12 +252,12 @@ export default function AdminLogin() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="bg-gray-800 border-gray-700 text-yellow-100 placeholder-gray-400 focus:border-yellow-400"
+                  className="bg-input border-border text-foreground placeholder-muted-foreground focus:border-ring"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-yellow-400">
+                <Label htmlFor="password" className="text-foreground">
                   Password
                 </Label>
                 <div className="relative">
@@ -268,13 +268,13 @@ export default function AdminLogin() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="bg-gray-800 border-gray-700 text-yellow-100 placeholder-gray-400 focus:border-yellow-400"
+                    className="bg-input border-border text-foreground placeholder-muted-foreground focus:border-ring"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-gray-400 hover:text-yellow-400"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-muted-foreground hover:text-foreground"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -283,14 +283,14 @@ export default function AdminLogin() {
               </div>
 
               {error && (
-                <Alert variant="destructive" className="bg-red-900 border-red-800">
-                  <AlertDescription className="text-red-200">{error}</AlertDescription>
+                <Alert variant="destructive" className="bg-destructive/10 border-destructive">
+                  <AlertDescription className="text-destructive">{error}</AlertDescription>
                 </Alert>
               )}
 
               <Button
                 type="submit"
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
+                className="w-full font-semibold"
                 disabled={state.isLoading}
               >
                 {state.isLoading ? (
@@ -307,10 +307,10 @@ export default function AdminLogin() {
         </Card>
 
         {/* Staff Portal Link */}
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-card border-border">
           <CardContent className="pt-6">
             <div className="text-center space-y-3">
-              <p className="text-yellow-200 text-sm">Looking for staff access?</p>
+              <p className="text-muted-foreground text-sm">Looking for staff access?</p>
               <Button
                 variant="outline"
                 onClick={() => router.push("/admin/staff-login")}
@@ -324,7 +324,7 @@ export default function AdminLogin() {
 
         {/* Back to Store */}
         <div className="text-center">
-          <Button variant="link" onClick={() => router.push("/")} className="text-yellow-400 hover:text-yellow-300">
+          <Button variant="link" onClick={() => router.push("/")} className="text-primary hover:text-primary/80">
             ← Back to Store
           </Button>
         </div>

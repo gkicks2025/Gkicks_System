@@ -241,17 +241,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!state.user) throw new Error("No user logged in");
       
       const token = localStorage.getItem('auth_token');
+      
+      // First, fetch current profile data to preserve all fields
+      const getCurrentProfile = async () => {
+        const response = await fetch(`/api/profiles?t=${Date.now()}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': token ? `Bearer ${token}` : '',
+            'Cache-Control': 'no-cache'
+          }
+        });
+        
+        if (response.ok) {
+          return await response.json();
+        }
+        return null;
+      };
+      
+      const currentProfile = await getCurrentProfile();
+      console.log('🔍 Current profile data for update:', currentProfile);
+      
+      // Prepare update payload with all current data plus updates
+      const updatePayload = {
+        first_name: updates.firstName || currentProfile?.first_name || '',
+        last_name: updates.lastName || currentProfile?.last_name || '',
+        phone: currentProfile?.phone || '',
+        birthdate: currentProfile?.birthdate || '',
+        gender: currentProfile?.gender || '',
+        bio: currentProfile?.bio || '',
+        avatar_url: updates.avatar || currentProfile?.avatar_url || '',
+        preferences: currentProfile?.preferences || {
+          newsletter: true,
+          sms_notifications: false,
+          email_notifications: true,
+          preferred_language: 'en',
+          currency: 'PHP'
+        }
+      };
+      
+      console.log('📝 Sending profile update with payload:', updatePayload);
+      
       const response = await fetch('/api/profiles', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : '',
         },
-        body: JSON.stringify({
-          first_name: updates.firstName,
-          last_name: updates.lastName,
-          avatar_url: updates.avatar,
-        }),
+        body: JSON.stringify(updatePayload),
       });
       
       let data;
@@ -269,6 +305,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Update user profile locally with server response
       const updatedUser = { ...state.user, ...updates };
       dispatch({ type: "SET_USER", payload: updatedUser });
+      
+      console.log('✅ Profile updated successfully in auth context');
       
       toast({
         title: "Profile updated",

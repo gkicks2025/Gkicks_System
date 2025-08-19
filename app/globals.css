@@ -4,11 +4,11 @@
 
 @layer base {
   :root {
-    --background: 45 100% 95%;   /* light yellow background */
+    --background: 60 100% 98%;   /* light cream background #FFFDF6 */
     --foreground: 0 0% 0%; /* black text */
-    --card: 45 100% 98%;
+    --card: 60 100% 99%;
     --card-foreground: 0 0% 0%;
-    --popover: 45 100% 98%;
+    --popover: 60 100% 99%;
     --popover-foreground: 0 0% 0%;
     --primary: 0 0% 0%; /* black primary */
     --primary-foreground: 45 100% 50%; /* yellow text on black */
@@ -21,7 +21,7 @@
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 45 100% 98%;
     --border: 45 100% 80%;
-    --input: 45 100% 98%;
+    --input: 60 100% 99%;
     --ring: 45 100% 50%;
     --radius: 0.5rem;
     --chart-1: 45 100% 50%;
@@ -32,30 +32,30 @@
   }
 
   .dark {
-    --background: 0 0% 5%; /* deep black background */
-    --foreground: 45 100% 70%; /* yellow text */
-    --card: 0 0% 8%;
-    --card-foreground: 45 100% 70%;
-    --popover: 0 0% 8%;
-    --popover-foreground: 45 100% 70%;
-    --primary: 45 100% 50%; /* bright yellow primary */
-    --primary-foreground: 0 0% 0%; /* black text on yellow */
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 45 100% 70%;
-    --muted: 0 0% 12%;
-    --muted-foreground: 45 100% 50%;
-    --accent: 45 100% 50%; /* bright yellow accent */
-    --accent-foreground: 0 0% 0%;
+    --background: 215 100% 10%; /* dark blue background #0E2954 */
+    --foreground: 0 0% 98%; /* white text */
+    --card: 215 100% 15%;
+    --card-foreground: 0 0% 98%;
+    --popover: 215 100% 15%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 215 100% 30%; /* blue primary */
+    --primary-foreground: 0 0% 98%; /* white text on blue */
+    --secondary: 215 50% 25%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 215 80% 18%;
+    --muted-foreground: 0 0% 70%;
+    --accent: 215 100% 40%; /* bright blue accent */
+    --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 50%;
-    --destructive-foreground: 45 100% 98%;
-    --border: 0 0% 20%;
-    --input: 0 0% 15%;
-    --ring: 45 100% 50%;
-    --chart-1: 45 100% 50%;
-    --chart-2: 0 0% 60%;
-    --chart-3: 45 100% 40%;
-    --chart-4: 0 0% 40%;
-    --chart-5: 45 100% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 215 50% 30%;
+    --input: 215 100% 18%;
+    --ring: 215 100% 40%;
+    --chart-1: 215 100% 40%;
+    --chart-2: 215 50% 55%;
+    --chart-3: 215 100% 30%;
+    --chart-4: 215 30% 45%;
+    --chart-5: 215 100% 50%;
   }
 }
 
@@ -69,60 +69,60 @@
   }
 }
 
-/* Custom scrollbar for black and yellow theme */
+/* Custom scrollbar for dark blue theme */
 .dark ::-webkit-scrollbar {
   width: 8px;
 }
 
 .dark ::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: #0a1a2a;
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: #ffd700;
+  background: #0E2954;
   border-radius: 4px;
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #ffed4e;
+  background: #1a3d6b;
 }
 
-/* Toast customization for black and yellow theme */
+/* Toast customization for dark blue theme */
 .dark [data-sonner-toaster] {
-  --normal-bg: #0d0d0d !important;
-  --normal-border: #333333 !important;
-  --normal-text: #ffd700 !important;
-  --success-bg: #1a1a00 !important;
-  --success-border: #333300 !important;
-  --success-text: #ffd700 !important;
+  --normal-bg: #0a1a2a !important;
+  --normal-border: #0E2954 !important;
+  --normal-text: #ffffff !important;
+  --success-bg: #001a0a !important;
+  --success-border: #0E2954 !important;
+  --success-text: #ffffff !important;
   --error-bg: #330000 !important;
   --error-border: #660000 !important;
-  --error-text: #ffd700 !important;
-  --warning-bg: #332200 !important;
-  --warning-border: #664400 !important;
-  --warning-text: #ffd700 !important;
+  --error-text: #ffffff !important;
+  --warning-bg: #1a1a00 !important;
+  --warning-border: #333300 !important;
+  --warning-text: #ffffff !important;
 }
 
 .dark [data-sonner-toast] {
   background: var(--normal-bg) !important;
   border: 1px solid var(--normal-border) !important;
-  color: var(--normal-text) !important;
+  color: #ffffff !important;
 }
 
 .dark [data-sonner-toast][data-type="success"] {
   background: var(--success-bg) !important;
   border-color: var(--success-border) !important;
-  color: var(--success-text) !important;
+  color: #ffffff !important;
 }
 
 .dark [data-sonner-toast][data-type="error"] {
   background: var(--error-bg) !important;
   border-color: var(--error-border) !important;
-  color: var(--error-text) !important;
+  color: #ffffff !important;
 }
 
 .dark [data-sonner-toast][data-type="warning"] {
   background: var(--warning-bg) !important;
   border-color: var(--warning-border) !important;
-  color: var(--warning-text) !important;
+  color: #ffffff !important;
 }

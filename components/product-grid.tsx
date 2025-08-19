@@ -120,11 +120,11 @@ export function ProductGrid({
 
   if (loading) {
     return (
-      <section className="py-16 bg-white dark:bg-gray-900">
+      <section className="py-16 bg-background">
         <div className="container mx-auto px-4">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 dark:border-yellow-400 mx-auto"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading products...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading products...</p>
           </div>
         </div>
       </section>
@@ -132,13 +132,13 @@ export function ProductGrid({
   }
 
   return (
-    <section className="py-16 bg-white dark:bg-gray-900">
+    <section className="py-16 bg-background">
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div className="flex items-center justify-between w-full">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-yellow-400 mb-2">
+              <h2 className="text-3xl font-bold text-foreground mb-2">
                 {searchQuery
                   ? `Search Results for "${searchQuery}"`
                   : category
@@ -148,7 +148,7 @@ export function ProductGrid({
             </div>
 
             <div className="flex items-center gap-4">
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="text-muted-foreground">
                 {filteredProducts.length} {filteredProducts.length === 1 ? "product" : "products"}
                 {displayedProducts.length < filteredProducts.length && ` (showing ${displayedProducts.length})`}
               </p>
@@ -158,7 +158,7 @@ export function ProductGrid({
                 variant="outline"
                 size="sm"
                 onClick={handleForceSync}
-                className="flex items-center gap-2 bg-transparent border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="flex items-center gap-2"
               >
                 <RefreshCw className="h-4 w-4" />
                 Sync
@@ -166,26 +166,26 @@ export function ProductGrid({
 
               {/* Sort Dropdown */}
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-32 border-2 border-yellow-400 bg-yellow-50 dark:bg-yellow-400 dark:text-black">
+                <SelectTrigger className="w-32 border-2 border-primary bg-primary/10">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border">
-                  <SelectItem value="featured" className="dark:text-gray-300 dark:hover:bg-gray-700">
+                  <SelectItem value="featured">
                     Featured
                   </SelectItem>
-                  <SelectItem value="name" className="dark:text-gray-300 dark:hover:bg-gray-700">
+                  <SelectItem value="name">
                     Name A-Z
                   </SelectItem>
-                  <SelectItem value="price-low" className="dark:text-gray-300 dark:hover:bg-gray-700">
+                  <SelectItem value="price-low">
                     Price: Low to High
                   </SelectItem>
-                  <SelectItem value="price-high" className="dark:text-gray-300 dark:hover:bg-gray-700">
+                  <SelectItem value="price-high">
                     Price: High to Low
                   </SelectItem>
-                  <SelectItem value="rating" className="dark:text-gray-300 dark:hover:bg-gray-700">
+                  <SelectItem value="rating">
                     Highest Rated
                   </SelectItem>
-                  <SelectItem value="newest" className="dark:text-gray-300 dark:hover:bg-gray-700">
+                  <SelectItem value="newest">
                     Newest First
                   </SelectItem>
                 </SelectContent>
@@ -195,7 +195,7 @@ export function ProductGrid({
         </div>
 
         {/* Sync Info */}
-        <div className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+        <div className="mb-4 text-sm text-muted-foreground">
           Last synced: {lastSyncTime.toLocaleTimeString()}
           {currentPage > 1 && ` • Page ${currentPage}`}
         </div>
@@ -204,19 +204,19 @@ export function ProductGrid({
         {(searchQuery || category) && (
           <div className="flex flex-col sm:flex-row gap-4 mb-8">
             <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <Filter className="h-4 w-4 text-muted-foreground" />
               <Select value={filterBy} onValueChange={setFilterBy}>
                 <SelectTrigger className="w-32 border-border bg-card text-foreground">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border">
-                  <SelectItem value="all" className="dark:text-gray-300 dark:hover:bg-gray-700">
+                  <SelectItem value="all">
                     All
                   </SelectItem>
-                  <SelectItem value="new" className="dark:text-gray-300 dark:hover:bg-gray-700">
+                  <SelectItem value="new">
                     New
                   </SelectItem>
-                  <SelectItem value="sale" className="dark:text-gray-300 dark:hover:bg-gray-700">
+                  <SelectItem value="sale">
                     On Sale
                   </SelectItem>
                 </SelectContent>
@@ -229,9 +229,9 @@ export function ProductGrid({
         {products.length === 0 ? (
           <Card className="p-12 bg-card border-border">
             <CardContent className="text-center">
-              <RefreshCw className="h-16 w-16 text-gray-400 dark:text-gray-500 mx-auto mb-4 animate-spin" />
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Loading products...</h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
+              <RefreshCw className="h-16 w-16 text-muted-foreground mx-auto mb-4 animate-spin" />
+              <h3 className="text-xl font-semibold text-foreground mb-2">Loading products...</h3>
+              <p className="text-muted-foreground mb-4">
                 Please wait while we fetch the latest products
               </p>
             </CardContent>
@@ -239,32 +239,32 @@ export function ProductGrid({
         ) : displayedProducts.length === 0 ? (
           <Card className="p-12 bg-card border-border">
             <CardContent className="text-center">
-              <Package className="h-16 w-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No products found</h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
+              <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-foreground mb-2">No products found</h3>
+              <p className="text-muted-foreground mb-4">
                 {searchQuery
                   ? `No products match your search for "${searchQuery}"`
                   : "No products are currently available in this category"}
               </p>
               {searchQuery && (
                 <div className="space-y-2">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Try:</p>
+                  <p className="text-sm text-muted-foreground">Try:</p>
                   <div className="flex flex-wrap justify-center gap-2">
                     <Badge
                       variant="outline"
-                      className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
+                      className="border-border text-muted-foreground"
                     >
                       Checking your spelling
                     </Badge>
                     <Badge
                       variant="outline"
-                      className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
+                      className="border-border text-muted-foreground"
                     >
                       Using different keywords
                     </Badge>
                     <Badge
                       variant="outline"
-                      className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
+                      className="border-border text-muted-foreground"
                     >
                       Browsing categories
                     </Badge>
@@ -273,7 +273,7 @@ export function ProductGrid({
               )}
               <Button
                 onClick={handleForceSync}
-                className="mt-4 bg-transparent border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="mt-4"
                 variant="outline"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
@@ -294,7 +294,7 @@ export function ProductGrid({
               <div className="text-center mt-12">
                 <Button
                   onClick={loadMoreProducts}
-                  className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-8 py-3 rounded-lg dark:bg-yellow-400 dark:hover:bg-yellow-500 dark:text-black"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 py-3 rounded-lg"
                 >
                   Load More Products ({remainingProducts} remaining)
                 </Button>
@@ -306,7 +306,7 @@ export function ProductGrid({
         {/* Product Count Summary */}
         {displayedProducts.length > 0 && remainingProducts === 0 && (
           <div className="text-center mt-12">
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-muted-foreground">
               Showing all {filteredProducts.length} products
               {searchQuery && ` matching "${searchQuery}"`}
               {category && ` in ${category} category`}

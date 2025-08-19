@@ -3,17 +3,17 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function OrdersLoading() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header Skeleton */}
-      <div className="bg-black h-20">
+      <div className="bg-primary h-20">
         <div className="container mx-auto px-4 h-full flex items-center justify-between">
-          <Skeleton className="h-12 w-12 rounded-full bg-gray-700" />
+          <Skeleton className="h-12 w-12 rounded-full bg-muted" />
           <div className="flex space-x-4">
-            <Skeleton className="h-8 w-20 bg-gray-700" />
-            <Skeleton className="h-8 w-20 bg-gray-700" />
-            <Skeleton className="h-8 w-20 bg-gray-700" />
+            <Skeleton className="h-8 w-20 bg-muted" />
+            <Skeleton className="h-8 w-20 bg-muted" />
+            <Skeleton className="h-8 w-20 bg-muted" />
           </div>
-          <Skeleton className="h-8 w-32 bg-gray-700" />
+          <Skeleton className="h-8 w-32 bg-muted" />
         </div>
       </div>
 

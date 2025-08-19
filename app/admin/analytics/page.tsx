@@ -182,19 +182,19 @@ export default function AnalyticsPage() {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-        <Card className="col-span-3 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+        <Card className="col-span-3 bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-gray-900 dark:text-gray-100">Top Selling Products</CardTitle>
-            <CardDescription className="text-gray-600 dark:text-gray-400">
+            <CardTitle className="text-card-foreground">Top Selling Products</CardTitle>
+            <CardDescription className="text-muted-foreground">
               Best performing products by revenue
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-center h-[350px]">
               <div className="text-center">
-                <TrendingUp className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No sales data available</h3>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                <TrendingUp className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-2 text-sm font-medium text-card-foreground">No sales data available</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
                   Products will appear here once orders are placed
                 </p>
               </div>
@@ -204,19 +204,19 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Recent Activity */}
-      <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-gray-900 dark:text-gray-100">Recent Activity</CardTitle>
-          <CardDescription className="text-gray-600 dark:text-gray-400">
+          <CardTitle className="text-card-foreground">Recent Activity</CardTitle>
+          <CardDescription className="text-muted-foreground">
             Latest store activities and updates
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
-              <Activity className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No recent activity</h3>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <Activity className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-2 text-sm font-medium text-card-foreground">No recent activity</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
                 Activity will appear here as your store grows
               </p>
             </div>

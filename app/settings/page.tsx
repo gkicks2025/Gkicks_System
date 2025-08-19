@@ -138,12 +138,12 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                <Separator className="bg-gray-200 dark:bg-gray-600" />
+                <Separator className="bg-border" />
 
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <h4 className="font-medium text-gray-900 dark:text-yellow-400">Email Updates</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                    <h4 className="font-medium text-foreground">Email Updates</h4>
+                    <p className="text-sm text-muted-foreground">
                       Get email updates about new products and sales
                     </p>
                   </div>
@@ -159,10 +159,10 @@ export default function SettingsPage() {
             <Card className="bg-card border-border">
               <CardHeader>
                 <div className="flex items-center gap-3">
-                  <Palette className="h-5 w-5 text-gray-700 dark:text-yellow-400" />
+                  <Palette className="h-5 w-5 text-primary" />
                   <div>
-                    <CardTitle className="text-gray-900 dark:text-yellow-400">Appearance</CardTitle>
-                    <CardDescription className="text-gray-600 dark:text-gray-300">
+                    <CardTitle className="text-foreground">Appearance</CardTitle>
+                    <CardDescription className="text-muted-foreground">
                       Customize how the app looks and feels
                     </CardDescription>
                   </div>

@@ -686,7 +686,7 @@ export default function InventoryPage() {
   // Show loading spinner while checking authentication
   if (adminState.isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+      <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
         <Loader2 className="h-8 w-8 animate-spin" />
         <span className="ml-2">Checking authentication...</span>
       </div>
@@ -695,11 +695,11 @@ export default function InventoryPage() {
 
   if (!adminState.isAuthenticated) {
     return (
-      <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white p-8">
+      <div className="min-h-screen bg-background text-foreground p-8">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold text-red-500 mb-4">Authentication Required</h1>
-          <p className="text-gray-600 dark:text-gray-300 mb-4">You need to be logged in as an admin to access this page.</p>
-          <a href="/admin/login" className="text-yellow-400 hover:underline">Go to Admin Login</a>
+          <h1 className="text-2xl font-bold text-destructive mb-4">Authentication Required</h1>
+          <p className="text-muted-foreground mb-4">You need to be logged in as an admin to access this page.</p>
+          <a href="/admin/login" className="text-primary hover:underline">Go to Admin Login</a>
         </div>
       </div>
     )
@@ -707,21 +707,21 @@ export default function InventoryPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px] bg-white dark:bg-gray-900">
+      <div className="flex items-center justify-center min-h-[400px] bg-background">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-yellow-500 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-300">Loading inventory...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading inventory...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white space-y-6 p-6">
+    <div className="min-h-screen bg-background text-foreground space-y-6 p-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-yellow-500">Product Inventory</h1>
-          <p className="text-gray-600 dark:text-gray-300">Manage your product stock levels and details</p>
+          <h1 className="text-3xl font-bold text-primary">Product Inventory</h1>
+          <p className="text-muted-foreground">Manage your product stock levels and details</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -744,7 +744,7 @@ export default function InventoryPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-300">In Stock</p>
+                <p className="text-sm text-muted-foreground">In Stock</p>
                 <p className="text-2xl font-bold text-green-500">{stockStats.inStock}</p>
               </div>
               <Package className="h-8 w-8 text-green-500" />
@@ -756,7 +756,7 @@ export default function InventoryPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Low Stock</p>
+                <p className="text-sm text-muted-foreground">Low Stock</p>
                 <p className="text-2xl font-bold text-yellow-500">{stockStats.lowStock}</p>
               </div>
               <TrendingDown className="h-8 w-8 text-yellow-500" />
@@ -768,7 +768,7 @@ export default function InventoryPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Out of Stock</p>
+                <p className="text-sm text-muted-foreground">Out of Stock</p>
                 <p className="text-2xl font-bold text-red-500">{stockStats.outOfStock}</p>
               </div>
               <AlertTriangle className="h-8 w-8 text-red-500" />
@@ -781,9 +781,9 @@ export default function InventoryPage() {
       {(lowStockProducts.length > 0 || outOfStockProducts.length > 0) && (
         <div className="space-y-3">
           {outOfStockProducts.length > 0 && (
-            <Alert className="border-red-600 bg-red-50 dark:bg-red-900/20">
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-              <AlertDescription className="text-red-700 dark:text-red-300">
+            <Alert className="border-destructive bg-destructive/10">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              <AlertDescription className="text-destructive">
                 <strong>Critical:</strong> {outOfStockProducts.length} product{outOfStockProducts.length > 1 ? 's are' : ' is'} out of stock:
                 <span className="ml-2 font-medium">
                   {outOfStockProducts.slice(0, 3).map(p => p.name).join(', ')}
@@ -794,7 +794,7 @@ export default function InventoryPage() {
           )}
           
           {lowStockProducts.length > 0 && (
-            <Alert className="border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20">
+            <Alert className="border-yellow-500 bg-yellow-500/10">
               <TrendingDown className="h-4 w-4 text-yellow-500" />
               <AlertDescription className="text-yellow-700 dark:text-yellow-300">
                 <strong>Warning:</strong> {lowStockProducts.length} product{lowStockProducts.length > 1 ? 's have' : ' has'} low stock:
@@ -811,7 +811,7 @@ export default function InventoryPage() {
       {/* Search and Filter */}
       <div className="flex gap-4 items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 h-4 w-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             placeholder="Search products..."
             value={searchTerm}
@@ -865,14 +865,14 @@ export default function InventoryPage() {
           <Table>
             <TableHeader>
               <TableRow className="border-border">
-                <TableHead className="text-gray-900 dark:text-white">Product</TableHead>
-                <TableHead className="text-gray-900 dark:text-white">Category</TableHead>
-                <TableHead className="text-gray-900 dark:text-white">Brand</TableHead>
-                <TableHead className="text-gray-900 dark:text-white">Price</TableHead>
-                <TableHead className="text-gray-900 dark:text-white">Stock</TableHead>
-                <TableHead className="text-gray-900 dark:text-white">Status</TableHead>
-                <TableHead className="text-gray-900 dark:text-white">3D Model</TableHead>
-                <TableHead className="text-gray-900 dark:text-white">Actions</TableHead>
+                <TableHead className="text-foreground">Product</TableHead>
+                <TableHead className="text-foreground">Category</TableHead>
+                <TableHead className="text-foreground">Brand</TableHead>
+                <TableHead className="text-foreground">Price</TableHead>
+                <TableHead className="text-foreground">Stock</TableHead>
+                <TableHead className="text-foreground">Status</TableHead>
+                <TableHead className="text-foreground">3D Model</TableHead>
+                <TableHead className="text-foreground">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -888,23 +888,23 @@ export default function InventoryPage() {
                         />
                       )}
                       <div>
-                        <div className="font-medium text-gray-900 dark:text-white">{product.name}</div>
+                        <div className="font-medium text-foreground">{product.name}</div>
                         {product.subtitle && (
-                          <div className="text-sm text-gray-600 dark:text-gray-300">{product.subtitle}</div>
+                          <div className="text-sm text-muted-foreground">{product.subtitle}</div>
                         )}
                         {product.sku && (
-                          <div className="text-xs text-gray-600 dark:text-gray-300">SKU: {product.sku}</div>
+                          <div className="text-xs text-muted-foreground">SKU: {product.sku}</div>
                         )}
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-gray-900 dark:text-white">{product.category}</TableCell>
-                  <TableCell className="text-gray-900 dark:text-white">{product.brand}</TableCell>
-                  <TableCell className="text-gray-900 dark:text-white">
+                  <TableCell className="text-foreground">{product.category}</TableCell>
+                  <TableCell className="text-foreground">{product.brand}</TableCell>
+                  <TableCell className="text-foreground">
                     <div className="flex flex-col">
                       <span className="font-medium">${product.price}</span>
                       {product.originalPrice && product.originalPrice > product.price && (
-                        <span className="text-sm text-gray-600 dark:text-gray-300 line-through">
+                        <span className="text-sm text-muted-foreground line-through">
                           ${product.originalPrice}
                         </span>
                       )}
@@ -913,14 +913,14 @@ export default function InventoryPage() {
                   <TableCell>
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900 dark:text-white text-lg">
+                        <span className="font-medium text-foreground text-lg">
                           {product.stock_quantity ?? 0} units
                         </span>
                         {(product.stock_quantity ?? 0) === 0 && (
-                          <AlertTriangle className="h-4 w-4 text-red-500 animate-pulse" />
+                          <AlertTriangle className="h-4 w-4 text-destructive animate-pulse" />
                         )}
                         {(product.stock_quantity ?? 0) > 0 && (product.stock_quantity ?? 0) <= (product.low_stock_threshold ?? 10) && (
-                          <TrendingDown className="h-4 w-4 text-yellow-500" />
+                          <TrendingDown className="h-4 w-4 text-primary" />
                         )}
                         {(product.stock_quantity ?? 0) > (product.low_stock_threshold ?? 10) && (
                           <Package className="h-4 w-4 text-green-500" />
@@ -928,7 +928,7 @@ export default function InventoryPage() {
                       </div>
                       <div className="flex gap-1">
                         {(product.stock_quantity ?? 0) === 0 ? (
-                          <Badge className="bg-red-600 text-white border-red-500 shadow-red-500/20 shadow-lg font-semibold animate-pulse">
+                          <Badge className="bg-destructive text-destructive-foreground border-destructive shadow-destructive/20 shadow-lg font-semibold animate-pulse">
                             🚨 Out of Stock
                           </Badge>
                         ) : (product.stock_quantity ?? 0) <= (product.low_stock_threshold ?? 10) ? (
@@ -942,7 +942,7 @@ export default function InventoryPage() {
                         )}
                       </div>
                       {(product.stock_quantity ?? 0) <= (product.low_stock_threshold ?? 10) && (product.stock_quantity ?? 0) > 0 && (
-                        <span className="text-xs text-yellow-600 dark:text-yellow-400">
+                        <span className="text-xs text-primary">
                           Threshold: {product.low_stock_threshold ?? 10}
                         </span>
                       )}
@@ -954,12 +954,12 @@ export default function InventoryPage() {
                         {product.status || 'Active'}
                       </Badge>
                       {product.is_new && <Badge variant="outline">New</Badge>}
-                      {product.is_sale && <Badge className="bg-red-600">Sale</Badge>}
+                      {product.is_sale && <Badge className="bg-destructive text-destructive-foreground">Sale</Badge>}
                     </div>
                   </TableCell>
                   <TableCell>
                     {product.model_3d_url ? (
-                      <Badge className="bg-blue-600">3D Available</Badge>
+                      <Badge className="bg-primary text-primary-foreground">3D Available</Badge>
                     ) : (
                       <Badge variant="outline">No 3D Model</Badge>
                     )}
@@ -1018,8 +1018,8 @@ export default function InventoryPage() {
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-blue-600 dark:text-blue-400">Add New Product</DialogTitle>
-            <DialogDescription className="text-gray-600 dark:text-gray-300">
+            <DialogTitle className="text-primary">Add New Product</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
               Create a new product with all necessary details including 3D model support.
             </DialogDescription>
           </DialogHeader>
@@ -1027,49 +1027,49 @@ export default function InventoryPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Basic Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Basic Information</h3>
+              <h3 className="text-lg font-semibold text-foreground">Basic Information</h3>
               
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-gray-900 dark:text-white">Product Name *</Label>
+                <Label htmlFor="name" className="text-foreground">Product Name *</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
+                  className="bg-background border-border text-foreground"
                   placeholder="Enter product name"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="subtitle" className="text-gray-900 dark:text-white">Subtitle</Label>
+                <Label htmlFor="subtitle" className="text-foreground">Subtitle</Label>
                 <Input
                   id="subtitle"
                   value={formData.subtitle}
                   onChange={(e) => setFormData(prev => ({ ...prev, subtitle: e.target.value }))}
-                  className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
+                  className="bg-background border-border text-foreground"
                   placeholder="Enter product subtitle"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="sku" className="text-gray-900 dark:text-white">SKU</Label>
+                <Label htmlFor="sku" className="text-foreground">SKU</Label>
                 <Input
                   id="sku"
                   value={formData.sku}
                   onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
-                  className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
+                  className="bg-background border-border text-foreground"
                   placeholder="Enter SKU"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="category" className="text-gray-900 dark:text-white">Category *</Label>
+                  <Label htmlFor="category" className="text-foreground">Category *</Label>
                   <Select
                     value={formData.category}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
                   >
-                    <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
+                    <SelectTrigger className="bg-background border-border text-foreground">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1081,12 +1081,12 @@ export default function InventoryPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="brand" className="text-gray-900 dark:text-white">Brand *</Label>
+                  <Label htmlFor="brand" className="text-foreground">Brand *</Label>
                   <Select
                     value={formData.brand}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, brand: value }))}
                   >
-                    <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
+                    <SelectTrigger className="bg-background border-border text-foreground">
                       <SelectValue placeholder="Select brand" />
                     </SelectTrigger>
                     <SelectContent>

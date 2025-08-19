@@ -1,0 +1,256 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { executeQuery } from '@/lib/database/mysql'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth'
+
+interface POSTransactionItem {
+  productId: string
+  name: string
+  brand: string
+  price: number
+  color: string
+  size: string
+  quantity: number
+  image: string
+}
+
+interface CreateTransactionRequest {
+  items: POSTransactionItem[]
+  total: number
+  paymentMethod: string
+  customerName?: string
+  paymentReference?: string
+  cashReceived?: number
+  changeGiven?: number
+}
+
+// GET - Fetch POS transactions
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user || (session.user as any).role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '50')
+    const date = searchParams.get('date')
+    const status = searchParams.get('status')
+    const offset = (page - 1) * limit
+
+    let whereClause = 'WHERE 1=1'
+    const params: any[] = []
+
+    if (date) {
+      whereClause += ' AND transaction_date = ?'
+      params.push(date)
+    }
+
+    if (status) {
+      whereClause += ' AND status = ?'
+      params.push(status)
+    }
+
+    // Get transactions with items
+    const transactionsQuery = `
+      SELECT 
+        t.*,
+        CONCAT(u.first_name, ' ', u.last_name) as cashier_name,
+        COUNT(ti.id) as item_count,
+        SUM(ti.quantity) as total_quantity
+      FROM pos_transactions t
+      LEFT JOIN users u ON t.user_id = u.id
+      LEFT JOIN pos_transaction_items ti ON t.id = ti.transaction_id
+      ${whereClause}
+      GROUP BY t.id
+      ORDER BY t.created_at DESC
+      LIMIT ? OFFSET ?
+    `
+
+    const transactions = await executeQuery(transactionsQuery, [...params, limit, offset])
+
+    // Get total count
+    const countQuery = `
+      SELECT COUNT(DISTINCT t.id) as total
+      FROM pos_transactions t
+      ${whereClause}
+    `
+    const [{ total }] = await executeQuery(countQuery, params)
+
+    return NextResponse.json({
+      transactions,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    })
+  } catch (error) {
+    console.error('❌ API: Error fetching POS transactions:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch transactions' },
+      { status: 500 }
+    )
+  }
+}
+
+// POST - Create new POS transaction
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user || (session.user as any).role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body: CreateTransactionRequest = await request.json()
+    const { items, total, paymentMethod, customerName, paymentReference, cashReceived, changeGiven } = body
+
+    if (!items || items.length === 0) {
+      return NextResponse.json({ error: 'No items provided' }, { status: 400 })
+    }
+
+    if (!total || total <= 0) {
+      return NextResponse.json({ error: 'Invalid total amount' }, { status: 400 })
+    }
+
+    if (!paymentMethod) {
+      return NextResponse.json({ error: 'Payment method required' }, { status: 400 })
+    }
+
+    // Get admin user ID (assuming it's stored in session)
+    const adminUserId = session.user.id || 1 // Fallback to admin ID 1
+
+    // Generate transaction ID
+    const transactionId = `POS-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    const receiptNumber = `RCP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    
+    // Calculate subtotal
+    const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+
+    // Start transaction
+    await executeQuery('START TRANSACTION')
+
+    try {
+      // Insert transaction
+      const insertTransactionQuery = `
+        INSERT INTO pos_transactions (
+          transaction_id, user_id, customer_name,
+          subtotal, total_amount, payment_method, payment_reference,
+          cash_received, change_given, receipt_number, transaction_date
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
+      `
+
+      const transactionResult = await executeQuery(insertTransactionQuery, [
+        transactionId,
+        adminUserId,
+        customerName || null,
+        subtotal,
+        total,
+        paymentMethod,
+        paymentReference || null,
+        cashReceived || null,
+        changeGiven || null,
+        receiptNumber
+      ])
+
+      const dbTransactionId = (transactionResult as any).insertId
+
+      // Insert transaction items
+      for (const item of items) {
+        const insertItemQuery = `
+          INSERT INTO pos_transaction_items (
+            transaction_id, product_id, product_name, product_brand,
+            product_sku, size, color, quantity, unit_price, total_price
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `
+
+        await executeQuery(insertItemQuery, [
+          dbTransactionId,
+          item.productId,
+          item.name,
+          item.brand,
+          `SKU-${item.productId}`, // Generate SKU if not provided
+          item.size,
+          item.color,
+          item.quantity,
+          item.price,
+          item.price * item.quantity
+        ])
+
+        // Update product stock
+        const updateStockQuery = `
+          UPDATE products 
+          SET stock_quantity = stock_quantity - ?
+          WHERE id = ? AND stock_quantity >= ?
+        `
+        
+        const stockResult = await executeQuery(updateStockQuery, [
+          item.quantity,
+          item.productId,
+          item.quantity
+        ])
+
+        if ((stockResult as any).affectedRows === 0) {
+          throw new Error(`Insufficient stock for product: ${item.name}`)
+        }
+      }
+
+      // Update daily sales
+      const updateDailySalesQuery = `
+        INSERT INTO pos_daily_sales (
+          sale_date, admin_user_id, total_transactions, total_items_sold,
+          gross_sales, net_sales, cash_sales, card_sales, digital_wallet_sales
+        ) VALUES (
+          CURDATE(), ?, 1, ?, ?, ?, 
+          CASE WHEN ? = 'CASH' THEN ? ELSE 0 END,
+          CASE WHEN ? = 'CARD' THEN ? ELSE 0 END,
+          CASE WHEN ? IN ('GCASH', 'MAYA') THEN ? ELSE 0 END
+        )
+        ON DUPLICATE KEY UPDATE
+          total_transactions = total_transactions + 1,
+          total_items_sold = total_items_sold + ?,
+          gross_sales = gross_sales + ?,
+          net_sales = net_sales + ?,
+          cash_sales = cash_sales + CASE WHEN ? = 'CASH' THEN ? ELSE 0 END,
+          card_sales = card_sales + CASE WHEN ? = 'CARD' THEN ? ELSE 0 END,
+          digital_wallet_sales = digital_wallet_sales + CASE WHEN ? IN ('GCASH', 'MAYA') THEN ? ELSE 0 END,
+          updated_at = CURRENT_TIMESTAMP
+      `
+
+      const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
+
+      await executeQuery(updateDailySalesQuery, [
+        adminUserId, totalItems, total, total,
+        paymentMethod, total,
+        paymentMethod, total,
+        paymentMethod, total,
+        totalItems, total, total,
+        paymentMethod, total,
+        paymentMethod, total,
+        paymentMethod, total
+      ])
+
+      await executeQuery('COMMIT')
+
+      return NextResponse.json({
+        success: true,
+        transactionId,
+        receiptNumber,
+        message: 'Transaction completed successfully'
+      })
+
+    } catch (error) {
+      await executeQuery('ROLLBACK')
+      throw error
+    }
+
+  } catch (error) {
+    console.error('❌ API: Error creating POS transaction:', error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to create transaction' },
+      { status: 500 }
+    )
+  }
+}
