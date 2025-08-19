@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/database/mysql'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
+import pool from '@/lib/database/mysql'
 
 interface POSTransactionItem {
   productId: string
@@ -142,7 +143,7 @@ export async function POST(request: NextRequest) {
     const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
 
     // Start transaction
-    await executeQuery('START TRANSACTION')
+    await pool.query('START TRANSACTION')
 
     try {
       // Insert transaction
@@ -244,7 +245,7 @@ export async function POST(request: NextRequest) {
         paymentMethod, total
       ])
 
-      await executeQuery('COMMIT')
+      await pool.query('COMMIT')
 
       return NextResponse.json({
         success: true,
@@ -254,7 +255,7 @@ export async function POST(request: NextRequest) {
       })
 
     } catch (error) {
-      await executeQuery('ROLLBACK')
+      await pool.query('ROLLBACK')
       throw error
     }
 
