@@ -122,9 +122,39 @@ export function ProductGrid({
     return (
       <section className="py-16 bg-background">
         <div className="container mx-auto px-4">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">Loading products...</p>
+          {/* Header Skeleton */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+            <div className="flex items-center justify-between w-full">
+              <div>
+                <div className="h-8 w-64 bg-muted animate-pulse rounded mb-2"></div>
+                <div className="h-4 w-32 bg-muted animate-pulse rounded"></div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="h-6 w-16 bg-muted animate-pulse rounded"></div>
+                <div className="h-10 w-32 bg-muted animate-pulse rounded"></div>
+                <div className="h-10 w-40 bg-muted animate-pulse rounded"></div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Product Grid Skeleton */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div key={index} className="bg-card border border-border rounded-lg overflow-hidden">
+                <div className="p-2">
+                  <div className="aspect-square bg-muted animate-pulse rounded-lg border-4 border-yellow-400"></div>
+                </div>
+                <div className="p-4 space-y-3">
+                  <div className="space-y-2">
+                    <div className="h-3 w-20 bg-muted animate-pulse rounded"></div>
+                    <div className="h-4 w-full bg-muted animate-pulse rounded"></div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="h-6 w-24 bg-muted animate-pulse rounded"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>

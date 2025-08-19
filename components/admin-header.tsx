@@ -5,7 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useRouter, usePathname } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
-import { Menu, X, Home, Package, ShoppingCart, BarChart3, Calculator, User, Settings, LogOut } from "lucide-react"
+import { Menu, X, Home, Package, ShoppingCart, BarChart3, Calculator, User, Settings, LogOut, Brain } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -52,6 +52,7 @@ export function AdminHeader() {
     { href: "/admin/orders", icon: ShoppingCart, label: "Orders", active: pathname === "/admin/orders" },
     { href: "/admin/analytics", icon: BarChart3, label: "Analytics", active: pathname === "/admin/analytics" },
     { href: "/admin/pos", icon: Calculator, label: "POS", active: pathname === "/admin/pos" },
+    { href: "/admin/ai-training", icon: Brain, label: "AI Training", active: pathname === "/admin/ai-training" },
   ]
 
   return (

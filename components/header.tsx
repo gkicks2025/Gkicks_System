@@ -395,6 +395,36 @@ export function Header({ onSearch }: HeaderProps) {
                 </div>
               )}
 
+              {/* Mobile Cart and Wishlist */}
+              <div className="border-t pt-2 mt-2">
+                <Link
+                  href="/cart"
+                  className="flex items-center px-3 py-2 text-base font-medium hover:text-yellow-400 transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <ShoppingCart className="h-5 w-5 mr-3" />
+                  Cart
+                  {cartCount > 0 && (
+                    <Badge className="ml-auto h-5 w-5 flex items-center justify-center p-0 text-xs bg-primary text-primary-foreground">
+                      {cartCount}
+                    </Badge>
+                  )}
+                </Link>
+                <Link
+                  href="/wishlist"
+                  className="flex items-center px-3 py-2 text-base font-medium hover:text-yellow-400 transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <Heart className="h-5 w-5 mr-3" />
+                  Wishlist
+                  {wishlistCount > 0 && (
+                    <Badge className="ml-auto h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500 hover:bg-red-600">
+                      {wishlistCount}
+                    </Badge>
+                  )}
+                </Link>
+              </div>
+
               {/* Mobile User Actions */}
               {user && !authLoading && (
                 <div className="border-t pt-2 mt-2">
@@ -411,13 +441,6 @@ export function Header({ onSearch }: HeaderProps) {
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Orders
-                  </Link>
-                  <Link
-                    href="/cart"
-                    className="block px-3 py-2 text-base font-medium hover:text-yellow-400 transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Cart
                   </Link>
                   <Link
                     href="/settings"

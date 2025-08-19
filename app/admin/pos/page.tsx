@@ -313,7 +313,10 @@ export default function POSPage() {
         color: selectedColor,
         size: selectedSize,
         quantity: 1,
-        image: `/images/${selectedProduct.name.toLowerCase().replace(/\s+/g, "-")}.png`,
+        image: (selectedProduct.gallery_images && selectedProduct.gallery_images.length > 0 
+          ? selectedProduct.gallery_images[0] 
+          : selectedProduct.image_url) || 
+        `/images/${selectedProduct.name.toLowerCase().replace(/\s+/g, "-")}.png`,
       }
 
       setCart([...cart, newItem])

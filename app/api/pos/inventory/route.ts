@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
         p.price,
         p.original_price,
         p.image_url,
+        p.gallery_images,
         p.description,
         p.is_new,
         p.is_sale,
@@ -44,6 +45,7 @@ export async function GET(request: NextRequest) {
     const formattedInventory = await Promise.all(inventoryArray.map(async (product: any) => {
       const colors = product.colors ? JSON.parse(product.colors) : []
       const sizes = product.sizes ? JSON.parse(product.sizes) : []
+      const galleryImages = product.gallery_images ? JSON.parse(product.gallery_images) : []
       
       // Get actual variants from product_variants table or use JSON variants
       let variants: { [color: string]: { [size: string]: number } } = {}
@@ -100,6 +102,7 @@ export async function GET(request: NextRequest) {
         price: parseFloat(product.price) || 0,
         originalPrice: parseFloat(product.original_price) || parseFloat(product.price) || 0,
         image_url: product.image_url,
+        gallery_images: galleryImages,
         description: product.description,
         is_new: Boolean(product.is_new),
         is_sale: Boolean(product.is_sale),

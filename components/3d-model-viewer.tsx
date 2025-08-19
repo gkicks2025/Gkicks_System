@@ -72,6 +72,8 @@ function Model3D({ url, productColors = [] }: Model3DProps) {
   const meshRef = useRef<Group>(null)
   const [isRotating, setIsRotating] = useState(false)
   const [loadedModel, setLoadedModel] = useState<THREE.Group | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useFrame((state, delta) => {
     if (meshRef.current && isRotating) {
@@ -82,6 +84,9 @@ function Model3D({ url, productColors = [] }: Model3DProps) {
   // Load model with materials (OBJ + MTL with fallback)
   React.useEffect(() => {
     const loadModel = async () => {
+      setIsLoading(true)
+      setError(null)
+      
       try {
         const filename = url.split('/').pop() || ''
         const fileExtension = filename.split('.').pop()?.toLowerCase()
@@ -359,9 +364,12 @@ function Model3D({ url, productColors = [] }: Model3DProps) {
         console.log('✅ Model processed and ready to render')
         
         setLoadedModel(obj)
+        setIsLoading(false)
         console.log('✅ Model set in state:', obj)
       } catch (error) {
         console.error('❌ Error loading 3D model:', error)
+        setError(error instanceof Error ? error.message : 'Failed to load 3D model')
+        setIsLoading(false)
       }
     }
     
@@ -380,18 +388,39 @@ function Model3D({ url, productColors = [] }: Model3DProps) {
       )}
       
       {/* Show loading indicator if no model is loaded yet */}
-      {!loadedModel && (
+      {!loadedModel && !error && isLoading && (
         <mesh>
           <boxGeometry args={[1, 1, 1]} />
           <meshLambertMaterial color="#4CAF50" transparent opacity={0.7} />
+        </mesh>
+      )}
+      
+      {/* Show error indicator if loading failed */}
+      {error && (
+        <mesh>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshLambertMaterial color="#f87171" transparent opacity={0.7} />
         </mesh>
       )}
     </group>
   )
 }
 
-function Loader() {
+function Loader({ error }: { error?: string | null }) {
   const { progress } = useProgress()
+  
+  if (error) {
+    return (
+      <Html center>
+        <div className="text-white text-center bg-red-500/20 p-4 rounded-lg backdrop-blur-sm">
+          <div className="text-red-400 mb-2">⚠️</div>
+          <div className="text-sm">Failed to load 3D model</div>
+          <div className="text-xs text-red-300 mt-1">{error}</div>
+        </div>
+      </Html>
+    )
+  }
+  
   return (
     <Html center>
       <div className="text-white text-center">

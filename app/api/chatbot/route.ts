@@ -1,8 +1,20 @@
 import { streamText } from "ai"
 import { openai } from "@ai-sdk/openai"
+import { searchFAQ, faqData, getFAQCategories } from "@/lib/faq-data"
 
 export async function POST(req: Request) {
   const { messages } = await req.json()
+
+  // Get the latest user message to search for relevant FAQ
+  const latestMessage = messages[messages.length - 1]?.content || ''
+  const relevantFAQs = searchFAQ(latestMessage).slice(0, 5) // Get top 5 relevant FAQs
+  
+  // Build FAQ context for the AI
+  const faqContext = relevantFAQs.length > 0 
+    ? `\n\nRELEVANT FAQ KNOWLEDGE:\n${relevantFAQs.map(faq => 
+        `Q: ${faq.question}\nA: ${faq.answer}\nCategory: ${faq.category}`
+      ).join('\n\n')}`
+    : ''
 
   const result = await streamText({
     model: openai("gpt-4o"),
@@ -44,14 +56,23 @@ Sizing Guide:
 - Half sizes available for most models
 - Wide and narrow fits for select brands
 
+FAQ CATEGORIES AVAILABLE:
+${getFAQCategories().join(', ')}
+
+IMPORTANT INSTRUCTIONS:
+1. When answering questions, first check if there's relevant FAQ information provided below
+2. Use the FAQ answers as your primary source of truth for store policies, procedures, and information
+3. If FAQ information is available, base your response on it but make it conversational and natural
+4. Always maintain a friendly, enthusiastic tone about shoes and fashion
+5. Use Filipino context when relevant (peso pricing, local references)
+6. If you don't have specific information, suggest checking the website or visiting the store
+
 Your personality:
 - Friendly and enthusiastic about shoes
 - Knowledgeable about fashion trends
 - Helpful with sizing and fit recommendations
 - Professional but approachable
-- Use Filipino context when relevant (peso pricing, local references)
-
-Always provide helpful, accurate information about shoes, sizing, pricing, and store policies. If you don't know specific product availability, suggest the customer check the website or visit the store.`,
+- Accurate with store policies and procedures${faqContext}`,
     messages,
   })
 

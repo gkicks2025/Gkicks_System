@@ -51,8 +51,10 @@ export function ReviewForm({ productName, productId, onSubmitReview, onCancel }:
 
     setIsSubmitting(true)
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      
       onSubmitReview({
         rating,
         comment: comment.trim(),
@@ -67,10 +69,13 @@ export function ReviewForm({ productName, productId, onSubmitReview, onCancel }:
       setUserName("")
       setEmail("")
       setPhotos([])
-      setIsSubmitting(false)
-
+      
       alert("Thank you for your review! It has been submitted successfully.")
-    }, 1500)
+    } catch (error) {
+      setErrors({ submit: "Failed to submit review. Please try again." })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleStarClick = (starRating: number) => {
@@ -263,14 +268,28 @@ export function ReviewForm({ productName, productId, onSubmitReview, onCancel }:
             </div>
           </div>
 
+          {/* Submit Error */}
+          {errors.submit && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+              <p className="text-red-600 dark:text-red-400 text-sm">{errors.submit}</p>
+            </div>
+          )}
+
           {/* Submit Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 pt-4">
             <Button
               type="submit"
-              className="bg-yellow-400 text-black hover:bg-yellow-500 shadow-lg hover:shadow-xl transition-all duration-300 px-8"
+              className="bg-yellow-400 text-black hover:bg-yellow-500 shadow-lg hover:shadow-xl transition-all duration-300 px-8 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Submitting Review..." : "Submit Review"}
+              {isSubmitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
+                  Submitting Review...
+                </>
+              ) : (
+                "Submit Review"
+              )}
             </Button>
             <Button
               type="button"

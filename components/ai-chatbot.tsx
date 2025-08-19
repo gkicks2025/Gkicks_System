@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useChat } from "ai/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,10 +12,26 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 export function AIChatbot() {
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
+  const [showElfsightWidget, setShowElfsightWidget] = useState(false)
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, reload } = useChat({
     api: "/api/chatbot",
   })
+
+  // Load Elfsight platform script
+  useEffect(() => {
+    const script = document.createElement('script')
+    script.src = 'https://elfsightcdn.com/platform.js'
+    script.async = true
+    document.head.appendChild(script)
+
+    return () => {
+      // Cleanup script on unmount
+      if (document.head.contains(script)) {
+        document.head.removeChild(script)
+      }
+    }
+  }, [])
 
   const resetConversation = () => {
     reload()
@@ -50,6 +66,14 @@ export function AIChatbot() {
           <div className="flex items-center space-x-1">
             <Button
               variant="ghost"
+              size="sm"
+              onClick={() => setShowElfsightWidget(!showElfsightWidget)}
+              className="h-8 px-2 text-xs text-black hover:bg-black/10"
+            >
+              {showElfsightWidget ? "Custom" : "Elfsight"}
+            </Button>
+            <Button
+              variant="ghost"
               size="icon"
               onClick={() => setIsMinimized(!isMinimized)}
               className="h-8 w-8 text-black hover:bg-black/10"
@@ -82,102 +106,110 @@ export function AIChatbot() {
       {!isMinimized && (
         <CardContent className="p-0">
           <div className="h-96 flex flex-col">
-            <ScrollArea className="flex-1 p-4">
-              {messages.length === 0 ? (
-                <div className="text-center py-8">
-                  <Bot className="h-12 w-12 mx-auto mb-4 text-yellow-500" />
-                  <h3 className="font-semibold text-gray-900 dark:text-yellow-400 mb-2">Welcome to GKicks!</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-                    I'm here to help you find the perfect shoes. Ask me about:
-                  </p>
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    <Badge variant="secondary" className="text-xs">
-                      Products
-                    </Badge>
-                    <Badge variant="secondary" className="text-xs">
-                      Sizing
-                    </Badge>
-                    <Badge variant="secondary" className="text-xs">
-                      Prices
-                    </Badge>
-                    <Badge variant="secondary" className="text-xs">
-                      Shipping
-                    </Badge>
+            {showElfsightWidget ? (
+              <div className="h-full p-4">
+                <div className="elfsight-app-1645323a-e0ed-4f5c-a082-273ee0550c9c" data-elfsight-app-lazy></div>
+              </div>
+            ) : (
+              <ScrollArea className="flex-1 p-4">
+                {messages.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Bot className="h-12 w-12 mx-auto mb-4 text-yellow-500" />
+                    <h3 className="font-semibold text-gray-900 dark:text-yellow-400 mb-2">Welcome to GKicks!</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                      I'm here to help you find the perfect shoes. Ask me about:
+                    </p>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      <Badge variant="secondary" className="text-xs">
+                        Products
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        Sizing
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        Prices
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        Shipping
+                      </Badge>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex items-start space-x-2 ${
-                        message.role === "user" ? "justify-end" : "justify-start"
-                      }`}
-                    >
-                      {message.role === "assistant" && (
+                ) : (
+                  <div className="space-y-4">
+                    {messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`flex items-start space-x-2 ${
+                          message.role === "user" ? "justify-end" : "justify-start"
+                        }`}
+                      >
+                        {message.role === "assistant" && (
+                          <div className="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center flex-shrink-0">
+                            <Bot className="h-4 w-4 text-black" />
+                          </div>
+                        )}
+                        <div
+                          className={`max-w-[80%] p-3 rounded-lg ${
+                            message.role === "user"
+                              ? "bg-yellow-400 text-black ml-auto"
+                              : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-yellow-400"
+                          }`}
+                        >
+                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                        </div>
+                        {message.role === "user" && (
+                          <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center flex-shrink-0">
+                            <User className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {isLoading && (
+                      <div className="flex items-start space-x-2">
                         <div className="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center flex-shrink-0">
                           <Bot className="h-4 w-4 text-black" />
                         </div>
-                      )}
-                      <div
-                        className={`max-w-[80%] p-3 rounded-lg ${
-                          message.role === "user"
-                            ? "bg-yellow-400 text-black ml-auto"
-                            : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-yellow-400"
-                        }`}
-                      >
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                      </div>
-                      {message.role === "user" && (
-                        <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center flex-shrink-0">
-                          <User className="h-4 w-4 text-gray-600 dark:text-gray-300" />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {isLoading && (
-                    <div className="flex items-start space-x-2">
-                      <div className="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center flex-shrink-0">
-                        <Bot className="h-4 w-4 text-black" />
-                      </div>
-                      <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg">
-                        <div className="flex space-x-1">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                          <div
-                            className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                            style={{ animationDelay: "0.1s" }}
-                          ></div>
-                          <div
-                            className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                            style={{ animationDelay: "0.2s" }}
-                          ></div>
+                        <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg">
+                          <div className="flex space-x-1">
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                            <div
+                              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                              style={{ animationDelay: "0.1s" }}
+                            ></div>
+                            <div
+                              className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                              style={{ animationDelay: "0.2s" }}
+                            ></div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </ScrollArea>
+                    )}
+                  </div>
+                )}
+              </ScrollArea>
+            )}
 
-            <div className="p-4 border-t border-border">
-              <form onSubmit={handleSubmit} className="flex space-x-2">
-                <Input
-                  value={input}
-                  onChange={handleInputChange}
-                  placeholder="Ask about shoes, sizing, prices..."
-                  className="flex-1 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-yellow-400"
-                  disabled={isLoading}
-                />
-                <Button
-                  type="submit"
-                  size="icon"
-                  disabled={isLoading || !input.trim()}
-                  className="bg-yellow-400 hover:bg-yellow-500 text-black"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </form>
-            </div>
+            {!showElfsightWidget && (
+              <div className="p-4 border-t border-border">
+                <form onSubmit={handleSubmit} className="flex space-x-2">
+                  <Input
+                    value={input}
+                    onChange={handleInputChange}
+                    placeholder="Ask about shoes, sizing, prices..."
+                    className="flex-1 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-yellow-400"
+                    disabled={isLoading}
+                  />
+                  <Button
+                    type="submit"
+                    size="icon"
+                    disabled={isLoading || !input.trim()}
+                    className="bg-yellow-400 hover:bg-yellow-500 text-black"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </form>
+              </div>
+            )}
           </div>
         </CardContent>
       )}

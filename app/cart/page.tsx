@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ArrowLeft, Minus, Plus, Trash2, ShoppingBag, Smartphone, User, CheckCircle, Receipt } from "lucide-react"
+import { ArrowLeft, Minus, Plus, Trash2, ShoppingBag, Smartphone, User, CheckCircle, Receipt, Upload } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
 
@@ -47,6 +47,8 @@ export default function CartPage() {
 
   const [customerEmail, setCustomerEmail] = useState(user?.email || "")
   const [paymentMethod, setPaymentMethod] = useState("")
+  const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null)
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadUserProfileAndAddress() {
@@ -88,10 +90,10 @@ export default function CartPage() {
         setShippingInfo({
           fullName: profileData ? `${profileData.first_name} ${profileData.last_name}`.trim() : "",
           phone: profileData?.phone || "",
-          street: addressData?.street_address || "",
+          street: addressData?.address_line_1 || "",
           city: addressData?.city || "",
-          province: addressData?.state_province || "",
-          zipCode: addressData?.zip_code || "",
+          province: addressData?.state || "",
+          zipCode: addressData?.postal_code || "",
           country: addressData?.country || "",
         })
       } catch (error) {
@@ -114,6 +116,43 @@ export default function CartPage() {
     if (method === "GCash" || method === "Maya") {
       setQrPaymentMethod(method.toLowerCase())
       setShowQRDialog(true)
+    }
+    // Reset screenshot when changing payment method
+    setPaymentScreenshot(null)
+    setScreenshotPreview(null)
+  }
+
+  const handleScreenshotUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Invalid File Type",
+          description: "Please upload an image file.",
+          variant: "destructive"
+        })
+        return
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File Too Large",
+          description: "Please upload an image smaller than 5MB.",
+          variant: "destructive"
+        })
+        return
+      }
+      
+      setPaymentScreenshot(file)
+      
+      // Create preview
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setScreenshotPreview(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
     }
   }
 
@@ -146,6 +185,16 @@ export default function CartPage() {
         title: "Payment Method Required",
         description: "Please select a payment method.",
         variant: "destructive",
+      })
+      return
+    }
+
+    // Validate screenshot for digital payment methods
+    if ((paymentMethod === "GCash" || paymentMethod === "Maya") && !paymentScreenshot) {
+      toast({
+        title: "Payment Screenshot Required",
+        description: `Please upload a screenshot of your ${paymentMethod} payment.`,
+        variant: "destructive"
       })
       return
     }
@@ -192,18 +241,22 @@ export default function CartPage() {
 
         if (existingAddress) {
            // Update existing address
-           const updateAddressResponse = await fetch(`/api/addresses?id=${existingAddress.id}`, {
+           const updateAddressResponse = await fetch('/api/addresses', {
              method: 'PUT',
              headers: {
                'Content-Type': 'application/json',
                'Authorization': `Bearer ${token}`
              },
              body: JSON.stringify({
-               street_address: shippingInfo.street,
+               id: existingAddress.id,
+               address_line_1: shippingInfo.street,
                city: shippingInfo.city,
-               state_province: shippingInfo.province,
-               zip_code: shippingInfo.zipCode,
+               state: shippingInfo.province,
+               postal_code: shippingInfo.zipCode,
                country: shippingInfo.country,
+               first_name: firstName || null,
+               last_name: lastName || null,
+               phone: shippingInfo.phone,
              })
            })
 
@@ -219,12 +272,14 @@ export default function CartPage() {
               'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
-              type: "home",
-              street_address: shippingInfo.street,
+              address_line_1: shippingInfo.street,
               city: shippingInfo.city,
-              state_province: shippingInfo.province,
-              zip_code: shippingInfo.zipCode,
+              state: shippingInfo.province,
+              postal_code: shippingInfo.zipCode,
               country: shippingInfo.country,
+              first_name: firstName || null,
+              last_name: lastName || null,
+              phone: shippingInfo.phone,
               is_default: true,
             })
           })
@@ -657,6 +712,34 @@ export default function CartPage() {
                         </SelectItem>
                       </SelectContent>
                     </Select>
+
+                    {/* Payment Screenshot Upload for Digital Payments */}
+                    {(paymentMethod === "GCash" || paymentMethod === "Maya") && (
+                      <div className="space-y-2">
+                        <Label htmlFor="paymentScreenshot" className="text-sm text-gray-700 dark:text-gray-300">
+                          Payment Screenshot *
+                        </Label>
+                        <Input
+                          id="paymentScreenshot"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleScreenshotUpload}
+                          className="h-10 sm:h-12 bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                        />
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Please upload a screenshot of your {paymentMethod} payment confirmation
+                        </p>
+                        {screenshotPreview && (
+                          <div className="mt-2">
+                            <img
+                              src={screenshotPreview}
+                              alt="Payment screenshot preview"
+                              className="max-w-full h-32 object-contain border border-gray-200 dark:border-gray-600 rounded"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <Button
@@ -707,10 +790,49 @@ export default function CartPage() {
                   Scan this QR code with your {qrPaymentMethod === "gcash" ? "GCash" : "PayMaya"} app
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                  Close this dialog after completing the payment
+                  Upload payment screenshot after completing the payment
                 </p>
               </div>
-              <Button onClick={() => setShowQRDialog(false)} className="w-full" variant="outline">
+              
+              {/* Screenshot Upload in QR Dialog */}
+              <div className="w-full space-y-2">
+                <Label htmlFor="qrPaymentScreenshot" className="text-sm text-gray-700 dark:text-gray-300">
+                  Payment Screenshot *
+                </Label>
+                <Input
+                  id="qrPaymentScreenshot"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleScreenshotUpload}
+                  className="w-full bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                />
+                {screenshotPreview && (
+                  <div className="mt-2">
+                    <img
+                      src={screenshotPreview}
+                      alt="Payment screenshot preview"
+                      className="max-w-full h-32 object-contain border border-gray-200 dark:border-gray-600 rounded mx-auto"
+                    />
+                  </div>
+                )}
+              </div>
+              
+              <Button 
+                onClick={() => {
+                  if (!paymentScreenshot) {
+                    toast({
+                      title: "Screenshot Required",
+                      description: "Please upload a payment screenshot before continuing.",
+                      variant: "destructive"
+                    })
+                    return
+                  }
+                  setShowQRDialog(false)
+                }} 
+                className="w-full" 
+                variant="outline"
+                disabled={!paymentScreenshot}
+              >
                 Payment Completed
               </Button>
             </div>

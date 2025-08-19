@@ -12,17 +12,17 @@ const nextConfig = {
   // Enable other optimizations
   reactStrictMode: true,
   poweredByHeader: false,
-  // Turbopack experimental features
-  experimental: {
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
-      },
-    },
-  },
+  // Disabled Turbopack to fix runtime binding conflicts
+  // experimental: {
+  //   turbo: {
+  //     rules: {
+  //       '*.svg': {
+  //         loaders: ['@svgr/webpack'],
+  //         as: '*.js',
+  //       },
+  //     },
+  //   },
+  // },
 }
 
 module.exports = nextConfig

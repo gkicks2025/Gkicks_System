@@ -904,11 +904,20 @@ export default function InventoryPage() {
                 <TableRow key={product.id} className="border-border">
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      {product.image && (
+                      {((product.gallery_images && product.gallery_images.length > 0) || product.image_url || product.image) && (
                         <img
-                          src={product.image}
+                          src={
+                            (product.gallery_images && product.gallery_images.length > 0 
+                              ? product.gallery_images[0] 
+                              : product.image_url) || 
+                            product.image ||
+                            `/images/${product.name?.toLowerCase().replace(/\s+/g, "-")}.png`
+                          }
                           alt={product.name}
                           className="w-12 h-12 object-cover rounded"
+                          onError={(e) => {
+                            e.currentTarget.src = "/placeholder.svg?height=48&width=48"
+                          }}
                         />
                       )}
                       <div>
