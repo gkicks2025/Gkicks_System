@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { executeQuery } from '@/lib/database'
+import { executeQuery } from '@/lib/database/mysql'
 
 // Use the centralized database connection
 

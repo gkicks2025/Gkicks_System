@@ -9,7 +9,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { Mesh, Group, Material } from 'three'
 import * as THREE from 'three'
 import { Button } from '@/components/ui/button'
-import { Maximize2, Minimize2, RotateCcw } from 'lucide-react'
+import { Slider } from '@/components/ui/slider'
+import { Maximize2, Minimize2, RotateCcw, Sun } from 'lucide-react'
 
 // Color mapping function for sneaker parts
 function getColorForMesh(mesh: Mesh, productColors: string[]): number {
@@ -441,6 +442,15 @@ interface ModelViewer3DProps {
 export default function ModelViewer3D({ modelUrl, filename, className = '', productColors = [] }: ModelViewer3DProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [autoRotate, setAutoRotate] = useState(false)
+  const [bottomBrightness, setBottomBrightness] = useState([1.5])
+  const [isBrightnessMinimized, setIsBrightnessMinimized] = useState(true)
+
+  // Function to extract filename without extension
+  const getDisplayName = (filename?: string) => {
+    if (!filename) return 'Interactive 3D Model'
+    const nameWithoutExtension = filename.replace(/\.[^/.]+$/, '')
+    return nameWithoutExtension || 'Interactive 3D Model'
+  }
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen)
@@ -458,34 +468,72 @@ export default function ModelViewer3D({ modelUrl, filename, className = '', prod
         <div className={`relative ${className}`}>
           <div className="relative bg-gray-900 rounded-lg overflow-hidden transition-all duration-300 w-full h-96">
             {/* Controls */}
-            <div className="absolute top-4 right-4 z-10 flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                className="bg-black/50 border-gray-600 text-white hover:bg-black/70"
-                onClick={() => setAutoRotate(!autoRotate)}
-              >
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="bg-black/50 border-gray-600 text-white hover:bg-black/70"
-                onClick={toggleFullscreen}
-              >
-                <Maximize2 className="h-4 w-4" />
-              </Button>
+            <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="bg-black/50 border-gray-600 text-white hover:bg-black/70"
+                  onClick={() => setAutoRotate(!autoRotate)}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="bg-black/50 border-gray-600 text-white hover:bg-black/70"
+                  onClick={toggleFullscreen}
+                >
+                  <Maximize2 className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              {/* Bottom Sole Brightness Control */}
+              <div className="bg-black/50 border border-gray-600 rounded-md transition-all duration-300">
+                <div 
+                  className="flex items-center justify-between p-3 cursor-pointer hover:bg-black/60"
+                  onClick={() => setIsBrightnessMinimized(!isBrightnessMinimized)}
+                >
+                  <div className="flex items-center gap-2">
+                    <Sun className="h-4 w-4 text-yellow-400" />
+                    <span className="text-white text-xs font-medium">
+                      {isBrightnessMinimized ? `${bottomBrightness[0].toFixed(1)}x` : 'Brightness Slider'}
+                    </span>
+                  </div>
+                </div>
+                {!isBrightnessMinimized && (
+                  <div className="px-3 pb-3">
+                    <Slider
+                      value={bottomBrightness}
+                      onValueChange={setBottomBrightness}
+                      max={3}
+                      min={0.1}
+                      step={0.1}
+                      className="w-full min-w-[180px]"
+                    />
+                    <div className="text-xs text-gray-300 mt-1 text-center">
+                      {bottomBrightness[0].toFixed(1)}x
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Model Info */}
             <div className="absolute bottom-4 left-4 z-10">
-              <div className="bg-black/50 rounded px-3 py-2">
-                <p className="text-white text-sm font-medium">
-                  {filename || 'Interactive 3D Model'}
-                </p>
-                <p className="text-gray-300 text-xs">
-                  Click and drag to rotate • Scroll to zoom
-                </p>
+              <div className="bg-black/50 border border-gray-600 rounded-md min-w-[250px] transition-all duration-300">
+                <div className="flex items-center justify-between p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-white text-sm font-medium">
+                      {getDisplayName(filename)}
+                    </span>
+                  </div>
+                </div>
+                <div className="px-3 pb-3">
+                  <p className="text-gray-300 text-xs">
+                    Click and drag to rotate • Scroll to zoom
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -548,6 +596,36 @@ export default function ModelViewer3D({ modelUrl, filename, className = '', prod
                  position={[0, -5, 3]} 
                  intensity={0.7} 
                  color="#87CEEB"
+               />
+               
+               {/* Enhanced Bottom Sole Lighting - Controllable Brightness */}
+               <pointLight 
+                 position={[0, -8, 0]} 
+                 intensity={bottomBrightness[0] * 2.0} 
+                 color="#ffffff"
+               />
+               <pointLight 
+                 position={[3, -6, 2]} 
+                 intensity={bottomBrightness[0] * 1.5} 
+                 color="#f0f8ff"
+               />
+               <pointLight 
+                 position={[-3, -6, 2]} 
+                 intensity={bottomBrightness[0] * 1.5} 
+                 color="#f0f8ff"
+               />
+               <pointLight 
+                 position={[0, -6, -3]} 
+                 intensity={bottomBrightness[0] * 1.2} 
+                 color="#fffaf0"
+               />
+               
+               {/* Directional light from below for sole illumination */}
+               <directionalLight 
+                 position={[0, -10, 0]} 
+                 target-position={[0, 0, 0]}
+                 intensity={bottomBrightness[0] * 1.8} 
+                 color="#ffffff"
                />
                
                {/* Side accent lights - Increased */}
@@ -744,23 +822,55 @@ export default function ModelViewer3D({ modelUrl, filename, className = '', prod
       {isFullscreen && (
         <div className="fixed inset-0 z-[9999] bg-gray-900 overflow-hidden">
            {/* Controls */}
-           <div className="absolute top-4 right-4 z-10 flex gap-2">
-             <Button
-               size="sm"
-               variant="outline"
-               className="bg-black/50 border-gray-600 text-white hover:bg-black/70"
-               onClick={() => setAutoRotate(!autoRotate)}
-             >
-               <RotateCcw className="h-4 w-4" />
-             </Button>
-             <Button
-               size="sm"
-               variant="outline"
-               className="bg-black/50 border-gray-600 text-white hover:bg-black/70"
-               onClick={toggleFullscreen}
-             >
-               <Minimize2 className="h-4 w-4" />
-             </Button>
+           <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+             <div className="flex gap-2">
+               <Button
+                 size="sm"
+                 variant="outline"
+                 className="bg-black/50 border-gray-600 text-white hover:bg-black/70"
+                 onClick={() => setAutoRotate(!autoRotate)}
+               >
+                 <RotateCcw className="h-4 w-4" />
+               </Button>
+               <Button
+                 size="sm"
+                 variant="outline"
+                 className="bg-black/50 border-gray-600 text-white hover:bg-black/70"
+                 onClick={toggleFullscreen}
+               >
+                 <Minimize2 className="h-4 w-4" />
+               </Button>
+             </div>
+             
+             {/* Bottom Sole Brightness Control */}
+             <div className="bg-black/50 border border-gray-600 rounded-md transition-all duration-300">
+               <div 
+                 className="flex items-center justify-between p-3 cursor-pointer hover:bg-black/60"
+                 onClick={() => setIsBrightnessMinimized(!isBrightnessMinimized)}
+               >
+                 <div className="flex items-center gap-2">
+                   <Sun className="h-4 w-4 text-yellow-400" />
+                   <span className="text-white text-xs font-medium">
+                     {isBrightnessMinimized ? `${bottomBrightness[0].toFixed(1)}x` : 'Brightness Slider'}
+                   </span>
+                 </div>
+               </div>
+               {!isBrightnessMinimized && (
+                 <div className="px-3 pb-3">
+                   <Slider
+                     value={bottomBrightness}
+                     onValueChange={setBottomBrightness}
+                     max={3}
+                     min={0.1}
+                     step={0.1}
+                     className="w-full min-w-[180px]"
+                   />
+                   <div className="text-xs text-gray-300 mt-1 text-center">
+                     {bottomBrightness[0].toFixed(1)}x
+                   </div>
+                 </div>
+               )}
+             </div>
            </div>
 
            {/* Close button for fullscreen */}
@@ -774,13 +884,19 @@ export default function ModelViewer3D({ modelUrl, filename, className = '', prod
 
            {/* Model Info */}
            <div className="absolute bottom-4 left-4 z-10">
-             <div className="bg-black/50 rounded px-3 py-2">
-               <p className="text-white text-sm font-medium">
-                 {filename || 'Interactive 3D Model'}
-               </p>
-               <p className="text-gray-300 text-xs">
-                 Click and drag to rotate • Scroll to zoom
-               </p>
+             <div className="bg-black/50 border border-gray-600 rounded-md min-w-[250px] transition-all duration-300">
+               <div className="flex items-center justify-between p-3">
+                 <div className="flex items-center gap-2">
+                   <span className="text-white text-sm font-medium">
+                     {getDisplayName(filename)}
+                   </span>
+                 </div>
+               </div>
+               <div className="px-3 pb-3">
+                 <p className="text-gray-300 text-xs">
+                   Click and drag to rotate • Scroll to zoom
+                 </p>
+               </div>
              </div>
            </div>
 
@@ -843,6 +959,36 @@ export default function ModelViewer3D({ modelUrl, filename, className = '', prod
                 position={[0, -5, 3]} 
                 intensity={0.7} 
                 color="#87CEEB"
+              />
+              
+              {/* Enhanced Bottom Sole Lighting - Controllable Brightness */}
+              <pointLight 
+                position={[0, -8, 0]} 
+                intensity={bottomBrightness[0] * 2.0} 
+                color="#ffffff"
+              />
+              <pointLight 
+                position={[3, -6, 2]} 
+                intensity={bottomBrightness[0] * 1.5} 
+                color="#f0f8ff"
+              />
+              <pointLight 
+                position={[-3, -6, 2]} 
+                intensity={bottomBrightness[0] * 1.5} 
+                color="#f0f8ff"
+              />
+              <pointLight 
+                position={[0, -6, -3]} 
+                intensity={bottomBrightness[0] * 1.2} 
+                color="#fffaf0"
+              />
+              
+              {/* Directional light from below for sole illumination */}
+              <directionalLight 
+                position={[0, -10, 0]} 
+                target-position={[0, 0, 0]}
+                intensity={bottomBrightness[0] * 1.8} 
+                color="#ffffff"
               />
               
               {/* Side accent lights - Increased */}

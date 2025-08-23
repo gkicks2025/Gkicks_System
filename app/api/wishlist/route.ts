@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
         p.original_price,
         p.image_url as image,
         p.colors,
-        p.category,
+        p.category_id as category,
         p.rating,
         p.sizes
       FROM wishlist_items w

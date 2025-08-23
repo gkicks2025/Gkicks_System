@@ -211,18 +211,19 @@ export async function POST(request: NextRequest) {
         const getProductQuery = 'SELECT variants FROM products WHERE id = ?'
         const productResult = await executeQuery(getProductQuery, [item.productId])
         
-        if (productResult.length > 0) {
+        if (Array.isArray(productResult) && productResult.length > 0) {
           let variants = {}
           try {
-            variants = productResult[0].variants ? JSON.parse(productResult[0].variants) : {}
+            variants = (productResult[0] as any).variants ? JSON.parse((productResult[0] as any).variants) : {}
           } catch (e) {
             console.warn('Failed to parse variants JSON for product', item.productId)
             variants = {}
           }
           
           // Update variant stock in JSON
-          if (variants[item.color] && variants[item.color][item.size] !== undefined) {
-            variants[item.color][item.size] = Math.max(0, variants[item.color][item.size] - item.quantity)
+          if (variants.hasOwnProperty(item.color) && typeof variants[item.color as keyof typeof variants] === 'object' && variants[item.color as keyof typeof variants]?.[item.size as keyof typeof variants[keyof typeof variants]] !== undefined) {
+            const colorVariant = variants[item.color as keyof typeof variants] as Record<string, number>;
+            colorVariant[item.size] = Math.max(0, colorVariant[item.size] - item.quantity);
           }
           
           // Calculate total stock from all variants

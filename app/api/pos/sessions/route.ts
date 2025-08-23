@@ -74,7 +74,8 @@ export async function GET(request: NextRequest) {
       FROM pos_sessions s
       ${whereClause}
     `
-    const [{ total }] = await executeQuery(countQuery, params)
+    const countResult = await executeQuery(countQuery, params) as any[];
+    const total = countResult[0]?.total || 0;
 
     return NextResponse.json({
       sessions,
@@ -135,11 +136,11 @@ export async function POST(request: NextRequest) {
     `
     const activeSession = await executeQuery(activeSessionQuery, [adminUserId])
 
-    if (activeSession.length > 0) {
+    if (Array.isArray(activeSession) && activeSession.length > 0) {
       return NextResponse.json(
         { 
           error: 'You already have an active session. Please close it first.',
-          activeSessionId: activeSession[0].session_id
+          activeSessionId: (activeSession[0] as any).session_id
         },
         { status: 400 }
       )

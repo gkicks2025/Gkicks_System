@@ -99,19 +99,52 @@ export default function ProductPage() {
     if (!product) return
 
     async function fetchStocks() {
-      const stocks: { [color: string]: { [size: string]: number } } = {}
-      const colors = product?.colors && product?.colors.length > 0 ? product.colors : ["default"]
-      const sizes = product?.sizes || ["5", "6", "7", "8", "9", "10", "11", "12"]
-      
-      for (const color of colors) {
-        stocks[color] = {}
-        for (const size of sizes) {
-          stocks[color][size] = await checkStock(productId, color, size);
+      try {
+        const stocks: { [color: string]: { [size: string]: number } } = {}
+        const colors = Array.isArray(product?.colors) && product.colors.length > 0 ? product.colors : ["default"]
+        const sizes = Array.isArray(product?.sizes) ? product.sizes : ["5", "6", "7", "8", "9", "10", "11", "12"]
+        
+        // Process colors sequentially to avoid overwhelming the API
+        for (const color of colors) {
+          stocks[color] = {}
+          // Process sizes in batches to reduce concurrent requests
+          const sizePromises = sizes.map(async (size) => {
+            try {
+              const stock = await checkStock(productId, color, size);
+              return { size, stock };
+            } catch (error) {
+              console.warn(`Failed to check stock for ${color} ${size}:`, error);
+              return { size, stock: 0 };
+            }
+          });
+          
+          const sizeResults = await Promise.allSettled(sizePromises);
+          sizeResults.forEach((result, index) => {
+            if (result.status === 'fulfilled') {
+              stocks[color][result.value.size] = result.value.stock;
+            } else {
+              stocks[color][sizes[index]] = 0;
+            }
+          });
         }
+        
+        setStockLevels(stocks)
+        setSelectedColor(colors[0])
+      } catch (error) {
+        console.error('Error fetching stocks:', error);
+        // Set default stock levels if fetch fails
+        const colors = Array.isArray(product?.colors) && product.colors.length > 0 ? product.colors : ["default"]
+        const sizes = Array.isArray(product?.sizes) ? product.sizes : ["5", "6", "7", "8", "9", "10", "11", "12"]
+        const defaultStocks: { [color: string]: { [size: string]: number } } = {}
+        colors.forEach(color => {
+          defaultStocks[color] = {}
+          sizes.forEach(size => {
+            defaultStocks[color][size] = 10; // Default stock
+          });
+        });
+        setStockLevels(defaultStocks)
+        setSelectedColor(colors[0])
       }
-      
-      setStockLevels(stocks)
-      setSelectedColor(colors[0])
     }
 
     fetchStocks()

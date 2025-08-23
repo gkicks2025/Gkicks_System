@@ -326,10 +326,16 @@ export default function ProfilePage() {
   }
 
   const handleSaveProfile = async () => {
+    console.log('🔍 PROFILE: handleSaveProfile called');
+    console.log('🔍 PROFILE: user state:', user);
+    console.log('🔍 PROFILE: profileData:', profileData);
+    
     if (!user) {
+      console.log('❌ PROFILE: No user found, aborting save');
       return
     }
 
+    console.log('✅ PROFILE: User found, proceeding with save');
     setLoading(true)
     try {
       const token = localStorage.getItem('auth_token')
@@ -344,6 +350,9 @@ export default function ProfilePage() {
         avatar_url: profileData.avatar_url,
         preferences: profileData.preferences,
       }
+      
+      console.log('📝 PROFILE: Sending request body:', requestBody);
+      console.log('🔗 PROFILE: Making PUT request to /api/profiles');
       
       const response = await fetch('/api/profiles', {
         method: 'PUT',
@@ -778,7 +787,12 @@ export default function ProfilePage() {
                     </div>
 
                     <Button
-                      onClick={handleSaveProfile}
+                      onClick={(e) => {
+                        console.log('🔘 PROFILE: Save button clicked!', e);
+                        console.log('🔘 PROFILE: loading state:', loading);
+                        console.log('🔘 PROFILE: Current profileData:', profileData);
+                        handleSaveProfile();
+                      }}
                       disabled={loading}
                       className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
@@ -1076,7 +1090,12 @@ export default function ProfilePage() {
                     </div>
 
                     <Button
-                      onClick={handleSaveProfile}
+                      onClick={(e) => {
+                        console.log('🔘 PROFILE: Save Preferences button clicked!', e);
+                        console.log('🔘 PROFILE: loading state:', loading);
+                        console.log('🔘 PROFILE: Current profileData:', profileData);
+                        handleSaveProfile();
+                      }}
                       disabled={loading}
                       className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >

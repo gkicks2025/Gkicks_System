@@ -1,6 +1,7 @@
 import { NextAuthOptions } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 import { User } from "@/contexts/auth-context"
+import { executeQuery } from "@/lib/database/mysql"
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -62,18 +63,34 @@ export const authOptions: NextAuthOptions = {
 // Function to store user in database
 async function storeUserInDatabase(user: User) {
   try {
-    const response = await fetch(`${process.env.NEXTAUTH_URL}/api/auth/store-user`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(user),
-    })
+    // Check if user already exists
+    const existingUsers = await executeQuery(
+      'SELECT id FROM users WHERE email = ?',
+      [user.email]
+    ) as any[]
     
-    if (!response.ok) {
-      console.error('Failed to store user in database')
+    if (existingUsers.length === 0) {
+      // Insert new user
+      await executeQuery(
+        'INSERT INTO users (email, first_name, last_name, avatar_url, is_admin) VALUES (?, ?, ?, ?, ?)',
+        [
+          user.email,
+          user.firstName,
+          user.lastName,
+          user.avatar,
+          user.role === 'admin' ? 1 : 0
+        ]
+      )
+      console.log('✅ Auth: New user stored in database:', user.email)
+    } else {
+      // Update existing user
+      await executeQuery(
+        'UPDATE users SET first_name = ?, last_name = ?, avatar_url = ? WHERE email = ?',
+        [user.firstName, user.lastName, user.avatar, user.email]
+      )
+      console.log('✅ Auth: User updated in database:', user.email)
     }
   } catch (error) {
-    console.error('Error storing user in database:', error)
+    console.error('❌ Auth: Error storing user in database:', error)
   }
 }
