@@ -1485,7 +1485,7 @@ export default function InventoryPage() {
                       Upload OBJ files with optional MTL materials, or ZIP archives containing OBJ+MTL+textures
                     </p>
                     <p className="text-xs text-blue-600 dark:text-blue-400">
-                      3D Models: OBJ, FBX, GLTF, GLB (Max. 50MB) • Recommended: OBJ with MTL
+                      3D Models: OBJ, FBX, GLTF, GLB (Max. 200MB) • Recommended: OBJ with MTL
                     </p>
                   </div>
                   {selected3DModel && (

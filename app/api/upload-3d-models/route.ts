@@ -41,8 +41,8 @@ export async function POST(request: NextRequest) {
         }, { status: 400 })
       }
 
-      // Validate file size (100MB limit for ZIP files, 50MB for others)
-      const maxSize = fileExtension === ".zip" ? 100 * 1024 * 1024 : 50 * 1024 * 1024
+      // Validate file size (200MB limit for all files)
+      const maxSize = 200 * 1024 * 1024
       if (file.size > maxSize) {
         return NextResponse.json({ 
           error: `File ${file.name} is too large. Maximum size is ${maxSize / (1024 * 1024)}MB` 

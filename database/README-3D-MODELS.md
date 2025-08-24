@@ -33,7 +33,7 @@ To complete the 3D model upload functionality, you need to run the database migr
 ## Features Implemented
 
 ✅ **API Endpoint**: `/api/upload-3d-models` - Handles OBJ file uploads
-✅ **File Validation**: Accepts only .obj files up to 50MB
+✅ **File Validation**: Accepts only .obj files up to 200MB
 ✅ **Admin Interface**: 3D model upload fields in both Add and Edit product dialogs
 ✅ **Product Interface**: Updated to include `model_3d_url` and `model_3d_filename` fields
 ✅ **File Storage**: 3D models stored in `public/uploads/3d-models/` directory
