@@ -25,3 +25,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# uploads and large files
+/public/uploads/3d-models/*.glb
+/public/uploads/3d-models/*.gltf
+/public/uploads/avatars/
+/public/uploads/products/
