@@ -22,15 +22,13 @@ export const authOptions: NextAuthOptions = {
       // Send properties to the client, like an access_token and user id from a provider.
       if (session.user) {
         // Map NextAuth session to our User interface
-        let role: 'admin' | 'staff' | 'customer' = 'admin' // Temporarily set all users as admin for testing
+        let role: 'admin' | 'staff' | 'customer' = 'customer' // Default role for all users
         
-        // Assign roles based on email
+        // Only gkcksdmn@gmail.com gets admin privileges
         if (session.user.email === 'gkcksdmn@gmail.com') {
           role = 'admin'
-        } else if (session.user.email === 'gkicksstaff@gmail.com') {
-          role = 'staff'
         }
-        // For testing: all users get admin access
+        // All other users are regular customers
         
         const user: User = {
           id: token.sub || '',
@@ -83,10 +81,10 @@ async function storeUserInDatabase(user: User) {
       )
       console.log('✅ Auth: New user stored in database:', user.email)
     } else {
-      // Update existing user
+      // Update existing user (including admin status)
       await executeQuery(
-        'UPDATE users SET first_name = ?, last_name = ?, avatar_url = ? WHERE email = ?',
-        [user.firstName, user.lastName, user.avatar, user.email]
+        'UPDATE users SET first_name = ?, last_name = ?, avatar_url = ?, is_admin = ? WHERE email = ?',
+        [user.firstName, user.lastName, user.avatar, user.role === 'admin' ? 1 : 0, user.email]
       )
       console.log('✅ Auth: User updated in database:', user.email)
     }

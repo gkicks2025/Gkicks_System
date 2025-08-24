@@ -102,7 +102,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch (error) {
-      console.error('❌ Error fetching user profile:', error);
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error('❌ Error fetching user profile:', error);
+      }
     }
   };
 

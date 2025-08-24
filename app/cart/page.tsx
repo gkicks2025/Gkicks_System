@@ -298,6 +298,16 @@ export default function CartPage() {
         }
       }
 
+      // Convert payment screenshot to base64 if available
+      let paymentScreenshotData = null
+      if (paymentScreenshot) {
+        paymentScreenshotData = await new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onload = (e) => resolve(e.target?.result as string)
+          reader.readAsDataURL(paymentScreenshot)
+        })
+      }
+
       // Create order
       const orderResponse = await fetch('/api/orders', {
         method: 'POST',
@@ -319,6 +329,7 @@ export default function CartPage() {
           customer_email: customerEmail,
           shipping_address: shippingInfo,
           payment_method: paymentMethod,
+          payment_screenshot: paymentScreenshotData,
           status: "pending",
         })
       })

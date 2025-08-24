@@ -245,6 +245,7 @@ export interface Order {
     | "delivered"
     | "cancelled";
   orderDate: string; // ISO string
+  created_at?: string; // Database field
   shippingAddress: {
     fullName: string;
     street: string;
@@ -254,6 +255,7 @@ export interface Order {
     phone?: string;
   };
   paymentMethod: string;
+  payment_screenshot?: string;
   trackingNumber?: string;
 }
 

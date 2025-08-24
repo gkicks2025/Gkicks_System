@@ -219,7 +219,7 @@ export default function ProfilePage() {
     }
   }, [user, tokenReady])
 
-  const fetchAddresses = async () => {
+  const fetchAddresses = async (preserveFormData = false) => {
     if (!user) return
 
     try {
@@ -244,7 +244,8 @@ export default function ProfilePage() {
       const data = await response.json()
       setAddresses(data || [])
 
-      if (data && data.length > 0) {
+      // Only set form data if not preserving current form state
+      if (!preserveFormData && data && data.length > 0) {
         const firstAddress = data[0]
         setCurrentAddressId(firstAddress.id)
         setAddressData({
@@ -469,7 +470,7 @@ export default function ProfilePage() {
         description: "Address saved successfully!",
       })
 
-      await fetchAddresses()
+      await fetchAddresses(true)
     } catch {
       toast({
         title: "Error",
@@ -508,7 +509,8 @@ export default function ProfilePage() {
         description: "Address deleted successfully!",
       })
 
-      if (currentAddressId === addressId) {
+      const wasCurrentAddress = currentAddressId === addressId
+      if (wasCurrentAddress) {
         setCurrentAddressId(null)
         setAddressData({
           street_address: "",
@@ -520,7 +522,7 @@ export default function ProfilePage() {
         })
       }
 
-      await fetchAddresses()
+      await fetchAddresses(!wasCurrentAddress)
     } catch {
       toast({
         title: "Error",

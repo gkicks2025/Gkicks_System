@@ -120,6 +120,8 @@ export default function AdminOrdersPage() {
     }
   }
 
+
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-PH", {
       style: "currency",
@@ -287,10 +289,10 @@ export default function AdminOrdersPage() {
                         </div>
                         <div className="hidden sm:block">
                           <p className="text-sm text-muted-foreground">
-                            {order.items.length} {order.items.length === 1 ? "item" : "items"}
+                            {order.items?.length || 0} {(order.items?.length || 0) === 1 ? "item" : "items"}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {new Date(order.orderDate).toLocaleDateString("en-PH", {
+                            {new Date(order.created_at || order.orderDate).toLocaleDateString("en-PH", {
                               year: "numeric",
                               month: "short",
                               day: "numeric",
@@ -309,20 +311,21 @@ export default function AdminOrdersPage() {
                           {order.status}
                         </Badge>
                       </div>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" onClick={() => setSelectedOrder(order)}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            View
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-card border-border">
+                      <div className="flex items-center space-x-2">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm" onClick={() => setSelectedOrder(order)}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-card border-border">
                           <DialogHeader>
                             <DialogTitle className="text-foreground">Order Details - #{selectedOrder?.id}</DialogTitle>
                             <DialogDescription className="text-muted-foreground">
                               Order placed on{" "}
                               {selectedOrder &&
-                                new Date(selectedOrder.orderDate).toLocaleDateString("en-PH", {
+                                new Date(selectedOrder.created_at || selectedOrder.orderDate).toLocaleDateString("en-PH", {
                                   year: "numeric",
                                   month: "long",
                                   day: "numeric",
@@ -350,17 +353,23 @@ export default function AdminOrdersPage() {
                               <div>
                                 <h4 className="font-medium mb-2 text-foreground">Shipping Address</h4>
                                 <div className="bg-muted p-3 rounded-lg">
-                                  <p className="text-foreground">{selectedOrder.shippingAddress.fullName}</p>
-                                  <p className="text-foreground">{selectedOrder.shippingAddress.street}</p>
-                                  <p className="text-foreground">
-                                    {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.province}{" "}
-                                    {selectedOrder.shippingAddress.zipCode}
-                                  </p>
-                                  <p className="text-foreground">Philippines</p>
-                                  {selectedOrder.shippingAddress.phone && (
-                                    <p className="text-foreground">
-                                      <strong>Phone:</strong> {selectedOrder.shippingAddress.phone}
-                                    </p>
+                                  {selectedOrder.shippingAddress ? (
+                                    <>
+                                      <p className="text-foreground">{selectedOrder.shippingAddress.fullName || 'N/A'}</p>
+                                      <p className="text-foreground">{selectedOrder.shippingAddress.street || 'N/A'}</p>
+                                      <p className="text-foreground">
+                                        {selectedOrder.shippingAddress.city || 'N/A'}, {selectedOrder.shippingAddress.province || 'N/A'}{" "}
+                                        {selectedOrder.shippingAddress.zipCode || 'N/A'}
+                                      </p>
+                                      <p className="text-foreground">Philippines</p>
+                                      {selectedOrder.shippingAddress.phone && (
+                                        <p className="text-foreground">
+                                          <strong>Phone:</strong> {selectedOrder.shippingAddress.phone}
+                                        </p>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <p className="text-foreground text-muted-foreground">No shipping address available</p>
                                   )}
                                 </div>
                               </div>
@@ -369,7 +378,7 @@ export default function AdminOrdersPage() {
                               <div>
                                 <h4 className="font-medium mb-2 text-foreground">Order Items</h4>
                                 <div className="space-y-2">
-                                  {selectedOrder.items.map((item, index) => (
+                                  {(selectedOrder.items || []).map((item, index) => (
                                     <div
                                       key={index}
                                       className="flex items-center justify-between p-3 bg-muted rounded-lg"
@@ -406,6 +415,21 @@ export default function AdminOrdersPage() {
                                     <span className="text-foreground">Payment Method:</span>
                                     <span className="text-foreground">{selectedOrder.paymentMethod}</span>
                                   </div>
+                                  {selectedOrder.payment_screenshot && (selectedOrder.paymentMethod === "GCash" || selectedOrder.paymentMethod === "Maya") && (
+                                    <div className="mt-3">
+                                      <span className="text-foreground font-medium">Payment Screenshot:</span>
+                                      <div className="mt-2 border rounded-lg overflow-hidden max-w-sm">
+                                        <img 
+                                          src={selectedOrder.payment_screenshot} 
+                                          alt="Payment Screenshot" 
+                                          className="w-full h-auto max-h-64 object-contain"
+                                          onClick={() => window.open(selectedOrder.payment_screenshot, '_blank')}
+                                          style={{ cursor: 'pointer' }}
+                                        />
+                                      </div>
+                                      <p className="text-xs text-muted-foreground mt-1">Click to view full size</p>
+                                    </div>
+                                  )}
                                   {selectedOrder.trackingNumber && (
                                     <div className="flex justify-between items-center mt-2">
                                       <span className="text-foreground">Tracking Number:</span>
@@ -438,7 +462,9 @@ export default function AdminOrdersPage() {
                             </div>
                           )}
                         </DialogContent>
-                      </Dialog>
+                        </Dialog>
+
+                      </div>
                     </div>
                   </div>
                 </div>

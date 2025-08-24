@@ -358,7 +358,7 @@ export default function AdminDashboard() {
                       <TableBody>
                         {stats.recentOrders.map((order) => (
                           <TableRow key={order.id} className="border-gray-200 dark:border-gray-700">
-                            <TableCell className="font-medium text-gray-700 dark:text-gray-300">#{order.id.slice(0, 8)}</TableCell>
+                            <TableCell className="font-medium text-gray-700 dark:text-gray-300">#{String(order.id).slice(0, 8)}</TableCell>
                             <TableCell className="text-gray-700 dark:text-gray-300">₱{order.total_amount?.toLocaleString()}</TableCell>
                             <TableCell>
                               <Badge

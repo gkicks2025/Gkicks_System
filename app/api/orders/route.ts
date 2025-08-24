@@ -6,16 +6,25 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret'
 
 // Helper function to get user from token
 async function getUserFromToken(request: NextRequest) {
+  const authHeader = request.headers.get('authorization')
+  
   try {
-    const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('🚫 ORDERS: No valid authorization header found')
       return null
     }
 
     const token = authHeader.substring(7)
+    console.log('🔍 ORDERS: Token received:', token.substring(0, 50) + '...')
+    console.log('🔍 ORDERS: Token length:', token.length)
+    console.log('🔍 ORDERS: Token parts:', token.split('.').length)
+    
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, email: string }
+    console.log('✅ ORDERS: Token verified successfully for user:', decoded.userId)
     return { id: decoded.userId, email: decoded.email }
   } catch (error) {
+    console.error('❌ ORDERS: Token verification failed:', error)
+    console.error('❌ ORDERS: Token that failed:', authHeader?.substring(7, 57) + '...')
     return null
   }
 }
@@ -33,15 +42,72 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 API: Fetching orders for user:', user.id)
     
+    // Fetch orders with proper field mapping
     const orders = await executeQuery(
-      `SELECT * FROM orders 
-       WHERE user_id = ? 
-       ORDER BY created_at DESC`,
+      `SELECT 
+        id,
+        order_number,
+        status,
+        payment_status,
+        payment_method,
+        subtotal,
+        tax_amount,
+        shipping_amount,
+        discount_amount,
+        total_amount as total,
+        shipping_address,
+        billing_address,
+        notes,
+        created_at,
+        updated_at
+      FROM orders 
+      WHERE user_id = ? 
+      ORDER BY created_at DESC`,
       [user.id]
     ) as any[]
 
-    console.log(`✅ API: Successfully fetched ${orders.length} orders`)
-    return NextResponse.json(orders)
+    // Fetch order items for each order
+    const ordersWithItems = await Promise.all(
+      orders.map(async (order: any) => {
+        const items = await executeQuery(
+          `SELECT 
+            oi.id,
+            oi.quantity,
+            oi.price,
+            oi.size,
+            oi.color,
+            p.name,
+            p.brand,
+            p.image_url
+          FROM order_items oi
+          JOIN products p ON oi.product_id = p.id
+          WHERE oi.order_id = ?`,
+          [order.id]
+        ) as any[]
+
+        // Convert numeric fields to proper numbers
+        const processedItems = items.map(item => ({
+          ...item,
+          quantity: Number(item.quantity),
+          price: Number(item.price)
+        }))
+
+        return {
+          ...order,
+          // Convert numeric fields to proper numbers
+          subtotal: Number(order.subtotal),
+          tax_amount: Number(order.tax_amount),
+          shipping_amount: Number(order.shipping_amount),
+          discount_amount: Number(order.discount_amount),
+          total: Number(order.total),
+          shipping_address: order.shipping_address ? JSON.parse(order.shipping_address) : null,
+          items: processedItems
+        }
+      })
+    )
+
+    console.log(`✅ API: Successfully fetched ${ordersWithItems.length} orders`)
+    return NextResponse.json(ordersWithItems)
 
   } catch (error) {
     console.error('❌ API: Error fetching orders:', error)
@@ -55,14 +121,23 @@ export async function GET(request: NextRequest) {
 // POST - Create new order
 export async function POST(request: NextRequest) {
   try {
+    // Get user from JWT token
+    const user = await getUserFromToken(request)
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const body = await request.json()
     const {
-      user_id,
       items,
       total,
       customer_email,
       shipping_address,
       payment_method,
+      payment_screenshot,
       status = 'pending'
     } = body
 
@@ -81,7 +156,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('🔍 API: Creating new order for:', customer_email)
+    console.log('🔍 API: Creating new order for:', customer_email, 'User ID:', user.id)
 
     // Validate stock availability for all items before creating order
     for (const item of items) {
@@ -159,15 +234,16 @@ export async function POST(request: NextRequest) {
     const result = await executeQuery(
       `INSERT INTO orders (
          user_id, order_number, status, total_amount, 
-         shipping_address, payment_method
-       ) VALUES (?, ?, ?, ?, ?, ?)`,
+         shipping_address, payment_method, payment_screenshot
+       ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
-        user_id || null,
+        user.id,
         orderNumber,
         status || 'pending',
         total || 0, // total_amount
         JSON.stringify(shipping_address || {}),
-        payment_method || null
+        payment_method || null,
+        payment_screenshot || null
       ]
     ) as any
 

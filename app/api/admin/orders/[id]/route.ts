@@ -78,3 +78,48 @@ export async function PATCH(
     )
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const orderId = params.id
+
+    console.log('🗑️ API: Deleting order:', orderId)
+
+    // First, delete order items
+    await db.execute(
+      'DELETE FROM order_items WHERE order_id = ?',
+      [orderId]
+    )
+
+    // Then delete the order
+    const [result] = await db.execute<ResultSetHeader>(
+      'DELETE FROM orders WHERE id = ?',
+      [orderId]
+    )
+
+    if (result.affectedRows === 0) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
+
+    console.log('✅ API: Order deleted successfully:', orderId)
+
+    return NextResponse.json({
+      success: true,
+      message: 'Order deleted successfully'
+    })
+  } catch (error) {
+    console.error('❌ API: Error deleting order:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete order' },
+      { status: 500 }
+    )
+  }
+}
