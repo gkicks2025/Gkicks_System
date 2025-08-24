@@ -10,7 +10,7 @@ import { Mesh, Group, Material } from 'three'
 import * as THREE from 'three'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
-import { Maximize2, Minimize2, RotateCcw, Sun } from 'lucide-react'
+import { Maximize2, Minimize2, RotateCcw, Sun, ChevronDown, ChevronUp } from 'lucide-react'
 
 // Color mapping function for sneaker parts
 function getColorForMesh(mesh: Mesh, productColors: string[]): number {
@@ -443,6 +443,7 @@ export default function ModelViewer3D({ modelUrl, filename, className = '', prod
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [autoRotate, setAutoRotate] = useState(false)
   const [brightness, setBrightness] = useState(1.0)
+  const [isBrightnessMinimized, setIsBrightnessMinimized] = useState(false)
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen)
@@ -480,17 +481,33 @@ export default function ModelViewer3D({ modelUrl, filename, className = '', prod
                 </Button>
               </div>
               {/* Brightness Control */}
-              <div className="bg-black/50 border border-gray-600 rounded-md p-2 flex items-center gap-2 min-w-[150px]">
-                <Sun className="h-4 w-4 text-white" />
-                <Slider
-                  value={[brightness]}
-                  onValueChange={(value) => setBrightness(value[0])}
-                  max={3.0}
-                  min={0.1}
-                  step={0.1}
-                  className="flex-1"
-                />
-                <span className="text-white text-xs min-w-[30px]">{brightness.toFixed(1)}</span>
+              <div className="bg-black/50 border border-gray-600 rounded-md p-2">
+                <div className="flex items-center gap-2 justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sun className="h-4 w-4 text-white" />
+                    {!isBrightnessMinimized && (
+                      <>
+                        <Slider
+                          value={[brightness]}
+                          onValueChange={(value) => setBrightness(value[0])}
+                          max={3.0}
+                          min={0.1}
+                          step={0.1}
+                          className="flex-1 min-w-[100px]"
+                        />
+                        <span className="text-white text-xs min-w-[30px]">{brightness.toFixed(1)}</span>
+                      </>
+                    )}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 w-6 p-0 text-white hover:bg-white/20"
+                    onClick={() => setIsBrightnessMinimized(!isBrightnessMinimized)}
+                  >
+                    {isBrightnessMinimized ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -498,10 +515,7 @@ export default function ModelViewer3D({ modelUrl, filename, className = '', prod
             <div className="absolute bottom-4 left-4 z-10">
               <div className="bg-black/50 rounded px-3 py-2">
                 <p className="text-white text-sm font-medium">
-                  {filename || 'Interactive 3D Model'}
-                </p>
-                <p className="text-gray-300 text-xs">
-                  Click and drag to rotate • Scroll to zoom
+                  {filename ? filename.replace(/\.[^/.]+$/, '') : 'Interactive 3D Model'}
                 </p>
               </div>
             </div>
@@ -761,23 +775,54 @@ export default function ModelViewer3D({ modelUrl, filename, className = '', prod
       {isFullscreen && (
         <div className="fixed inset-0 z-[9999] bg-gray-900 overflow-hidden">
            {/* Controls */}
-           <div className="absolute top-4 right-4 z-10 flex gap-2">
-             <Button
-               size="sm"
-               variant="outline"
-               className="bg-black/50 border-gray-600 text-white hover:bg-black/70"
-               onClick={() => setAutoRotate(!autoRotate)}
-             >
-               <RotateCcw className="h-4 w-4" />
-             </Button>
-             <Button
-               size="sm"
-               variant="outline"
-               className="bg-black/50 border-gray-600 text-white hover:bg-black/70"
-               onClick={toggleFullscreen}
-             >
-               <Minimize2 className="h-4 w-4" />
-             </Button>
+           <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+             <div className="flex gap-2">
+               <Button
+                 size="sm"
+                 variant="outline"
+                 className="bg-black/50 border-gray-600 text-white hover:bg-black/70"
+                 onClick={() => setAutoRotate(!autoRotate)}
+               >
+                 <RotateCcw className="h-4 w-4" />
+               </Button>
+               <Button
+                 size="sm"
+                 variant="outline"
+                 className="bg-black/50 border-gray-600 text-white hover:bg-black/70"
+                 onClick={toggleFullscreen}
+               >
+                 <Minimize2 className="h-4 w-4" />
+               </Button>
+             </div>
+             {/* Brightness Control */}
+             <div className="bg-black/50 border border-gray-600 rounded-md p-2">
+               <div className="flex items-center gap-2 justify-between">
+                 <div className="flex items-center gap-2">
+                   <Sun className="h-4 w-4 text-white" />
+                   {!isBrightnessMinimized && (
+                     <>
+                       <Slider
+                         value={[brightness]}
+                         onValueChange={(value) => setBrightness(value[0])}
+                         max={3.0}
+                         min={0.1}
+                         step={0.1}
+                         className="flex-1 min-w-[100px]"
+                       />
+                       <span className="text-white text-xs min-w-[30px]">{brightness.toFixed(1)}</span>
+                     </>
+                   )}
+                 </div>
+                 <Button
+                   size="sm"
+                   variant="ghost"
+                   className="h-6 w-6 p-0 text-white hover:bg-white/20"
+                   onClick={() => setIsBrightnessMinimized(!isBrightnessMinimized)}
+                 >
+                   {isBrightnessMinimized ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
+                 </Button>
+               </div>
+             </div>
            </div>
 
            {/* Close button for fullscreen */}
@@ -793,10 +838,7 @@ export default function ModelViewer3D({ modelUrl, filename, className = '', prod
            <div className="absolute bottom-4 left-4 z-10">
              <div className="bg-black/50 rounded px-3 py-2">
                <p className="text-white text-sm font-medium">
-                 {filename || 'Interactive 3D Model'}
-               </p>
-               <p className="text-gray-300 text-xs">
-                 Click and drag to rotate • Scroll to zoom
+                 {filename ? filename.replace(/\.[^/.]+$/, '') : 'Interactive 3D Model'}
                </p>
              </div>
            </div>
@@ -807,19 +849,19 @@ export default function ModelViewer3D({ modelUrl, filename, className = '', prod
               style={{ background: 'linear-gradient(135deg, #2a2a3e 0%, #1e2a4e 100%)' }}
               gl={{ antialias: true, alpha: true }}
             >
-             {/* Professional lighting setup for enhanced 3D model visibility - Maximum Brightened */}
-               {/* Ambient base lighting - Maximum Increased */}
-               <ambientLight intensity={2.0} color="#ffffff" />
+             {/* Professional lighting setup for enhanced 3D model visibility - Brightness Controlled */}
+               {/* Ambient base lighting - Brightness Controlled */}
+               <ambientLight intensity={2.0 * brightness} color="#ffffff" />
               
-              {/* Hemisphere light for natural sky/ground lighting - Maximum Increased */}
+              {/* Hemisphere light for natural sky/ground lighting - Brightness Controlled */}
                <hemisphereLight 
-                 args={["#ffffff", "#ffffff", 2.5]}
+                 args={["#ffffff", "#ffffff", 2.5 * brightness]}
                />
               
-              {/* Main key light - primary illumination - Maximum Increased */}
+              {/* Main key light - primary illumination - Brightness Controlled */}
                <directionalLight 
                  position={[10, 10, 5]} 
-                 intensity={3.5} 
+                 intensity={3.5 * brightness} 
                  color="#ffffff"
                  castShadow 
                  shadow-mapSize-width={2048}
@@ -831,46 +873,46 @@ export default function ModelViewer3D({ modelUrl, filename, className = '', prod
                  shadow-camera-bottom={-10}
                />
               
-              {/* Fill light - softer secondary lighting - Maximum Increased */}
+              {/* Fill light - softer secondary lighting - Brightness Controlled */}
                <directionalLight 
                  position={[-8, 6, -3]} 
-                 intensity={2.2} 
+                 intensity={2.2 * brightness} 
                  color="#ffffff"
                />
               
-              {/* Rim light - creates edge definition - Maximum Increased */}
+              {/* Rim light - creates edge definition - Brightness Controlled */}
                <directionalLight 
                  position={[0, 0, -10]} 
-                 intensity={2.5} 
+                 intensity={2.5 * brightness} 
                  color="#ffffff"
                />
               
-              {/* Spot lights for dramatic effect - Increased */}
+              {/* Spot lights for dramatic effect - Brightness Controlled */}
               <spotLight 
                 position={[5, 8, 5]} 
-                intensity={1.2}
+                intensity={1.2 * brightness}
                 angle={Math.PI / 6}
                 penumbra={0.3}
                 color="#ffffff"
                 castShadow
               />
               
-              {/* Bottom fill light to reduce harsh shadows - Increased */}
+              {/* Bottom fill light to reduce harsh shadows - Brightness Controlled */}
               <pointLight 
                 position={[0, -5, 3]} 
-                intensity={0.7} 
+                intensity={0.7 * brightness} 
                 color="#87CEEB"
               />
               
-              {/* Side accent lights - Increased */}
+              {/* Side accent lights - Brightness Controlled */}
               <pointLight 
                 position={[8, 2, 0]} 
-                intensity={0.6} 
+                intensity={0.6 * brightness} 
                 color="#ffb347"
               />
               <pointLight 
                 position={[-8, 2, 0]} 
-                intensity={0.6} 
+                intensity={0.6 * brightness} 
                 color="#b3d9ff"
               />
              

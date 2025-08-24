@@ -173,9 +173,28 @@ export async function fetchProductByIdFromAPI(id: number): Promise<Product | nul
  * Uses .maybeSingle() so that if no row exists, data === null instead of a 406 error.
  */
 export async function hasUserViewedProduct(userId: string, productId: number): Promise<boolean> {
-  // Simplified implementation - for now, always return false to allow view counting
-  // This can be enhanced later with proper API endpoints if needed
-  return false;
+  if (!userId) return false;
+
+  try {
+    const response = await fetch('/api/products/check-view', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ productId, userId }),
+    });
+
+    if (!response.ok) {
+      console.error('Error checking user view:', response.status);
+      return false;
+    }
+
+    const data = await response.json();
+    return data.hasViewed || false;
+  } catch (error) {
+    console.error('Error checking user view:', error);
+    return false;
+  }
 }
 
 /**

@@ -313,9 +313,27 @@ export default function InventoryPage() {
       const url = currentProduct ? `/api/products/${currentProduct.id}` : '/api/products'
       const method = currentProduct ? 'PUT' : 'POST'
 
-      const token = localStorage.getItem('auth_token')
+      // Wait a moment for token to be available if it's being generated
+      let token = localStorage.getItem('auth_token')
+      if (!token || token === 'null' || token === 'undefined') {
+        console.log('Token not immediately available, waiting 1 second...')
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        token = localStorage.getItem('auth_token')
+      }
+      
       console.log('Token being sent:', token ? `Token exists (length: ${token.length})` : 'No token found')
       console.log('Token preview:', token ? token.substring(0, 50) + '...' : 'N/A')
+      
+      // Check if token exists before making the request
+      if (!token || token === 'null' || token === 'undefined') {
+        toast({
+          title: "Authentication Error",
+          description: "No valid authentication token found. Please log in again.",
+          variant: "destructive",
+        })
+        router.push('/admin/login')
+        return
+      }
       
       const response = await fetch(url, {
         method,
@@ -1533,17 +1551,7 @@ export default function InventoryPage() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="low_stock_threshold" className="text-gray-900 dark:text-white">Low Stock Threshold</Label>
-                  <Input
-                    id="low_stock_threshold"
-                    type="number"
-                    value={formData.low_stock_threshold}
-                    onChange={(e) => setFormData(prev => ({ ...prev, low_stock_threshold: parseInt(e.target.value) || 0 }))}
-                    className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
-                    placeholder="10"
-                  />
-                </div>
+
 
                 <div className="space-y-2">
                   <Label htmlFor="status" className="text-gray-900 dark:text-white">Status</Label>

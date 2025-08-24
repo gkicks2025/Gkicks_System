@@ -67,6 +67,29 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         if (response.ok) {
           const data = await response.json()
           console.log("Admin user found:", data.user)
+          
+          // Generate JWT token for admin user
+          try {
+            const tokenResponse = await fetch('/api/auth/session-to-jwt', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            })
+            
+            if (tokenResponse.ok) {
+              const tokenData = await tokenResponse.json()
+              if (typeof window !== "undefined" && tokenData.token) {
+                console.log('✅ Admin JWT token generated and stored')
+                localStorage.setItem('auth_token', tokenData.token)
+              }
+            } else {
+              console.error('Failed to generate admin JWT token:', tokenResponse.status)
+            }
+          } catch (tokenError) {
+            console.error('Error generating admin JWT token:', tokenError)
+          }
+          
           setState({
             user: data.user,
             isLoading: false,
@@ -98,11 +121,11 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       setState((prev) => ({ ...prev, isLoading: true }))
       console.log("Attempting admin login for:", email)
 
-      // First, sign in with MySQL auth
-      const success = await signIn(email, password)
-
-      if (!success) {
-        console.error("Auth error: Login failed")
+      // First, sign in with Google auth
+      try {
+        await signInWithGoogle()
+      } catch (error) {
+        console.error("Auth error: Login failed", error)
         setState((prev) => ({ ...prev, isLoading: false }))
         return false
       }
@@ -132,6 +155,29 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
       const data = await response.json()
       console.log("Admin login successful:", data.user)
+      
+      // Generate JWT token for admin user
+      try {
+        const tokenResponse = await fetch('/api/auth/session-to-jwt', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+        
+        if (tokenResponse.ok) {
+          const tokenData = await tokenResponse.json()
+          if (typeof window !== "undefined" && tokenData.token) {
+            console.log('✅ Admin login JWT token generated and stored')
+            localStorage.setItem('auth_token', tokenData.token)
+          }
+        } else {
+          console.error('Failed to generate admin login JWT token:', tokenResponse.status)
+        }
+      } catch (tokenError) {
+        console.error('Error generating admin login JWT token:', tokenError)
+      }
+      
       setState({
         user: data.user,
         isLoading: false,
@@ -147,6 +193,12 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      // Clear JWT token from localStorage
+      if (typeof window !== "undefined") {
+        localStorage.removeItem('auth_token')
+        console.log('🗑️ Admin JWT token cleared from localStorage')
+      }
+      
       await signOut()
       setState({
         user: null,

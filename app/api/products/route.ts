@@ -9,16 +9,20 @@ async function getUserFromToken(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('❌ PRODUCTS: No valid authorization header found');
       return null;
     }
 
     const token = authHeader.substring(7);
-    console.log('POST - Received token length:', token.length);
-    console.log('POST - Token preview:', token.substring(0, 50) + '...');
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, email: string };
-    return { id: decoded.userId, email: decoded.email };
+    console.log('🔍 PRODUCTS: Received token length:', token.length);
+    console.log('🔍 PRODUCTS: Token preview:', token.substring(0, 50) + '...');
+    
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, email: string, role: string };
+    console.log('✅ PRODUCTS: Token verified successfully for user:', decoded.userId, 'role:', decoded.role);
+    return { id: decoded.userId, email: decoded.email, role: decoded.role };
   } catch (error) {
-    console.error('Token verification failed:', error);
+    console.error('❌ PRODUCTS: Token verification failed:', error);
+    console.error('❌ PRODUCTS: Token verification failed - no token available');
     return null;
   }
 }
@@ -74,11 +78,11 @@ export async function POST(request: NextRequest) {
     // Create product in MySQL database
     const insertQuery = `
       INSERT INTO products (
-        name, brand, price, original_price, category, sku, stock_quantity, status,
+        name, brand, price, original_price, category, sku, stock_quantity,
         image_url, gallery_images, description, is_active, is_new, is_sale,
         colors, sizes, model_3d_url, model_3d_filename, created_at, updated_at
       ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
       )
     `;
 
@@ -90,7 +94,6 @@ export async function POST(request: NextRequest) {
       category,
       finalSku,
       parseInt(stock_quantity) || 0,
-      status || 'Active',
       image_url || '/placeholder-product.jpg',
       JSON.stringify(gallery_images || []),
       description || '',

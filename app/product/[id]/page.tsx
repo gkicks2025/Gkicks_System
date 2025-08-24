@@ -76,18 +76,19 @@ export default function ProductPage() {
   const userId = String(user.id) // Now TypeScript knows user.id exists
 
   async function checkAndUpdateView() {
-    console.log("Updating view for user:", userId, "product:", productId);
+    console.log("Checking and updating view for user:", userId, "product:", productId);
     
     const viewed = await hasUserViewedProduct(userId, productId);
 
     if (!viewed) {
-      const newCount = await updateViewCount(productId, userId)
-      if (!viewed) {
-        await updateViewCount(productId, userId);
-        setCurrentViews(prev => prev + 1);
+      console.log("User hasn't viewed this product, updating view count");
+      const newCount = await updateViewCount(productId, userId);
+      if (newCount > 0) {
+        setCurrentViews(newCount);
       }
     } else {
-      setHasViewed(true)
+      console.log("User has already viewed this product");
+      setHasViewed(true);
     }
   }
 
