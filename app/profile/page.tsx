@@ -219,6 +219,18 @@ export default function ProfilePage() {
     }
   }, [user, tokenReady])
 
+  // Additional effect to handle cases where user is already authenticated on mount
+  useEffect(() => {
+    // Small delay to ensure auth context has initialized
+    const timer = setTimeout(() => {
+      if (user && tokenReady && addresses.length === 0) {
+        fetchAddresses()
+      }
+    }, 100)
+    
+    return () => clearTimeout(timer)
+  }, []) // Run only once on mount
+
   const fetchAddresses = async (preserveFormData = false) => {
     if (!user) return
 
@@ -267,7 +279,10 @@ export default function ProfilePage() {
   }
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('🔍 AVATAR: handleAvatarUpload called');
+    
     if (!user) {
+      console.log('❌ AVATAR: No user found');
       toast({
         title: 'Not logged in',
         description: 'Please log in to upload an avatar.',
@@ -276,22 +291,39 @@ export default function ProfilePage() {
       return
     }
 
-    if (!event.target.files || event.target.files.length === 0) return
+    if (!event.target.files || event.target.files.length === 0) {
+      console.log('❌ AVATAR: No files selected');
+      return
+    }
 
     const file = event.target.files[0]
+    console.log('📁 AVATAR: File selected:', file.name, 'Size:', file.size, 'Type:', file.type);
 
     setLoading(true)
     try {
       const formData = new FormData()
       formData.append('file', file)
+      console.log('📤 AVATAR: Uploading file to /api/upload-avatar');
+      
+      // Get the token for authentication
+      const token = localStorage.getItem('auth_token')
+      console.log('🔑 AVATAR: Token for upload:', token ? 'Present' : 'Missing');
+      console.log('🔑 AVATAR: Token length:', token ? token.length : 0);
+      console.log('🔑 AVATAR: Token preview:', token ? token.substring(0, 50) + '...' : 'None');
 
       const response = await fetch('/api/upload-avatar', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData
       })
 
+      console.log('📥 AVATAR: Upload response status:', response.status);
+
       if (!response.ok) {
         const errorData = await response.json()
+        console.log('❌ AVATAR: Upload failed:', errorData);
         toast({
           title: 'Upload failed',
           description: errorData.error || 'Failed to upload avatar',
@@ -301,21 +333,25 @@ export default function ProfilePage() {
       }
 
       const data = await response.json()
-      console.log('✅ Avatar uploaded successfully:', data)
+      console.log('✅ AVATAR: Upload successful, response data:', data)
       
       // Update the profile data with the new avatar URL
+      console.log('🔄 AVATAR: Updating profile data with new avatar URL:', data.url);
       setProfileData(prev => ({ ...prev, avatar_url: data.url }))
       
       // Also update the auth context
+      console.log('🔄 AVATAR: Updating auth context with avatar:', data.url);
       await updateProfile({
         avatar: data.url,
       })
+      console.log('✅ AVATAR: Auth context updated successfully');
 
       toast({
         title: 'Success',
         description: data.message || 'Avatar updated successfully!',
       })
-    } catch {
+    } catch (error) {
+      console.log('❌ AVATAR: Unexpected error:', error);
       toast({
         title: 'Error',
         description: 'Unexpected error occurred during avatar upload',
@@ -559,10 +595,10 @@ export default function ProfilePage() {
   // Show loading only when auth is actually loading, not when user is null
   if (!user && authLoading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-yellow-500 mx-auto mb-4" />
-          <p className="text-gray-400">Loading...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     )
@@ -571,10 +607,10 @@ export default function ProfilePage() {
   // If not loading and no user, redirect to login
   if (!user && !authLoading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-400 mb-4">Please log in to view your profile</p>
-          <Link href="/auth" className="text-yellow-500 hover:text-yellow-400">
+          <p className="text-muted-foreground mb-4">Please log in to view your profile</p>
+          <Link href="/auth" className="text-primary hover:text-primary/80">
             Go to Login
           </Link>
         </div>
@@ -583,63 +619,62 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-6xl mx-auto p-6">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-yellow-500">My Profile</h1>
-          <p className="text-gray-400">Manage your account settings and preferences</p>
+          <h1 className="text-3xl font-bold text-primary">My Profile</h1>
+          <p className="text-muted-foreground">Manage your account settings and preferences</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="lg:col-span-1">
-            <Card className="bg-gray-800 border-gray-700">
+            <Card className="bg-card border-border">
               <CardContent className="p-6 text-center">
                 <div className="relative inline-block mb-4">
-                  <Avatar className="w-24 h-24">
-                    <AvatarImage src={profileData.avatar_url || user?.avatar || "/placeholder.svg"} />
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xl">
-                      {profileData.first_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <input
-                    type="file"
-                    id="avatar-upload"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleAvatarUpload}
-                  />
-                  <label
-                    htmlFor="avatar-upload"
-                    className="absolute -bottom-3 -right-3 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer p-3"
-                    style={{ boxShadow: '0 0 8px rgba(0,0,0,0.3)' }}
-                  >
-                    <Camera className="h-4 w-4" />
-                  </label>
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-1">
+                    <Avatar className="w-24 h-24">
+                      <AvatarImage src={profileData.avatar_url || user?.avatar || "/placeholder.svg"} />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-xl">
+                        {profileData.first_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <input
+                      type="file"
+                      id="avatar-upload"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarUpload}
+                    />
+                    <label
+                      htmlFor="avatar-upload"
+                      className="absolute -bottom-3 -right-3 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer p-3 shadow-lg"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </label>
+                  </div>
+                <h3 className="text-xl font-semibold text-foreground mb-1">
                   {profileData.first_name || profileData.last_name
                     ? `${profileData.first_name} ${profileData.last_name}`.trim()
                     : "User"}
                 </h3>
-                <p className="text-gray-400 mb-6">{user?.email}</p>
+                <p className="text-muted-foreground mb-6">{user?.email}</p>
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-2 text-gray-400">
+                    <span className="flex items-center gap-2 text-muted-foreground">
                       <Heart className="h-4 w-4" />
                       Wishlist Items
                     </span>
                     <Badge variant="secondary">0</Badge>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-2 text-gray-400">
+                    <span className="flex items-center gap-2 text-muted-foreground">
                       <ShoppingCart className="h-4 w-4" />
                       Cart Items
                     </span>
                     <Badge variant="secondary">0</Badge>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-2 text-gray-400">
+                    <span className="flex items-center gap-2 text-muted-foreground">
                       <Package className="h-4 w-4" />
                       Total Orders
                     </span>
@@ -648,13 +683,13 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="mt-6 space-y-2">
-                  <Button variant="outline" className="w-full border-gray-600 hover:bg-gray-700 bg-transparent" asChild>
+                  <Button variant="outline" className="w-full" asChild>
                     <Link href="/wishlist">
                       <Heart className="h-4 w-4 mr-2" />
                       Wishlist
                     </Link>
                   </Button>
-                  <Button variant="outline" className="w-full border-gray-600 hover:bg-gray-700 bg-transparent" asChild>
+                  <Button variant="outline" className="w-full" asChild>
                     <Link href="/orders">
                       <Package className="h-4 w-4 mr-2" />
                       Orders
@@ -667,7 +702,7 @@ export default function ProfilePage() {
 
           <div className="lg:col-span-3">
             <Tabs defaultValue="personal" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-3 bg-gray-800">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger
                   value="personal"
                   className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
@@ -689,39 +724,37 @@ export default function ProfilePage() {
               </TabsList>
 
               <TabsContent value="personal">
-                <Card className="bg-gray-800 border-gray-700">
+                <Card className="bg-card border-border">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-yellow-500">
+                    <CardTitle className="flex items-center gap-2 text-primary">
                       <User className="h-5 w-5" />
                       Personal Information
                     </CardTitle>
-                    <CardDescription className="text-gray-400">
+                    <CardDescription className="text-muted-foreground">
                       Update your personal details and contact information
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <Label htmlFor="firstName" className="text-gray-300">
+                        <Label htmlFor="firstName">
                           First Name
                         </Label>
                         <Input
                           id="firstName"
                           value={profileData.first_name}
                           onChange={(e) => setProfileData((prev) => ({ ...prev, first_name: e.target.value }))}
-                          className="bg-gray-700 border-gray-600 text-white"
                           placeholder="Enter your first name"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="lastName" className="text-gray-300">
+                        <Label htmlFor="lastName">
                           Last Name
                         </Label>
                         <Input
                           id="lastName"
                           value={profileData.last_name}
                           onChange={(e) => setProfileData((prev) => ({ ...prev, last_name: e.target.value }))}
-                          className="bg-gray-700 border-gray-600 text-white"
                           placeholder="Enter your last name"
                         />
                       </div>
@@ -729,19 +762,18 @@ export default function ProfilePage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <Label htmlFor="phone" className="text-gray-300">
+                        <Label htmlFor="phone">
                           Phone Number
                         </Label>
                         <Input
                           id="phone"
                           value={profileData.phone}
                           onChange={(e) => setProfileData((prev) => ({ ...prev, phone: e.target.value }))}
-                          className="bg-gray-700 border-gray-600 text-white"
                           placeholder="+63 9XX XXX XXXX"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="dateOfBirth" className="text-gray-300">
+                        <Label htmlFor="dateOfBirth">
                           Date of Birth
                         </Label>
                         <Input
@@ -749,23 +781,22 @@ export default function ProfilePage() {
                           type="date"
                           value={profileData.birthdate}
                           onChange={(e) => setProfileData((prev) => ({ ...prev, birthdate: e.target.value }))}
-                          className="bg-gray-700 border-gray-600 text-white"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="gender" className="text-gray-300">
+                      <Label htmlFor="gender">
                         Gender
                       </Label>
                       <Select
                         value={profileData.gender}
                         onValueChange={(value) => setProfileData((prev) => ({ ...prev, gender: value }))}
                       >
-                        <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                        <SelectTrigger>
                           <SelectValue placeholder="Select your gender" />
                         </SelectTrigger>
-                        <SelectContent className="bg-gray-700 border-gray-600">
+                        <SelectContent>
                           <SelectItem value="male">Male</SelectItem>
                           <SelectItem value="female">Female</SelectItem>
                           <SelectItem value="other">Other</SelectItem>
@@ -775,14 +806,14 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="bio" className="text-gray-300">
+                      <Label htmlFor="bio">
                         Bio
                       </Label>
                       <Textarea
                         id="bio"
                         value={profileData.bio}
                         onChange={(e) => setProfileData((prev) => ({ ...prev, bio: e.target.value }))}
-                        className="bg-gray-700 border-gray-600 text-white resize-none"
+                        className="resize-none"
                         placeholder="Tell us about yourself..."
                         rows={4}
                       />
@@ -796,7 +827,6 @@ export default function ProfilePage() {
                         handleSaveProfile();
                       }}
                       disabled={loading}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                       Save Changes
@@ -806,22 +836,21 @@ export default function ProfilePage() {
               </TabsContent>
 
               <TabsContent value="address">
-                <Card className="bg-gray-800 border-gray-700">
+                <Card className="bg-card border-border">
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
-                        <CardTitle className="flex items-center gap-2 text-yellow-500">
+                        <CardTitle className="flex items-center gap-2 text-primary">
                           <MapPin className="h-5 w-5" />
                           Address Information
                         </CardTitle>
-                        <CardDescription className="text-gray-400">
+                        <CardDescription className="text-muted-foreground">
                           Manage your shipping and billing addresses
                         </CardDescription>
                       </div>
                       <Button
                         onClick={handleNewAddress}
                         variant="outline"
-                        className="border-gray-600 hover:bg-gray-700 bg-transparent"
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         New Address
@@ -831,40 +860,37 @@ export default function ProfilePage() {
                   <CardContent className="space-y-6">
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="streetAddress" className="text-gray-300">
+                        <Label htmlFor="streetAddress">
                           Street Address
                         </Label>
                         <Input
                           id="streetAddress"
                           value={addressData.street_address}
                           onChange={(e) => setAddressData((prev) => ({ ...prev, street_address: e.target.value }))}
-                          className="bg-gray-700 border-gray-600 text-white"
                           placeholder="123 Main Street"
                         />
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="city" className="text-gray-300">
+                          <Label htmlFor="city">
                             City
                           </Label>
                           <Input
                             id="city"
                             value={addressData.city}
                             onChange={(e) => setAddressData((prev) => ({ ...prev, city: e.target.value }))}
-                            className="bg-gray-700 border-gray-600 text-white"
                             placeholder="Cabuyao City"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="stateProvince" className="text-gray-300">
+                          <Label htmlFor="stateProvince">
                             State/Province
                           </Label>
                           <Input
                             id="stateProvince"
                             value={addressData.state_province}
                             onChange={(e) => setAddressData((prev) => ({ ...prev, state_province: e.target.value }))}
-                            className="bg-gray-700 border-gray-600 text-white"
                             placeholder="Metro Manila"
                           />
                         </div>
@@ -872,29 +898,28 @@ export default function ProfilePage() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="zipCode" className="text-gray-300">
+                          <Label htmlFor="zipCode">
                             ZIP Code
                           </Label>
                           <Input
                             id="zipCode"
                             value={addressData.zip_code}
                             onChange={(e) => setAddressData((prev) => ({ ...prev, zip_code: e.target.value }))}
-                            className="bg-gray-700 border-gray-600 text-white"
                             placeholder="1000"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="country" className="text-gray-300">
+                          <Label htmlFor="country">
                             Country
                           </Label>
                           <Select
                             value={addressData.country}
                             onValueChange={(value) => setAddressData((prev) => ({ ...prev, country: value }))}
                           >
-                            <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                            <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-gray-700 border-gray-600">
+                            <SelectContent>
                               <SelectItem value="Philippines">Philippines</SelectItem>
                               <SelectItem value="United States">United States</SelectItem>
                               <SelectItem value="Canada">Canada</SelectItem>
@@ -911,7 +936,7 @@ export default function ProfilePage() {
                           checked={addressData.is_default}
                           onCheckedChange={(checked) => setAddressData((prev) => ({ ...prev, is_default: checked }))}
                         />
-                        <Label htmlFor="isDefault" className="text-gray-300">
+                        <Label htmlFor="isDefault">
                           Set as default address
                         </Label>
                       </div>
@@ -919,7 +944,6 @@ export default function ProfilePage() {
                       <Button
                         onClick={handleSaveAddress}
                         disabled={addressLoading}
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
                       >
                         {addressLoading ? (
                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -932,39 +956,37 @@ export default function ProfilePage() {
 
                     {addresses.length > 0 && (
                       <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-white">Saved Addresses</h3>
+                        <h3 className="text-lg font-semibold text-foreground">Saved Addresses</h3>
                         <div className="space-y-3">
                           {addresses.map((address) => (
                             <div
                               key={address.id}
-                              className="p-4 bg-gray-700 rounded-lg border border-gray-600 flex items-center justify-between"
+                              className="p-4 bg-muted rounded-lg border flex items-center justify-between"
                             >
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <p className="font-medium text-white">{address.address_line_1}</p>
+                                  <p className="font-medium text-foreground">{address.address_line_1}</p>
                                   {address.is_default && (
                                     <Badge className="bg-primary text-primary-foreground text-xs">Default</Badge>
                                   )}
                                 </div>
-                                <p className="text-gray-300 text-sm">
+                                <p className="text-foreground text-sm">
                                   {address.city}, {address.state} {address.postal_code}
                                 </p>
-                                <p className="text-gray-400 text-sm">{address.country}</p>
+                                <p className="text-muted-foreground text-sm">{address.country}</p>
                               </div>
                               <div className="flex items-center gap-2">
                                 <Button
                                   onClick={() => handleEditAddress(address)}
                                   variant="outline"
                                   size="sm"
-                                  className="border-gray-600 hover:bg-gray-600"
                                 >
                                   Edit
                                 </Button>
                                 <Button
                                   onClick={() => handleDeleteAddress(address.id)}
-                                  variant="outline"
+                                  variant="destructive"
                                   size="sm"
-                                  className="border-red-600 text-red-400 hover:bg-red-900"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -979,24 +1001,24 @@ export default function ProfilePage() {
               </TabsContent>
 
               <TabsContent value="preferences">
-                <Card className="bg-gray-800 border-gray-700">
+                <Card className="bg-card border-border">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-yellow-500">
+                    <CardTitle className="flex items-center gap-2 text-primary">
                       <Settings className="h-5 w-5" />
                       Preferences
                     </CardTitle>
-                    <CardDescription className="text-gray-400">
+                    <CardDescription className="text-muted-foreground">
                       Customize your account preferences and notifications
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-white">Notifications</h3>
+                      <h3 className="text-lg font-semibold text-foreground">Notifications</h3>
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <Label className="text-gray-300">Email Notifications</Label>
-                            <p className="text-sm text-gray-400">Receive updates via email</p>
+                            <Label>Email Notifications</Label>
+                            <p className="text-sm text-muted-foreground">Receive updates via email</p>
                           </div>
                           <Switch
                             checked={profileData.preferences.email_notifications}
@@ -1010,8 +1032,8 @@ export default function ProfilePage() {
                         </div>
                         <div className="flex items-center justify-between">
                           <div>
-                            <Label className="text-gray-300">SMS Notifications</Label>
-                            <p className="text-sm text-gray-400">Receive updates via SMS</p>
+                            <Label>SMS Notifications</Label>
+                            <p className="text-sm text-muted-foreground">Receive updates via SMS</p>
                           </div>
                           <Switch
                             checked={profileData.preferences.sms_notifications}
@@ -1025,8 +1047,8 @@ export default function ProfilePage() {
                         </div>
                         <div className="flex items-center justify-between">
                           <div>
-                            <Label className="text-gray-300">Newsletter</Label>
-                            <p className="text-sm text-gray-400">Receive our newsletter and promotions</p>
+                            <Label>Newsletter</Label>
+                            <p className="text-sm text-muted-foreground">Receive our newsletter and promotions</p>
                           </div>
                           <Switch
                             checked={profileData.preferences.newsletter}
@@ -1042,10 +1064,10 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-white">Regional Settings</h3>
+                      <h3 className="text-lg font-semibold text-foreground">Regional Settings</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-gray-300">Preferred Language</Label>
+                          <Label>Preferred Language</Label>
                           <Select
                             value={profileData.preferences.preferred_language}
                             onValueChange={(value) =>
@@ -1055,10 +1077,10 @@ export default function ProfilePage() {
                               }))
                             }
                           >
-                            <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                            <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-gray-700 border-gray-600">
+                            <SelectContent>
                               <SelectItem value="en">English</SelectItem>
                               <SelectItem value="fil">Filipino</SelectItem>
                               <SelectItem value="es">Spanish</SelectItem>
@@ -1067,7 +1089,7 @@ export default function ProfilePage() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-gray-300">Currency</Label>
+                          <Label>Currency</Label>
                           <Select
                             value={profileData.preferences.currency}
                             onValueChange={(value) =>
@@ -1077,10 +1099,10 @@ export default function ProfilePage() {
                               }))
                             }
                           >
-                            <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                            <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-gray-700 border-gray-600">
+                            <SelectContent>
                               <SelectItem value="PHP">PHP (₱)</SelectItem>
                               <SelectItem value="USD">USD ($)</SelectItem>
                               <SelectItem value="EUR">EUR (€)</SelectItem>
@@ -1099,7 +1121,6 @@ export default function ProfilePage() {
                         handleSaveProfile();
                       }}
                       disabled={loading}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                       Save Preferences

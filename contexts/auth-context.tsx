@@ -60,7 +60,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch complete user profile data
   const fetchUserProfile = async (token: string, abortController?: AbortController) => {
-    console.log('🔄 AUTH CONTEXT: fetchUserProfile called with token:', token ? 'present' : 'missing');
     try {
       const response = await fetch('/api/profiles', {
         method: 'GET',
@@ -94,16 +93,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           
           dispatch({ type: "SET_USER", payload: updatedUser });
-          console.log('✅ User profile updated:', {
-            firstName: updatedUser.firstName,
-            lastName: updatedUser.lastName,
-            avatar: updatedUser.avatar
-          });
         }
       }
     } catch (error) {
       if (error instanceof Error && error.name !== 'AbortError') {
-        console.error('❌ Error fetching user profile:', error);
+        console.error('Failed to fetch user profile:', error);
       }
     }
   };
@@ -180,20 +174,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (response.ok) {
         const data = await response.json();
         if (typeof window !== "undefined" && data.token) {
-          console.log('✅ New JWT token generated and stored');
           localStorage.setItem('auth_token', data.token);
           dispatch({ type: "SET_TOKEN_READY", payload: true });
           
           // Fetch complete user profile data after token is ready
-          console.log('🔄 About to fetch user profile with token');
           await fetchUserProfile(data.token);
         }
       } else {
-        console.error('Failed to generate JWT token:', response.status, response.statusText);
         dispatch({ type: "SET_TOKEN_READY", payload: false });
       }
     } catch (error) {
-      console.error('Error generating JWT token:', error);
+      console.error('Failed to generate JWT token:', error);
       dispatch({ type: "SET_TOKEN_READY", payload: false });
     }
   };
@@ -308,6 +299,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const updatedUser = { ...state.user, ...updates };
       dispatch({ type: "SET_USER", payload: updatedUser });
       
+      // Refresh user profile from database to ensure consistency
+      if (token) {
+        await fetchUserProfile(token);
+      }
+      
       console.log('✅ Profile updated successfully in auth context');
       
       toast({
@@ -333,8 +329,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('✅ User data updated in auth context:', updatedUser);
   };
 
-  // Initialize and check for existing authentication
-
+  // Initialize and check for existing authentication on app startup
+  useEffect(() => {
+    const initializeAuth = async () => {
+      // Only run if we don't have a session yet but have a stored token
+      const storedToken = localStorage.getItem('auth_token')
+      
+      if (storedToken && !session && !state.user) {
+        dispatch({ type: "SET_TOKEN_READY", payload: true })
+        await fetchUserProfile(storedToken)
+      } else if (!storedToken && !session) {
+        dispatch({ type: "SET_TOKEN_READY", payload: false })
+      }
+    }
+    
+    initializeAuth()
+  }, []) // Run only once on mount
 
   return (
     <AuthContext.Provider

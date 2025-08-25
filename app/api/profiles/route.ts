@@ -74,32 +74,33 @@ export async function GET(request: NextRequest) {
           const userLastName = userDataArray[0].last_name || ''
           const userAvatarUrl = userDataArray[0].avatar_url || ''
           
-          // Update profile with user data
+          // Update profile with user data (preserve existing avatar_url)
           const updateQuery = `
             UPDATE profiles 
             SET first_name = ?, last_name = ?, avatar_url = ?, updated_at = NOW()
             WHERE id = ?
           `
           
+          // Only use user avatar if profile doesn't have one
+          const finalAvatarUrl = dbProfile.avatar_url || userAvatarUrl
+          
           await executeQuery(updateQuery, [
             userFirstName,
             userLastName,
-            userAvatarUrl || dbProfile.avatar_url,
+            finalAvatarUrl,
             user.id
           ])
           
           console.log('✅ Profile updated with user data:', {
             first_name: userFirstName,
             last_name: userLastName,
-            avatar_url: userAvatarUrl || dbProfile.avatar_url
+            avatar_url: finalAvatarUrl
           })
           
           // Update the profile object
           dbProfile.first_name = userFirstName
           dbProfile.last_name = userLastName
-          if (userAvatarUrl) {
-            dbProfile.avatar_url = userAvatarUrl
-          }
+          dbProfile.avatar_url = finalAvatarUrl
         }
       }
       
