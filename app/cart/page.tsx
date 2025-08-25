@@ -49,7 +49,7 @@ export default function CartPage() {
 
   const [customerEmail, setCustomerEmail] = useState(user?.email || "")
   const [paymentMethod, setPaymentMethod] = useState("")
-  const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null)
+  const [paymentScreenshot, setPaymentScreenshot] = useState<string | null>(null)
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null)
 
   useEffect(() => {
@@ -132,7 +132,7 @@ export default function CartPage() {
     setScreenshotPreview(null)
   }
 
-  const handleScreenshotUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleScreenshotUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
       // Validate file type
@@ -145,24 +145,50 @@ export default function CartPage() {
         return
       }
       
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
         toast({
           title: "File Too Large",
-          description: "Please upload an image smaller than 5MB.",
+          description: "Please upload an image smaller than 10MB.",
           variant: "destructive"
         })
         return
       }
       
-      setPaymentScreenshot(file)
-      
-      // Create preview
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        setScreenshotPreview(e.target?.result as string)
+      try {
+        // Upload file to server
+        const formData = new FormData()
+        formData.append('file', file)
+        
+        const uploadResponse = await fetch('/api/upload-payment-screenshot', {
+          method: 'POST',
+          body: formData
+        })
+        
+        if (!uploadResponse.ok) {
+          const errorData = await uploadResponse.json()
+          throw new Error(errorData.error || 'Failed to upload screenshot')
+        }
+        
+        const { url } = await uploadResponse.json()
+        
+        // Store the uploaded file URL instead of the file object
+        setPaymentScreenshot(url)
+        setScreenshotPreview(url)
+        
+        toast({
+          title: "Screenshot Uploaded",
+          description: "Payment screenshot uploaded successfully.",
+        })
+        
+      } catch (error) {
+        console.error('Screenshot upload error:', error)
+        toast({
+          title: "Upload Failed",
+          description: error instanceof Error ? error.message : "Failed to upload screenshot.",
+          variant: "destructive"
+        })
       }
-      reader.readAsDataURL(file)
     }
   }
 
@@ -306,15 +332,8 @@ export default function CartPage() {
       const shipping = subtotal > 2000 ? 0 : 150 // Free shipping over ₱2000
       const total = subtotal + vat + shipping
 
-      // Convert payment screenshot to base64 if available
-      let paymentScreenshotData = null
-      if (paymentScreenshot) {
-        paymentScreenshotData = await new Promise<string>((resolve) => {
-          const reader = new FileReader()
-          reader.onload = (e) => resolve(e.target?.result as string)
-          reader.readAsDataURL(paymentScreenshot)
-        })
-      }
+      // Use payment screenshot URL directly
+      const paymentScreenshotData = paymentScreenshot || null
 
       // Create order
       const orderResponse = await fetch('/api/orders', {
