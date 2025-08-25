@@ -20,6 +20,8 @@ export default function CartPage() {
   const { user, tokenReady } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
+  
+
   const [isProcessing, setIsProcessing] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
   const [showQRDialog, setShowQRDialog] = useState(false)
@@ -298,6 +300,12 @@ export default function CartPage() {
         }
       }
 
+      // Calculate totals
+      const subtotal = items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 0)), 0)
+      const vat = subtotal * 0.12 // 12% VAT in Philippines
+      const shipping = subtotal > 2000 ? 0 : 150 // Free shipping over ₱2000
+      const total = subtotal + vat + shipping
+
       // Convert payment screenshot to base64 if available
       let paymentScreenshotData = null
       if (paymentScreenshot) {
@@ -375,6 +383,7 @@ export default function CartPage() {
     }
   }
 
+  // Calculate totals for display
   const subtotal = items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 0)), 0)
   const vat = subtotal * 0.12 // 12% VAT in Philippines
   const shipping = subtotal > 2000 ? 0 : 150 // Free shipping over ₱2000

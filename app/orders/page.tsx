@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useAuth } from "@/contexts/auth-context"
-import { Package, Truck, CheckCircle, Clock, XCircle, Eye, RotateCcw } from "lucide-react"
+import { Package, Truck, CheckCircle, Clock, XCircle, Eye, RotateCcw, X } from "lucide-react"
 
 interface OrderItem {
   id: string
@@ -123,6 +123,32 @@ export default function OrdersPage() {
   const handleViewDetails = (order: Order) => {
     setSelectedOrder(order)
     setIsDialogOpen(true)
+  }
+
+  const handleCancelOrder = async (orderId: string) => {
+    try {
+      const token = localStorage.getItem('auth_token')
+      const response = await fetch(`/api/orders/${orderId}/cancel`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel order')
+      }
+
+      // Refresh orders list
+      const updatedOrders = orders.map(order => 
+        order.id === orderId ? { ...order, status: 'cancelled' } : order
+      )
+      setOrders(updatedOrders)
+    } catch (error) {
+      console.error('Failed to cancel order:', error)
+      alert('Failed to cancel order. Please try again.')
+    }
   }
 
   if (loading) {
@@ -257,6 +283,17 @@ export default function OrdersPage() {
                           <Eye className="h-4 w-4" />
                           View Details
                         </Button>
+                        {(order.status === "pending" || order.status === "processing") && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="flex items-center gap-2 bg-transparent text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleCancelOrder(order.id)}
+                          >
+                            <X className="h-4 w-4" />
+                            Cancel Order
+                          </Button>
+                        )}
                         {order.status === "delivered" && (
                           <Button variant="outline" size="sm" className="flex items-center gap-2 bg-transparent">
                             <RotateCcw className="h-4 w-4" />

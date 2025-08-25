@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { useAdmin } from "@/contexts/admin-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,11 +17,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { type Order } from "@/lib/admin-data"
-import { Search, Eye, Package, Truck, CheckCircle, XCircle, Clock, Filter, RefreshCw } from "lucide-react"
+import { Search, Eye, Package, Truck, CheckCircle, XCircle, Clock, Filter, RefreshCw, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 
 export default function AdminOrdersPage() {
+  const { state } = useAdmin()
+  const router = useRouter()
   const [orders, setOrders] = useState<Order[]>([])
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -27,6 +31,21 @@ export default function AdminOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
+
+  // Check authentication
+  useEffect(() => {
+    if (state.isLoading) return // Still loading
+    
+    if (!state.isAuthenticated || !state.user) {
+      toast({
+        title: "Access Denied",
+        description: "Admin authentication required. Redirecting to login...",
+        variant: "destructive",
+      })
+      router.push('/admin/login')
+      return
+    }
+  }, [state.isAuthenticated, state.isLoading, state.user, router, toast])
 
   const loadOrders = async () => {
     setIsLoading(true)
@@ -120,6 +139,80 @@ export default function AdminOrdersPage() {
     }
   }
 
+  const handleDeleteOrder = async (orderId: string) => {
+    console.log('🗑️ Frontend: Delete button clicked for order:', orderId)
+    
+    if (!confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
+      console.log('🚫 Frontend: User cancelled deletion')
+      return
+    }
+
+    console.log('✅ Frontend: User confirmed deletion, proceeding...')
+
+    try {
+      // Get JWT token from localStorage for admin authentication
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
+      console.log('🔑 Frontend: JWT token found:', !!token)
+      
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      }
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+      
+      console.log('📡 Frontend: Making DELETE request to:', `/api/admin/orders/${orderId}`)
+      
+      const response = await fetch(`/api/admin/orders/${orderId}`, {
+        method: 'DELETE',
+        headers,
+      })
+      
+      console.log('📡 Frontend: Response status:', response.status)
+      
+      if (response.ok) {
+        console.log('✅ Frontend: Delete successful, updating UI')
+        setOrders((prevOrders) => prevOrders.filter((order) => order.id !== orderId))
+        toast({
+          title: "Order Deleted",
+          description: "Order has been successfully deleted",
+        })
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('❌ Frontend: Delete failed:', response.status, errorData)
+        
+        if (response.status === 401) {
+          toast({
+            title: "Authentication Required",
+            description: "Please log in as an admin to delete orders. Go to /admin/login",
+            variant: "destructive",
+          })
+        } else if (response.status === 403) {
+          toast({
+            title: "Access Denied",
+            description: "You don't have permission to delete orders",
+            variant: "destructive",
+          })
+        } else {
+          toast({
+            title: "Error",
+            description: errorData.error || `Failed to delete order (${response.status})`,
+            variant: "destructive",
+          })
+        }
+        console.error('Delete order error:', response.status, errorData)
+      }
+    } catch (error) {
+      console.error('❌ Frontend: Network error deleting order:', error)
+      toast({
+        title: "Network Error",
+        description: "Unable to connect to server. Please check your connection.",
+        variant: "destructive",
+      })
+    }
+  }
+
 
 
   const formatCurrency = (amount: number) => {
@@ -164,6 +257,23 @@ export default function AdminOrdersPage() {
       default:
         return "bg-muted text-muted-foreground"
     }
+  }
+
+  // Show loading while checking authentication
+  if (state.isLoading) {
+    return (
+      <div className="p-6 bg-background min-h-screen">
+        <div className="animate-pulse">
+          <div className="h-8 bg-muted rounded w-1/4 mb-6"></div>
+          <div className="text-muted-foreground">Checking authentication...</div>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't render if not authenticated (will redirect)
+  if (!state.isAuthenticated || !state.user) {
+    return null
   }
 
   if (isLoading) {
@@ -320,7 +430,7 @@ export default function AdminOrdersPage() {
                             </Button>
                           </DialogTrigger>
                           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-card border-border">
-                          <DialogHeader>
+                            <DialogHeader>
                             <DialogTitle className="text-foreground">Order Details - #{selectedOrder?.id}</DialogTitle>
                             <DialogDescription className="text-muted-foreground">
                               Order placed on{" "}
@@ -463,7 +573,19 @@ export default function AdminOrdersPage() {
                           )}
                         </DialogContent>
                         </Dialog>
-
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleDeleteOrder(order.id)
+                          }}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Remove
+                        </Button>
                       </div>
                     </div>
                   </div>

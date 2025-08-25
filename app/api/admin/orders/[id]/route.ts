@@ -84,9 +84,43 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Check for JWT token in Authorization header or cookies
+    const authHeader = request.headers.get('authorization')
+    const cookieHeader = request.headers.get('cookie')
+    let token = null
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7)
+    } else if (cookieHeader) {
+      const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+        const [key, value] = cookie.trim().split('=')
+        acc[key] = value
+        return acc
+      }, {} as Record<string, string>)
+      token = cookies['auth-token']
+    }
+    
+    // Also check localStorage token (for client-side requests)
+    if (!token) {
+      // For client-side requests, we'll rely on the session check as fallback
+      const session = await getServerSession(authOptions)
+      if (!session?.user?.email || session.user.email !== 'gkcksdmn@gmail.com') {
+        return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 })
+      }
+    } else {
+      // Verify JWT token
+      try {
+        const jwt = require('jsonwebtoken')
+        const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret'
+        const decoded = jwt.verify(token, JWT_SECRET) as any
+        
+        if (!decoded.userId || decoded.role !== 'admin') {
+          return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 })
+        }
+      } catch (jwtError) {
+        console.error('JWT verification failed:', jwtError)
+        return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+      }
     }
 
     const orderId = params.id

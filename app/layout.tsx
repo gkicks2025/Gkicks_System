@@ -2,7 +2,6 @@ import type React from "react"
 import type { Metadata } from "next"
 import "./globals.css"
 import { Providers } from "@/components/providers"
-import { AIChatbot } from "@/components/ai-chatbot"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 
@@ -20,12 +19,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script src="https://elfsightcdn.com/platform.js" async></script>
+      </head>
       <body className="font-sans">
         <Providers>
           <Header />
           <main>{children}</main>
           <Footer />
-          <AIChatbot />
+          <div className="elfsight-app-1645323a-e0ed-4f5c-a082-273ee0550c9c" data-elfsight-app-lazy></div>
         </Providers>
       </body>
     </html>

@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useReducer } from "react"
+import { createContext, useContext, useReducer, useEffect } from "react"
 
 export interface CartItem {
   id: string
@@ -106,12 +106,42 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
   }
 }
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(cartReducer, {
+const getInitialState = (): CartState => {
+  if (typeof window !== "undefined") {
+    try {
+      const savedCart = localStorage.getItem("gkicks-cart")
+      if (savedCart) {
+        const parsed = JSON.parse(savedCart)
+        return {
+          items: parsed.items || [],
+          total: parsed.total || 0,
+          itemCount: parsed.itemCount || 0,
+        }
+      }
+    } catch (error) {
+      console.error("Error loading cart from localStorage:", error)
+    }
+  }
+  return {
     items: [],
     total: 0,
     itemCount: 0,
-  })
+  }
+}
+
+export function CartProvider({ children }: { children: React.ReactNode }) {
+  const [state, dispatch] = useReducer(cartReducer, getInitialState())
+
+  // Save cart to localStorage whenever state changes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("gkicks-cart", JSON.stringify(state))
+      } catch (error) {
+        console.error("Error saving cart to localStorage:", error)
+      }
+    }
+  }, [state])
 
   const addItem = (item: Omit<CartItem, "quantity">) => {
     dispatch({ type: "ADD_ITEM", payload: item })
