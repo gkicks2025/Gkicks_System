@@ -49,8 +49,14 @@ export async function GET(request: NextRequest) {
       [user.id]
     )
 
-    console.log(`✅ API: Successfully fetched ${(addresses as any[]).length} addresses`)
-    return NextResponse.json(addresses)
+    // Convert is_default from 0/1 to boolean
+    const formattedAddresses = (addresses as any[]).map(address => ({
+      ...address,
+      is_default: Boolean(address.is_default)
+    }))
+
+    console.log(`✅ API: Successfully fetched ${formattedAddresses.length} addresses`)
+    return NextResponse.json(formattedAddresses)
 
   } catch (error) {
     console.error('❌ API: Error fetching addresses:', error)
@@ -130,8 +136,14 @@ export async function POST(request: NextRequest) {
       [(result as any).insertId]
     )
 
+    // Convert is_default from 0/1 to boolean
+    const formattedAddress = {
+      ...(newAddress as any[])[0],
+      is_default: Boolean((newAddress as any[])[0].is_default)
+    }
+
     console.log('✅ API: Successfully created address')
-    return NextResponse.json((newAddress as any[])[0], { status: 201 })
+    return NextResponse.json(formattedAddress, { status: 201 })
 
   } catch (error) {
     console.error('❌ API: Error creating address:', error)
@@ -240,8 +252,14 @@ export async function PUT(request: NextRequest) {
       [id, user.id]
     )
 
+    // Convert is_default from 0/1 to boolean
+    const formattedAddress = {
+      ...(updatedAddress as any[])[0],
+      is_default: Boolean((updatedAddress as any[])[0].is_default)
+    }
+
     console.log('✅ API: Successfully updated address')
-    return NextResponse.json((updatedAddress as any[])[0])
+    return NextResponse.json(formattedAddress)
 
   } catch (error) {
     console.error('❌ API: Error updating address:', error)

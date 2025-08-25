@@ -929,7 +929,7 @@ export default function CartPage() {
                       <div className="flex justify-between">
                         <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Amount:</span>
                         <span className="text-xs sm:text-sm font-bold text-green-600 dark:text-green-400">
-                          ₱{(completedOrder?.total || 0).toLocaleString()}
+                          ₱{(completedOrder?.total_amount || 0).toLocaleString()}
                         </span>
                       </div>
                       <div className="flex justify-between">

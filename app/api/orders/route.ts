@@ -55,6 +55,7 @@ export async function GET(request: NextRequest) {
         shipping_amount,
         discount_amount,
         total_amount as total,
+        customer_email,
         shipping_address,
         billing_address,
         notes,
@@ -234,13 +235,14 @@ export async function POST(request: NextRequest) {
     const result = await executeQuery(
       `INSERT INTO orders (
          user_id, order_number, status, total_amount, 
-         shipping_address, payment_method, payment_screenshot
-       ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+         customer_email, shipping_address, payment_method, payment_screenshot
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         user.id,
         orderNumber,
         status || 'pending',
         total || 0, // total_amount
+        customer_email,
         JSON.stringify(shipping_address || {}),
         payment_method || null,
         payment_screenshot || null
