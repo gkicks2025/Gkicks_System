@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useAdmin } from "@/contexts/admin-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -24,12 +24,14 @@ import { useToast } from "@/hooks/use-toast"
 export default function AdminOrdersPage() {
   const { state } = useAdmin()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [orders, setOrders] = useState<Order[]>([])
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [highlightOrderId, setHighlightOrderId] = useState<string | null>(null)
   const { toast } = useToast()
 
   // Check authentication
@@ -84,6 +86,19 @@ export default function AdminOrdersPage() {
     window.addEventListener("storage", handleStorageChange)
     return () => window.removeEventListener("storage", handleStorageChange)
   }, [])
+
+  // Handle highlight parameter from URL
+  useEffect(() => {
+    const highlightId = searchParams.get('highlight')
+    if (highlightId) {
+      setHighlightOrderId(highlightId)
+      // Remove highlight after 3 seconds
+      const timer = setTimeout(() => {
+        setHighlightOrderId(null)
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     // Filter orders based on search term and status
@@ -388,7 +403,14 @@ export default function AdminOrdersPage() {
           ) : (
             <div className="space-y-4">
               {filteredOrders.map((order, index) => (
-                <div key={order.id} className="border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors bg-card">
+                <div 
+                  key={order.id} 
+                  className={`border rounded-lg p-4 hover:bg-muted/50 transition-all duration-300 bg-card ${
+                    highlightOrderId === order.id.toString() 
+                      ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 shadow-lg ring-2 ring-yellow-400/50' 
+                      : 'border-border'
+                  }`}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-4">

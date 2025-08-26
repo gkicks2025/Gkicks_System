@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { AdminNotifications } from "@/components/admin-notifications"
 // Removed Supabase auth - using local authentication
 
 export function AdminHeader() {
@@ -80,6 +81,9 @@ export function AdminHeader() {
 
           {/* User Menu */}
           <div className="flex items-center space-x-4">
+            {/* Notifications */}
+            <AdminNotifications />
+            
             {/* Back to Store */}
             <Button
               variant="outline"
