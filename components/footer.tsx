@@ -5,6 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
 export function Footer() {
   const { resolvedTheme } = useTheme()
@@ -121,13 +122,35 @@ export function Footer() {
           <div className="text-center sm:text-left space-y-4">
             <h3 className="text-lg font-semibold text-foreground">Contact Us</h3>
             <div className="space-y-3">
-              <div className="flex items-start justify-center sm:justify-start space-x-3">
-                  <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                <div className="text-sm text-muted-foreground">
-                  <p>240 Del Pilar Street,</p>
-                  <p>Poblacion Dos, Cabuyao City, Laguna 4025 Cabuyao, Philippines</p>
-                </div>
-              </div>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <div className="flex items-start justify-center sm:justify-start space-x-3 cursor-pointer hover:text-primary transition-colors group">
+                    <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                    <div className="text-sm text-muted-foreground group-hover:text-primary transition-colors">
+                      <p>Canlubang Bridge,</p>
+                      <p>Mayapa-Canlubang Cadre Rd, Calamba, 4027 Laguna, Philippines</p>
+                      <p className="text-xs text-primary mt-1 opacity-70">Click to view map</p>
+                    </div>
+                  </div>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl w-full">
+                  <DialogHeader>
+                    <DialogTitle>Visit Our Store - G-KICKS MAYAPA</DialogTitle>
+                  </DialogHeader>
+                  <div className="flex justify-center">
+                    <iframe 
+                      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3867.716025894724!2d121.12030207589997!3d14.211398786485324!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x33bd63001caa7bd7%3A0x213065c9667c47e0!2sG-KICKS%20MAYAPA!5e0!3m2!1sen!2sph!4v1756154201232!5m2!1sen!2sph" 
+                      width="100%" 
+                      height="450" 
+                      style={{border: 0}} 
+                      allowFullScreen 
+                      loading="lazy" 
+                      referrerPolicy="no-referrer-when-downgrade"
+                      className="rounded-lg"
+                    ></iframe>
+                  </div>
+                </DialogContent>
+              </Dialog>
               <div className="flex items-center justify-center sm:justify-start space-x-3">
                 <Phone className="h-4 w-4 text-primary flex-shrink-0" />
                 <span className="text-sm text-muted-foreground">+63 956 879 8828</span>
