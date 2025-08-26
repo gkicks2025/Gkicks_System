@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
 import { executeQuery } from '../../../lib/database/mysql'
+import { sendOrderReceipt } from '@/lib/email-service'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret'
 
@@ -285,6 +286,49 @@ export async function POST(request: NextRequest) {
       ...order,
       shipping_address: order.shipping_address ? JSON.parse(order.shipping_address) : null,
       items: orderItems
+    }
+
+    // Send order receipt email
+    try {
+      const emailData = {
+        orderNumber: order.order_number,
+        customerEmail: order.customer_email,
+        customerName: shipping_address?.fullName || 'Valued Customer',
+        items: items.map(item => ({
+          name: item.product_name,
+          quantity: item.quantity,
+          price: item.price,
+          size: item.size,
+          color: item.color
+        })),
+        subtotal: total,
+        tax: 0, // Add tax calculation if needed
+        shipping: 0, // Add shipping calculation if needed
+        total: total,
+        shippingAddress: {
+          fullName: shipping_address?.fullName || '',
+          address: shipping_address?.address || '',
+          city: shipping_address?.city || '',
+          state: shipping_address?.state || '',
+          postalCode: shipping_address?.postalCode || '',
+          country: shipping_address?.country || 'Philippines'
+        },
+        orderDate: new Date().toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })
+      }
+
+      const emailSent = await sendOrderReceipt(emailData)
+      if (emailSent) {
+        console.log('✅ API: Order receipt email sent successfully to:', order.customer_email)
+      } else {
+        console.log('⚠️ API: Failed to send order receipt email, but order was created successfully')
+      }
+    } catch (emailError) {
+      console.error('❌ API: Error sending order receipt email:', emailError)
+      // Don't fail the order creation if email fails
     }
 
     console.log('✅ API: Successfully created order:', orderNumber)
