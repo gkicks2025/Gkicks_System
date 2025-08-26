@@ -49,6 +49,7 @@ interface User {
   city?: string;
   postal_code?: string;
   country?: string;
+  location?: string;
   is_admin: boolean;
   avatar_url?: string;
   created_at: string;
@@ -172,7 +173,7 @@ export default function MySQLAdminPage() {
       setUsersLoading(true);
       setError(null);
       
-      const response = await fetch('/api/admin/users');
+      const response = await fetch('/api/admin/real-users');
       const data = await response.json();
       
       if (!response.ok) {
@@ -498,7 +499,7 @@ export default function MySQLAdminPage() {
                         </TableCell>
                         <TableCell>{user.phone || 'N/A'}</TableCell>
                         <TableCell>
-                          {user.city && user.country ? `${user.city}, ${user.country}` : user.city || user.country || 'N/A'}
+                          {user.location || (user.city && user.country ? `${user.city}, ${user.country}` : user.city || user.country || 'N/A')}
                         </TableCell>
                         <TableCell>
                           <Badge variant={user.is_admin ? 'default' : 'secondary'}>
