@@ -387,13 +387,13 @@ export default function AdminOrdersPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredOrders.map((order) => (
+              {filteredOrders.map((order, index) => (
                 <div key={order.id} className="border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors bg-card">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-4">
                         <div>
-                          <h3 className="font-medium text-foreground">#{order.id}</h3>
+                          <h3 className="font-medium text-foreground">#{index + 1}</h3>
                           <p className="text-sm text-muted-foreground">{order.customerName || "Unknown Customer"}</p>
                           <p className="text-xs text-muted-foreground">{order.customerEmail || "No email"}</p>
                         </div>
@@ -431,7 +431,7 @@ export default function AdminOrdersPage() {
                           </DialogTrigger>
                           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-card border-border">
                             <DialogHeader>
-                            <DialogTitle className="text-foreground">Order Details - #{selectedOrder?.id}</DialogTitle>
+                            <DialogTitle className="text-foreground">Order Details - #{filteredOrders.findIndex(order => order.id === selectedOrder?.id) + 1}</DialogTitle>
                             <DialogDescription className="text-muted-foreground">
                               Order placed on{" "}
                               {selectedOrder &&
