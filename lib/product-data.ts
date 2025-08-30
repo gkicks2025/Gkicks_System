@@ -26,7 +26,7 @@ export interface Product {
   isNew?: boolean;
   isSale?: boolean;
   views: number;
-  category: "men" | "women" | "kids" | "unisex";
+  category: "men" | "women" | "kids";
   isDeleted?: boolean;
   isActive?: boolean;
   is_new?: boolean;

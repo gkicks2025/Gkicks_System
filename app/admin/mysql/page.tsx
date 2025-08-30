@@ -663,7 +663,7 @@ export default function MySQLAdminPage() {
                   <SelectItem value="men">Men</SelectItem>
                   <SelectItem value="women">Women</SelectItem>
                   <SelectItem value="kids">Kids</SelectItem>
-                  <SelectItem value="unisex">Unisex</SelectItem>
+                  
                 </SelectContent>
               </Select>
             </div>

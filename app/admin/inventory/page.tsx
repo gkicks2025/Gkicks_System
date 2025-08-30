@@ -170,7 +170,7 @@ export default function InventoryPage() {
     }
   }, [adminState.isLoading, adminState.isAuthenticated, router, toast])
 
-  const categories = ["Men", "Women", "Kids", "Unisex"]
+  const categories = ["Men", "Women", "Kids"]
   const brands = ["Nike", "Adidas", "Converse", "New Balance", "ASICS"]
   const commonSizes = ["6", "7", "8", "9", "10", "11", "12"]
 

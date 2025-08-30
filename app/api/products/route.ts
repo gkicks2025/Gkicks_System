@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
       category,
       sku,
       stock_quantity,
+      low_stock_threshold,
       status,
       image_url,
       gallery_images,
@@ -61,6 +62,36 @@ export async function POST(request: NextRequest) {
       model_3d_filename,
       subtitle
     } = body;
+
+    // Generate slug from product name
+    const generateSlug = (name: string) => {
+      return name
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+        .replace(/\s+/g, '-') // Replace spaces with hyphens
+        .replace(/-+/g, '-') // Replace multiple hyphens with single
+        .trim()
+        .substring(0, 255); // Limit to 255 characters
+    };
+    
+    const baseSlug = generateSlug(name);
+    let slug = baseSlug;
+    
+    // Check if slug already exists and make it unique
+    let slugCounter = 1;
+    while (true) {
+      const existingProduct = await executeQueryMySQL(
+        'SELECT id FROM products WHERE slug = ? LIMIT 1',
+        [slug]
+      );
+      
+      if (!existingProduct || (existingProduct as any[]).length === 0) {
+        break; // Slug is unique
+      }
+      
+      slug = `${baseSlug}-${slugCounter}`;
+      slugCounter++;
+    }
 
     // Validate required fields
     if (!name || !brand || !price || !category) {
@@ -78,25 +109,28 @@ export async function POST(request: NextRequest) {
     // Create product in MySQL database
     const insertQuery = `
       INSERT INTO products (
-        name, brand, price, original_price, category, sku, stock_quantity,
-        image_url, gallery_images, description, is_active, is_new, is_sale,
+        name, slug, brand, price, original_price, category, sku, stock_quantity, low_stock_threshold,
+        image_url, gallery_images, description, short_description, is_active, is_new, is_sale,
         colors, sizes, model_3d_url, model_3d_filename, created_at, updated_at
       ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
       )
     `;
 
     const params = [
       name,
+      slug,
       brand,
       parseFloat(price),
       original_price ? parseFloat(original_price) : null,
       category,
       finalSku,
       parseInt(stock_quantity) || 0,
+      parseInt(low_stock_threshold) || 10,
       image_url || '/placeholder-product.jpg',
       JSON.stringify(gallery_images || []),
       description || '',
+      subtitle || '', // short_description
       is_active !== false,
       is_new || false,
       is_sale || false,
@@ -197,8 +231,8 @@ export async function GET(request: NextRequest) {
         isNew: Boolean(item.is_new),
         isSale: Boolean(item.is_sale),
         views: item.views || 0,
-        category: item.category || 'unisex',
-        gender: item.gender || 'unisex',
+        category: item.category || 'men',
+        gender: item.gender || 'men',
         sku: item.sku || '',
         stock_quantity: parseInt(item.stock_quantity) || 0,
         low_stock_threshold: parseInt(item.low_stock_threshold) || 10,

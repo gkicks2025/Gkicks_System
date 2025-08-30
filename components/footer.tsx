@@ -74,9 +74,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/unisex" className="text-muted-foreground hover:text-primary transition-colors text-sm">
-                  Unisex Collection
-                </Link>
+
               </li>
               <li>
                 <Link href="/sale" className="text-muted-foreground hover:text-primary transition-colors text-sm">

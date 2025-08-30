@@ -6,7 +6,7 @@ A modern, full-stack e-commerce platform built with Next.js, featuring user auth
 
 ### Customer Features
 - **User Authentication**: Secure login/register with JWT tokens
-- **Product Catalog**: Browse shoes by category (Men, Women, Kids, Unisex)
+- **Product Catalog**: Browse shoes by category (Men, Women, Kids)
 - **Shopping Cart**: Add/remove items with persistent storage
 - **Wishlist**: Save favorite products
 - **User Profile**: Manage personal information and avatar

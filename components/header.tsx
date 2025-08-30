@@ -112,17 +112,17 @@ export function Header({ onSearch }: HeaderProps) {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center">
+          <Link href="/" className="flex items-center space-x-1 mr-8">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center">
               <Image
               src="/images/gkicks-transparent-logo.png"
               alt="GKICKS"
-              width={40}
-              height={40}
+              width={32}
+              height={32}
               className="object-contain"
             />
             </div>
-            <span className={`text-2xl font-bold select-none ${textColorClass}`}>GKICKS</span>
+            <span className={`text-xl font-bold select-none ${textColorClass}`}>G-Kicks</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -135,9 +135,6 @@ export function Header({ onSearch }: HeaderProps) {
             </Link>
             <Link href="/kids" className="hover:text-yellow-400 transition-colors">
               Kids
-            </Link>
-            <Link href="/unisex" className="hover:text-yellow-400 transition-colors">
-              Unisex
             </Link>
             <Link href="/sale" className="hover:text-yellow-400 transition-colors">
               Sale
@@ -363,13 +360,6 @@ export function Header({ onSearch }: HeaderProps) {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Kids
-              </Link>
-              <Link
-                href="/unisex"
-                className="block px-3 py-2 text-base font-medium hover:text-yellow-400 transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Unisex
               </Link>
               <Link
                 href="/sale"
