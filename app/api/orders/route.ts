@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
 import { executeQuery } from '../../../lib/database/mysql'
-import { sendOrderReceipt } from '@/lib/email-service'
+import { sendOrderReceipt, sendStaffNotification } from '@/lib/email-service'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret'
 
@@ -329,6 +329,41 @@ export async function POST(request: NextRequest) {
     } catch (emailError) {
       console.error('❌ API: Error sending order receipt email:', emailError)
       // Don't fail the order creation if email fails
+    }
+
+    // Send staff notification email
+    try {
+      const staffNotificationData = {
+        orderNumber: orderNumber,
+        customerName: order.customer_name || 'Guest Customer',
+        customerEmail: order.customer_email || 'No email provided',
+        total: total,
+        itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
+        orderDate: new Date().toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }),
+        items: items.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          size: item.size,
+          color: item.color
+        }))
+      }
+
+      const staffNotificationSent = await sendStaffNotification(staffNotificationData)
+      if (staffNotificationSent) {
+        console.log('✅ API: Staff notification email sent successfully to: gkicksstaff@gmail.com')
+      } else {
+        console.log('⚠️ API: Failed to send staff notification email, but order was created successfully')
+      }
+    } catch (staffEmailError) {
+      console.error('❌ API: Error sending staff notification email:', staffEmailError)
+      // Don't fail the order creation if staff email fails
     }
 
     console.log('✅ API: Successfully created order:', orderNumber)

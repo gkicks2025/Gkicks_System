@@ -38,6 +38,23 @@ interface OrderEmailData {
   orderDate: string;
 }
 
+// Staff notification data interface
+interface StaffNotificationData {
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string;
+  total: number;
+  itemCount: number;
+  orderDate: string;
+  items: Array<{
+    name: string;
+    quantity: number;
+    price: number;
+    size?: string;
+    color?: string;
+  }>;
+}
+
 // Create email transporter
 function createTransporter() {
   const config: EmailConfig = {
@@ -210,6 +227,146 @@ Thank you for choosing GKICKS!
     return true;
   } catch (error) {
     console.error('Failed to send order receipt email:', error);
+    return false;
+  }
+}
+
+// Generate HTML email template for staff notification
+function generateStaffNotificationHTML(notificationData: StaffNotificationData): string {
+  const itemsHTML = notificationData.items
+    .map(
+      (item) => `
+        <tr>
+          <td style="padding: 8px; border-bottom: 1px solid #eee;">
+            <div style="font-weight: 600; color: #333;">${item.name}</div>
+            ${item.size ? `<div style="font-size: 12px; color: #666;">Size: ${item.size}</div>` : ''}
+            ${item.color ? `<div style="font-size: 12px; color: #666;">Color: ${item.color}</div>` : ''}
+          </td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">₱${item.price.toFixed(2)}</td>
+        </tr>
+      `
+    )
+    .join('');
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>New Order Alert - GKICKS</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <!-- Header -->
+      <div style="text-align: center; margin-bottom: 30px; padding: 20px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; border-radius: 10px;">
+        <h1 style="margin: 0; font-size: 24px; font-weight: bold;">🚨 NEW ORDER ALERT</h1>
+        <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;">GKICKS Staff Notification</p>
+      </div>
+
+      <!-- Order Alert -->
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h2 style="color: #dc2626; margin-bottom: 10px;">New Order Received!</h2>
+        <p style="font-size: 16px; margin: 0;">A new order has been placed and requires your attention.</p>
+      </div>
+
+      <!-- Order Summary -->
+      <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <h3 style="margin-top: 0; color: #333;">Order Summary</h3>
+        <div style="margin-bottom: 10px;">
+          <span><strong>Order Number:</strong></span>
+          <span style="color: #dc2626; font-weight: 600; margin-left: 10px;">${notificationData.orderNumber}</span>
+        </div>
+        <div style="margin-bottom: 10px;">
+          <span><strong>Customer:</strong></span>
+          <span style="margin-left: 10px;">${notificationData.customerName}</span>
+        </div>
+        <div style="margin-bottom: 10px;">
+          <span><strong>Email:</strong></span>
+          <span style="margin-left: 10px;">${notificationData.customerEmail}</span>
+        </div>
+        <div style="margin-bottom: 10px;">
+          <span><strong>Order Date:</strong></span>
+          <span style="margin-left: 10px;">${notificationData.orderDate}</span>
+        </div>
+        <div style="margin-bottom: 10px;">
+          <span><strong>Total Items:</strong></span>
+          <span style="margin-left: 10px;">${notificationData.itemCount}</span>
+        </div>
+        <div>
+          <span><strong>Total Amount:</strong></span>
+          <span style="color: #dc2626; font-weight: 600; font-size: 18px; margin-left: 10px;">₱${notificationData.total.toFixed(2)}</span>
+        </div>
+      </div>
+
+      <!-- Items Table -->
+      <div style="margin-bottom: 30px;">
+        <h3 style="color: #333; margin-bottom: 15px;">Order Items</h3>
+        <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <thead>
+            <tr style="background: #f1f5f9;">
+              <th style="padding: 12px; text-align: left; font-weight: 600; color: #475569;">Item</th>
+              <th style="padding: 12px; text-align: center; font-weight: 600; color: #475569;">Qty</th>
+              <th style="padding: 12px; text-align: right; font-weight: 600; color: #475569;">Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHTML}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Action Required -->
+      <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <h3 style="margin-top: 0; color: #92400e;">⚠️ Action Required</h3>
+        <p style="margin: 0; color: #92400e;">Please log in to the admin panel to process this order and update its status.</p>
+      </div>
+
+      <!-- Footer -->
+      <div style="text-align: center; padding: 20px; color: #666; font-size: 14px;">
+        <p style="margin: 0;">This is an automated notification from GKICKS Order Management System.</p>
+        <p style="margin: 5px 0 0 0;">Please do not reply to this email.</p>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+// Send staff notification email
+export async function sendStaffNotification(notificationData: StaffNotificationData): Promise<boolean> {
+  try {
+    const transporter = createTransporter();
+    
+    // Verify transporter configuration
+    await transporter.verify();
+    
+    const mailOptions = {
+      from: {
+        name: 'GKICKS Order System',
+        address: process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@gkicks.com',
+      },
+      to: 'gkicksstaff@gmail.com',
+      subject: `🚨 New Order Alert: ${notificationData.orderNumber} - ₱${notificationData.total.toFixed(2)}`,
+      html: generateStaffNotificationHTML(notificationData),
+      text: `
+NEW ORDER ALERT - GKICKS
+
+Order Number: ${notificationData.orderNumber}
+Customer: ${notificationData.customerName}
+Email: ${notificationData.customerEmail}
+Total: ₱${notificationData.total.toFixed(2)}
+Items: ${notificationData.itemCount}
+Date: ${notificationData.orderDate}
+
+Please log in to the admin panel to process this order.
+      `,
+    };
+
+    const result = await transporter.sendMail(mailOptions);
+    console.log('Staff notification email sent successfully:', result.messageId);
+    return true;
+  } catch (error) {
+    console.error('Failed to send staff notification email:', error);
     return false;
   }
 }
