@@ -24,11 +24,26 @@ export const authOptions: NextAuthOptions = {
         // Map NextAuth session to our User interface
         let role: 'admin' | 'staff' | 'customer' = 'customer' // Default role for all users
         
-        // Only gkcksdmn@gmail.com gets admin privileges
-        if (session.user.email === 'gkcksdmn@gmail.com') {
-          role = 'admin'
+        // Check admin_users table first for staff/admin roles
+        try {
+          const adminUser = await executeQuery(
+            'SELECT role FROM admin_users WHERE email = ? AND is_active = 1',
+            [session.user.email]
+          )
+          
+          if (adminUser && Array.isArray(adminUser) && adminUser.length > 0) {
+            role = (adminUser as any[])[0].role as 'admin' | 'staff'
+          } else if (session.user.email === 'gkcksdmn@gmail.com') {
+            // Fallback for legacy admin
+            role = 'admin'
+          }
+        } catch (error) {
+          console.error('Error checking admin_users table:', error)
+          // Fallback to legacy admin check
+          if (session.user.email === 'gkcksdmn@gmail.com') {
+            role = 'admin'
+          }
         }
-        // All other users are regular customers
         
         const user: User = {
           id: token.sub || '',

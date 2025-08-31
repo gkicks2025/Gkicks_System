@@ -5,6 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useRouter, usePathname } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
+import { useAdmin } from "@/contexts/admin-context"
 import { Menu, X, Home, Package, ShoppingCart, BarChart3, Calculator, User, Settings, LogOut, Database } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -37,24 +38,34 @@ export function AdminHeader() {
     }
   }
 
-  // Check user role
-  const isFullAdmin = user?.email === "gkcksdmn@gmail.com"
-  const isStaff = user?.email === "gkicksstaff@gmail.com"
+  // Check user role using admin context
+  const { state: adminState, hasPermission, isAdmin, isStaff } = useAdmin()
+  const isFullAdmin = isAdmin()
+  const isStaffUser = isStaff()
 
   const getUserDisplayName = () => {
     if (isFullAdmin) return "ADMIN GKICKS"
-    if (isStaff) return "STAFF GKICKS"
+    if (isStaffUser) return "STAFF GKICKS"
     return profile?.first_name || user?.email?.split("@")[0] || "User"
   }
 
-  const navigationItems = [
-    { href: "/admin", icon: Home, label: "Dashboard", active: pathname === "/admin" },
-    { href: "/admin/inventory", icon: Package, label: "Products", active: pathname === "/admin/inventory" },
-    { href: "/admin/orders", icon: ShoppingCart, label: "Orders", active: pathname === "/admin/orders" },
-    { href: "/admin/analytics", icon: BarChart3, label: "Analytics", active: pathname === "/admin/analytics" },
-    { href: "/admin/pos", icon: Calculator, label: "POS", active: pathname === "/admin/pos" },
-    { href: "/admin/mysql", icon: Database, label: "Database", active: pathname === "/admin/mysql" },
+  // Filter navigation items based on user permissions
+  const allNavigationItems = [
+    { href: "/admin", icon: Home, label: "Dashboard", active: pathname === "/admin", permission: "dashboard" },
+    { href: "/admin/inventory", icon: Package, label: "Products", active: pathname === "/admin/inventory", permission: "inventory" },
+    { href: "/admin/orders", icon: ShoppingCart, label: "Orders", active: pathname === "/admin/orders", permission: "orders" },
+    { href: "/admin/analytics", icon: BarChart3, label: "Analytics", active: pathname === "/admin/analytics", permission: "analytics" },
+    { href: "/admin/pos", icon: Calculator, label: "POS", active: pathname === "/admin/pos", permission: "pos" },
+    { href: "/admin/mysql", icon: Database, label: "Database", active: pathname === "/admin/mysql", permission: "database" },
   ]
+  
+  const navigationItems = allNavigationItems.filter(item => {
+    // Admin has access to all items
+    if (isFullAdmin) return true
+    // Staff only has access to orders and POS
+    if (isStaffUser) return item.permission === 'orders' || item.permission === 'pos'
+    return false
+  })
 
   return (
     <header className="bg-background border-b border-border">

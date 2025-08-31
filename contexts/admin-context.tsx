@@ -8,7 +8,7 @@ interface AdminUser {
   id: string
   email: string
   role: "admin" | "staff" | "cashier"
-  permissions: string[]
+  permissions: Record<string, boolean> | { all: boolean }
   is_active: boolean
   created_at: string
 }
@@ -216,8 +216,19 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     // Admin has all permissions
     if (state.user.role === "admin") return true
 
-    // Check specific permissions
-    return state.user.permissions.includes(permission)
+    // Check if permissions object has 'all' permission
+    if (typeof state.user.permissions === 'object' && 'all' in state.user.permissions && state.user.permissions.all) {
+      return true
+    }
+
+    // Check specific permissions in the permissions object
+    if (typeof state.user.permissions === 'object' && permission in state.user.permissions) {
+      return 'all' in state.user.permissions 
+        ? false 
+        : (state.user.permissions as Record<string, boolean>)[permission] === true
+    }
+
+    return false
   }
 
   const isAdmin = (): boolean => {

@@ -25,11 +25,14 @@ export default function StaffLogin() {
 
   useEffect(() => {
     if (state.isAuthenticated && state.user) {
-      // Check if user is staff or cashier
-      if (state.user.email === "gkicksstaff@gmail.com" || state.user.email === "gkickscashier@gmail.com") {
+      // Check user role and redirect accordingly
+      if (state.user.role === 'staff') {
         router.push("/admin/orders")
-      } else {
+      } else if (state.user.role === 'admin') {
         router.push("/admin")
+      } else {
+        // For other roles or legacy users, redirect to orders
+        router.push("/admin/orders")
       }
     }
   }, [state.isAuthenticated, state.user, router])
@@ -54,7 +57,7 @@ export default function StaffLogin() {
   const fillCredentials = (userType: "staff" | "cashier") => {
     if (userType === "staff") {
       setEmail("gkicksstaff@gmail.com")
-      setPassword("staff123")
+      setPassword("staff123456")
     } else if (userType === "cashier") {
       setEmail("gkickscashier@gmail.com")
       setPassword("cashier123")

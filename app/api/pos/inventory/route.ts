@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     // Check authentication
     const session = await getServerSession(authOptions)
     console.log('🔍 POS INVENTORY API: Session check -', session?.user ? 'authenticated' : 'not authenticated', 'role:', (session?.user as any)?.role)
-    if (!session?.user || (session.user as any).role !== 'admin') {
+    if (!session?.user || ((session.user as any).role !== 'admin' && (session.user as any).role !== 'staff')) {
       console.log('❌ POS INVENTORY API: Unauthorized access attempt')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user || (session.user as any).role !== 'admin') {
+    if (!session?.user || ((session.user as any).role !== 'admin' && (session.user as any).role !== 'staff')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     
