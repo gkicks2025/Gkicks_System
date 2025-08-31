@@ -278,7 +278,12 @@ export default function ProductPage() {
         description: `${product.name} has been removed from your wishlist.`,
       })
     } else {
-      addToWishlist(product)
+      // Use the currently selected image, just like the cart does
+      const productWithCurrentImage = {
+        ...product,
+        image: productImages[selectedImageIndex]?.src || product.image_url || product.image || "/placeholder.svg"
+      }
+      addToWishlist(productWithCurrentImage)
       toast({
         title: "Added to Wishlist",
         description: `${product.name} has been added to your wishlist.`,
