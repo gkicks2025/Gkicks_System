@@ -677,8 +677,8 @@ export default function POSPage() {
     ))
   }
 
-  const addPaymentMethod = () => {
-    setPaymentMethods(prev => [...prev, {method: 'cash', amount: 0}])
+  const addPaymentMethod = (method: string) => {
+    setPaymentMethods(prev => [...prev, {method, amount: 0}])
   }
 
   const removePaymentMethod = (index: number) => {
@@ -780,64 +780,111 @@ export default function POSPage() {
         <title>Receipt</title>
         <style>
           body {
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            line-height: 1.4;
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            line-height: 1.3;
             margin: 0;
-            padding: 20px;
-            width: 300px;
+            padding: 15px;
+            width: 350px;
+            color: #333;
           }
-          .header {
+          .logo-section {
             text-align: center;
-            border-bottom: 1px dashed #000;
-            padding-bottom: 10px;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
           }
-          .store-name {
-            font-size: 16px;
+          .logo-section img {
+            max-width: 120px;
+            height: auto;
+          }
+          .company-info {
+            text-align: justify;
+            margin-bottom: 20px;
+            font-size: 10px;
+            line-height: 1.4;
+          }
+          .company-info div {
+            text-align: justify;
+          }
+          .company-name {
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-bottom: 2px;
+            text-align: justify;
           }
-          .transaction-info {
-            margin-bottom: 10px;
-            border-bottom: 1px dashed #000;
-            padding-bottom: 10px;
-          }
-          .items {
-            margin-bottom: 10px;
-          }
-          .item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-          }
-          .item-details {
-            flex: 1;
-          }
-          .item-price {
+          .receipt-header {
             text-align: right;
+            margin-bottom: 20px;
           }
-          .totals {
-            border-top: 1px dashed #000;
+          .receipt-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+          }
+          .receipt-details {
+            font-size: 10px;
+            line-height: 1.4;
+          }
+          .receipt-details div {
+            text-align: justify;
+          }
+          .customer-info {
+            text-align: justify;
+            margin-bottom: 20px;
+            font-size: 10px;
+            line-height: 1.4;
+          }
+          .customer-info div {
+            text-align: justify;
+          }
+          .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+          }
+          .items-table th {
+            text-align: justify;
+            padding: 8px 0;
+            border-bottom: 1px solid #ddd;
+            font-weight: bold;
+            font-size: 10px;
+          }
+          .items-table td {
+            padding: 6px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 10px;
+            text-align: justify;
+          }
+          .qty-col { width: 40px; text-align: center; }
+          .desc-col { width: 180px; text-align: justify; }
+          .price-col { width: 60px; text-align: right; }
+          .amount-col { width: 70px; text-align: right; }
+          .totals-section {
+            margin-top: 20px;
             padding-top: 10px;
-            margin-top: 10px;
+            text-align: justify;
           }
           .total-line {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 3px;
+            margin-bottom: 4px;
+            font-size: 10px;
+            text-align: justify;
           }
           .final-total {
             font-weight: bold;
-            font-size: 14px;
-            border-top: 1px solid #000;
-            padding-top: 5px;
-            margin-top: 5px;
+            font-size: 12px;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #333;
+            text-align: justify;
           }
-          .footer {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 10px;
+          .contact-info {
+            margin-top: 30px;
+            text-align: justify;
+            font-size: 9px;
+            line-height: 1.4;
+          }
+          .contact-info div {
+            text-align: justify;
           }
           @media print {
             body { margin: 0; padding: 10px; }
@@ -845,73 +892,87 @@ export default function POSPage() {
         </style>
       </head>
       <body>
-        <div class="header">
-          <div class="store-name">GKICKS SHOP</div>
-          <div>Point of Sale System</div>
+        <div class="logo-section">
+          <img src="/images/gkicks-transparent-logo.png" alt="GKicks Logo" />
         </div>
         
-        <div class="transaction-info">
-          <div>Transaction ID: ${transactionData.id}</div>
-          <div>Date: ${new Date(transactionData.timestamp).toLocaleString()}</div>
-          ${transactionData.customerName ? `<div>Customer: ${transactionData.customerName}</div>` : ''}
-          <div>Cashier: ${transactionData.cashier || 'Admin'}</div>
+        <div class="company-info">
+          <div class="company-name">FROM</div>
+          <div>GKICKS SHOP</div>
+          <div>Your Address 1234</div>
+          <div>CA 12345</div>
         </div>
         
-        <div class="items">
-          ${transactionData.items.map((item: CartItem) => `
-            <div class="item">
-              <div class="item-details">
-                <div>${item.name}</div>
-                <div style="font-size: 10px; color: #666;">
-                  ${item.brand} • ${item.color} • Size ${item.size}
-                </div>
-                <div>${item.quantity} x ₱${item.price.toFixed(2)}</div>
-              </div>
-              <div class="item-price">₱${(item.price * item.quantity).toFixed(2)}</div>
-            </div>
-          `).join('')}
+        <div class="receipt-header">
+          <div class="receipt-title">RECEIPT</div>
+          <div class="receipt-details">
+            <div>Receipt #: ${transactionData.id.slice(-6)}</div>
+            <div>Receipt Date: ${new Date(transactionData.timestamp).toLocaleDateString()}</div>
+          </div>
         </div>
         
-        <div class="totals">
+        <div class="customer-info">
+          <div><strong>TO</strong></div>
+          <div>${transactionData.customerName || 'Customer Name'}</div>
+          <div>Customer Address 1234</div>
+          <div>CA 12345</div>
+        </div>
+        
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th class="qty-col">QTY</th>
+              <th class="desc-col">Description</th>
+              <th class="price-col">Unit Price</th>
+              <th class="amount-col">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${transactionData.items.map((item: CartItem) => `
+              <tr>
+                <td class="qty-col">${item.quantity}</td>
+                <td class="desc-col">${item.name}<br><small style="color: #666;">${item.brand} • ${item.color} • Size ${item.size}</small></td>
+                <td class="price-col">${item.price.toFixed(2)}</td>
+                <td class="amount-col">${(item.price * item.quantity).toFixed(2)}</td>
+              </tr>
+            `).join('')}
+            ${Array.from({length: Math.max(0, 8 - transactionData.items.length)}, () => `
+              <tr>
+                <td class="qty-col">0</td>
+                <td class="desc-col"></td>
+                <td class="price-col">0.00</td>
+                <td class="amount-col">0.00</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        
+        <div class="totals-section">
           <div class="total-line">
-            <span>Subtotal:</span>
-            <span>₱${transactionData.subtotal?.toFixed(2) || transactionData.total.toFixed(2)}</span>
+            <span>Subtotal</span>
+            <span>${(transactionData.subtotal || transactionData.total).toFixed(2)}</span>
           </div>
           ${transactionData.discount ? `
             <div class="total-line">
-              <span>Discount:</span>
-              <span>-₱${transactionData.discount.toFixed(2)}</span>
+              <span>Discount</span>
+              <span>-${transactionData.discount.toFixed(2)}</span>
             </div>
           ` : ''}
-          <div class="total-line final-total">
-            <span>TOTAL:</span>
-            <span>₱${transactionData.total.toFixed(2)}</span>
+          <div class="total-line">
+            <span>Sales Tax (5%)</span>
+            <span>0.00</span>
           </div>
-          ${transactionData.paymentMethod === 'multiple' && transactionData.paymentDetails ? 
-            transactionData.paymentDetails.map((payment: {method: string, amount: number}) => `
-              <div class="total-line">
-                <span>Payment (${payment.method}):</span>
-                <span>₱${payment.amount.toFixed(2)}</span>
-              </div>
-            `).join('') : `
-              <div class="total-line">
-                <span>Payment (${transactionData.paymentMethod}):</span>
-                <span>₱${transactionData.amountPaid?.toFixed(2) || transactionData.total.toFixed(2)}</span>
-              </div>
-            `
-          }
-          ${transactionData.change ? `
-            <div class="total-line">
-              <span>Change:</span>
-              <span>₱${transactionData.change.toFixed(2)}</span>
-            </div>
-          ` : ''}
+          <div class="total-line final-total">
+            <span>Total</span>
+            <span>${transactionData.total.toFixed(2)}</span>
+          </div>
         </div>
         
-        <div class="footer">
-          <div>Thank you for shopping with us!</div>
-          <div>Please keep this receipt for your records</div>
-        </div>
+        <div class="contact-info">
+           <div>Tel: +1 234 56 789</div>
+           <div>Email: company@email.com</div>
+           <div>Web: company.com</div>
+         </div>
         
         <script>
           window.onload = function() {
@@ -1356,7 +1417,7 @@ export default function POSPage() {
                             ) : (
                               <div className="space-y-3">
                                 <div className="flex gap-2">
-                                  <Select onValueChange={addPaymentMethod}>
+                                  <Select onValueChange={(value) => addPaymentMethod(value)}>
                                     <SelectTrigger className="bg-background border-border text-foreground">
                                       <SelectValue placeholder="Add payment method" />
                                     </SelectTrigger>
@@ -1382,7 +1443,7 @@ export default function POSPage() {
                                     <Input
                                       type="number"
                                       value={payment.amount}
-                                      onChange={(e) => updatePaymentMethod(index, e.target.value, Number(e.target.value))}
+                                      onChange={(e) => updatePaymentMethod(index, payment.method, Number(e.target.value))}
                                       placeholder="0.00"
                                       min="0"
                                       step="0.01"
