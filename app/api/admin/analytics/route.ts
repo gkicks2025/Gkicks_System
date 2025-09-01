@@ -22,30 +22,58 @@ export async function GET(request: NextRequest) {
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
     
-    // Monthly revenue data for the last 6 months
+    // Monthly revenue data for the last 6 months (combining orders and POS transactions)
     const monthlyRevenue = await executeQuery(`
       SELECT 
-        DATE_FORMAT(created_at, '%Y-%m') as month,
-        MONTHNAME(created_at) as month_name,
-        SUM(total_amount) as revenue,
-        COUNT(*) as order_count
-      FROM orders 
-      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
-        AND status IN ('completed', 'delivered')
-      GROUP BY DATE_FORMAT(created_at, '%Y-%m'), MONTHNAME(created_at)
+        DATE_FORMAT(date_col, '%Y-%m') as month,
+        MONTHNAME(date_col) as month_name,
+        SUM(revenue) as revenue,
+        SUM(order_count) as order_count
+      FROM (
+        SELECT 
+          created_at as date_col,
+          total_amount as revenue,
+          1 as order_count
+        FROM orders 
+        WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+          AND status IN ('completed', 'delivered', 'processing', 'pending')
+        UNION ALL
+        SELECT 
+          created_at as date_col,
+          total_amount as revenue,
+          1 as order_count
+        FROM pos_transactions 
+        WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+          AND status = 'completed'
+      ) combined_data
+      GROUP BY DATE_FORMAT(date_col, '%Y-%m'), MONTHNAME(date_col)
       ORDER BY month ASC
     `)
     
-    // Daily sales for the last 30 days
+    // Daily sales for the last 30 days (combining orders and POS transactions)
     const dailySales = await executeQuery(`
       SELECT 
-        DATE(created_at) as date,
-        SUM(total_amount) as revenue,
-        COUNT(*) as orders
-      FROM orders 
-      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-        AND status IN ('completed', 'delivered')
-      GROUP BY DATE(created_at)
+        DATE(date_col) as date,
+        SUM(revenue) as revenue,
+        SUM(order_count) as orders
+      FROM (
+        SELECT 
+          created_at as date_col,
+          total_amount as revenue,
+          1 as order_count
+        FROM orders 
+        WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+          AND status IN ('completed', 'delivered', 'processing', 'pending')
+        UNION ALL
+        SELECT 
+          created_at as date_col,
+          total_amount as revenue,
+          1 as order_count
+        FROM pos_transactions 
+        WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+          AND status = 'completed'
+      ) combined_data
+      GROUP BY DATE(date_col)
       ORDER BY date ASC
     `)
     
@@ -59,7 +87,7 @@ export async function GET(request: NextRequest) {
       FROM order_items oi
       JOIN products p ON oi.product_id = p.id
       JOIN orders o ON oi.order_id = o.id
-      WHERE o.status IN ('completed', 'delivered')
+      WHERE o.status IN ('completed', 'delivered', 'processing', 'pending')
         AND o.created_at >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
       GROUP BY p.category
       ORDER BY revenue DESC
@@ -78,44 +106,68 @@ export async function GET(request: NextRequest) {
       FROM order_items oi
       JOIN products p ON oi.product_id = p.id
       JOIN orders o ON oi.order_id = o.id
-      WHERE o.status IN ('completed', 'delivered')
+      WHERE o.status IN ('completed', 'delivered', 'processing', 'pending')
         AND o.created_at >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
       GROUP BY p.id, p.name, p.brand, p.category
       ORDER BY total_sold DESC
       LIMIT 10
     `)
     
-    // Customer analytics
+    // Customer analytics (combining orders and POS transactions)
     const customerStats = await executeQuery(`
       SELECT 
-        COUNT(DISTINCT user_id) as total_customers,
+        COUNT(DISTINCT COALESCE(user_id, customer_name)) as total_customers,
         AVG(total_amount) as avg_order_value,
         COUNT(*) as total_orders
-      FROM orders 
-      WHERE status IN ('completed', 'delivered')
-        AND created_at >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
+      FROM (
+        SELECT user_id, NULL as customer_name, total_amount
+        FROM orders 
+        WHERE status IN ('completed', 'delivered', 'processing', 'pending')
+          AND created_at >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
+        UNION ALL
+        SELECT NULL as user_id, customer_name, total_amount
+        FROM pos_transactions 
+        WHERE status = 'completed'
+          AND created_at >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
+      ) combined_data
     `)
     
-    // Growth metrics
+    // Growth metrics - Current month (combining orders and POS transactions)
     const currentMonthStatsResult = await executeQuery(`
       SELECT 
         COUNT(*) as orders,
         SUM(total_amount) as revenue,
-        COUNT(DISTINCT user_id) as customers
-      FROM orders 
-      WHERE created_at >= ? 
-        AND status IN ('completed', 'delivered')
-    `, [startOfMonth.toISOString().split('T')[0]])
+        COUNT(DISTINCT COALESCE(user_id, customer_name)) as customers
+      FROM (
+        SELECT user_id, NULL as customer_name, total_amount
+        FROM orders 
+        WHERE created_at >= ? 
+          AND status IN ('completed', 'delivered', 'processing', 'pending')
+        UNION ALL
+        SELECT NULL as user_id, customer_name, total_amount
+        FROM pos_transactions 
+        WHERE created_at >= ?
+          AND status = 'completed'
+      ) combined_data
+    `, [startOfMonth.toISOString().split('T')[0], startOfMonth.toISOString().split('T')[0]])
     
     const lastMonthStatsResult = await executeQuery(`
       SELECT 
         COUNT(*) as orders,
         SUM(total_amount) as revenue,
-        COUNT(DISTINCT user_id) as customers
-      FROM orders 
-      WHERE created_at >= ? AND created_at <= ?
-        AND status IN ('completed', 'delivered')
-    `, [startOfLastMonth.toISOString().split('T')[0], endOfLastMonth.toISOString().split('T')[0]])
+        COUNT(DISTINCT COALESCE(user_id, customer_name)) as customers
+      FROM (
+        SELECT user_id, NULL as customer_name, total_amount
+        FROM orders 
+        WHERE created_at >= ? AND created_at <= ?
+          AND status IN ('completed', 'delivered', 'processing', 'pending')
+        UNION ALL
+        SELECT NULL as user_id, customer_name, total_amount
+        FROM pos_transactions 
+        WHERE created_at >= ? AND created_at <= ?
+          AND status = 'completed'
+      ) combined_data
+    `, [startOfLastMonth.toISOString().split('T')[0], endOfLastMonth.toISOString().split('T')[0], startOfLastMonth.toISOString().split('T')[0], endOfLastMonth.toISOString().split('T')[0]])
     
     // Calculate growth percentages
     const currentMonthStats = Array.isArray(currentMonthStatsResult) ? currentMonthStatsResult : []
@@ -135,18 +187,43 @@ export async function GET(request: NextRequest) {
       ? ((currentMonth.customers - lastMonth.customers) / lastMonth.customers * 100).toFixed(1)
       : '0'
     
+    // Recent Activity - Get recent orders and transactions
+    const recentActivity = await executeQuery(`
+      SELECT 
+        'order' as type,
+        id,
+        total_amount,
+        status,
+        created_at,
+        user_id as customer_info
+      FROM orders 
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+      UNION ALL
+      SELECT 
+        'pos_transaction' as type,
+        id,
+        total_amount,
+        status,
+        created_at,
+        customer_name as customer_info
+      FROM pos_transactions 
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+      ORDER BY created_at DESC
+      LIMIT 10
+    `)
+    
     const analyticsData = {
-      monthlyRevenue: monthlyRevenue.map(row => ({
+      monthlyRevenue: monthlyRevenue.map((row: { month_name: string | null; revenue: string | number; order_count: string | number }) => ({
         month: row.month_name?.substring(0, 3) || 'N/A',
-        revenue: parseFloat(row.revenue) || 0,
-        orders: parseInt(row.order_count) || 0
+        revenue: parseFloat(String(row.revenue)) || 0,
+        orders: parseInt(String(row.order_count)) || 0
       })),
-      dailySales: dailySales.map(row => ({
+      dailySales: dailySales.map((row: { date: string; revenue: string | number; orders: string | number }) => ({
         date: row.date,
-        revenue: parseFloat(row.revenue) || 0,
-        orders: parseInt(row.orders) || 0
+        revenue: parseFloat(String(row.revenue)) || 0,
+        orders: parseInt(String(row.orders)) || 0
       })),
-      categoryStats: categoryStats.map(row => ({
+      categoryStats: categoryStats.map((row: { category: string; items_sold: string; revenue: string; orders: string }) => ({
         name: row.category || 'Other',
         value: parseInt(row.items_sold) || 0,
         revenue: parseFloat(row.revenue) || 0,
@@ -160,7 +237,15 @@ export async function GET(request: NextRequest) {
         customers: parseFloat(customerGrowth)
       },
       currentMonth,
-      lastMonth
+      lastMonth,
+      recentActivity: recentActivity.map((activity: any) => ({
+        type: activity.type,
+        id: activity.id,
+        amount: parseFloat(activity.total_amount) || 0,
+        status: activity.status,
+        date: activity.created_at,
+        customer: activity.customer_info || 'Guest'
+      }))
     }
     
     console.log(`✅ API: Successfully returned analytics data`)

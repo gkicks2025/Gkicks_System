@@ -29,6 +29,7 @@ interface AnalyticsData {
   growth: { orders: number; revenue: number; customers: number }
   currentMonth: { orders: number; revenue: number; customers: number }
   lastMonth: { orders: number; revenue: number; customers: number }
+  recentActivity: Array<{ type: string; id: string; amount: number; status: string; date: string; customer: string }>
 }
 
 const COLORS = ["#FBBF24", "#10B981", "#3B82F6", "#EF4444", "#8B5CF6"]
@@ -410,15 +411,53 @@ export default function AnalyticsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <Activity className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-2 text-sm font-medium text-card-foreground">No recent activity</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Activity will appear here as your store grows
-              </p>
+          {analyticsData?.recentActivity && analyticsData.recentActivity.length > 0 ? (
+            <div className="space-y-4">
+              {analyticsData.recentActivity.map((activity, index) => (
+                <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-accent/50 hover:bg-accent transition-colors">
+                  <div className="flex items-center space-x-3">
+                    <div className="flex-shrink-0">
+                      {activity.type === 'order' ? (
+                        <ShoppingCart className="h-5 w-5 text-blue-500" />
+                      ) : (
+                        <DollarSign className="h-5 w-5 text-green-500" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-card-foreground truncate">
+                        {activity.type === 'order' ? 'Online Order' : 'POS Transaction'} #{activity.id}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {activity.customer} • {new Date(activity.date).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-card-foreground">₱{activity.amount.toFixed(2)}</p>
+                    <p className={`text-xs capitalize ${
+                      activity.status === 'completed' || activity.status === 'delivered' 
+                        ? 'text-green-600' 
+                        : activity.status === 'pending' || activity.status === 'processing'
+                        ? 'text-yellow-600'
+                        : 'text-red-600'
+                    }`}>
+                      {activity.status}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <Activity className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-2 text-sm font-medium text-card-foreground">No recent activity</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Activity will appear here as your store grows
+                </p>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
