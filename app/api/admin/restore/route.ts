@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/database/sqlite';
+import pool from '@/lib/database/mysql';
 import fs from 'fs';
 import path from 'path';
 
@@ -39,52 +39,67 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const db = await getDatabase();
-    
-    // Begin transaction for atomic restore
-    await db.run('BEGIN TRANSACTION');
+    // Get a connection from the pool for transaction
+    const connection = await pool.getConnection();
     
     try {
-      // Disable foreign key constraints during restore
-      await db.run('PRAGMA foreign_keys=OFF');
+      // Begin transaction for atomic restore
+      await connection.query('START TRANSACTION');
+      
+      // Disable foreign key checks during restore
+      await connection.query('SET FOREIGN_KEY_CHECKS = 0');
       
       // Split SQL content into individual statements
       const statements = fileContent
         .split(';')
         .map(stmt => stmt.trim())
-        .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'));
+        .filter(stmt => stmt.length > 0 && !stmt.startsWith('--') && !stmt.startsWith('/*'));
+      
+      let executedCount = 0;
       
       // Execute each statement
       for (const statement of statements) {
         if (statement.trim()) {
           try {
-            await db.run(statement);
+            await connection.query(statement);
+            executedCount++;
           } catch (stmtError) {
             console.error('Statement error:', statement, stmtError);
-            // Continue with other statements, but log the error
+            // Continue with other statements for non-critical errors
+            // But still count critical errors
+            if (stmtError instanceof Error && 
+                (stmtError.message.includes('syntax error') || 
+                 stmtError.message.includes('doesn\'t exist'))) {
+              // For critical errors, we might want to continue but log them
+              console.warn('Non-critical error, continuing:', stmtError.message);
+            }
           }
         }
       }
       
-      // Re-enable foreign key constraints
-      await db.run('PRAGMA foreign_keys=ON');
+      // Re-enable foreign key checks
+      await connection.query('SET FOREIGN_KEY_CHECKS = 1');
       
       // Commit transaction
-      await db.run('COMMIT');
+      await connection.query('COMMIT');
       
       return NextResponse.json(
         { 
           success: true, 
           message: 'Database restored successfully',
-          statementsExecuted: statements.length
+          statementsExecuted: executedCount,
+          totalStatements: statements.length
         },
         { status: 200 }
       );
       
     } catch (restoreError) {
       // Rollback transaction on error
-      await db.run('ROLLBACK');
+      await connection.query('ROLLBACK');
       throw restoreError;
+    } finally {
+      // Always release the connection back to the pool
+      connection.release();
     }
     
   } catch (error) {
@@ -93,12 +108,16 @@ export async function POST(request: NextRequest) {
     // Determine error message based on error type
     let errorMessage = 'Failed to restore database';
     if (error instanceof Error) {
-      if (error.message.includes('SQLITE_CORRUPT')) {
+      if (error.message.includes('corrupt') || error.message.includes('malformed')) {
         errorMessage = 'Backup file appears to be corrupted';
-      } else if (error.message.includes('syntax error')) {
+      } else if (error.message.includes('syntax error') || error.message.includes('SQL syntax')) {
         errorMessage = 'Invalid SQL syntax in backup file';
-      } else if (error.message.includes('no such table')) {
+      } else if (error.message.includes('doesn\'t exist') || error.message.includes('Unknown table')) {
         errorMessage = 'Backup file structure does not match current database';
+      } else if (error.message.includes('Access denied') || error.message.includes('permission')) {
+        errorMessage = 'Database access denied. Check permissions.';
+      } else if (error.message.includes('Connection')) {
+        errorMessage = 'Database connection failed. Please try again.';
       }
     }
     

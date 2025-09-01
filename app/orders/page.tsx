@@ -216,7 +216,7 @@ export default function OrdersPage() {
                           <span className="capitalize">{order.status}</span>
                         </div>
                       </Badge>
-                      <p className="text-lg font-semibold">${Number(order.total).toFixed(2)}</p>
+                      <p className="text-lg font-semibold">₱{Number(order.total).toFixed(2)}</p>
                     </div>
                   </div>
                 </CardHeader>
@@ -241,7 +241,7 @@ export default function OrdersPage() {
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold">${Number(item.price).toFixed(2)}</p>
+                            <p className="font-semibold">₱{Number(item.price).toFixed(2)}</p>
                           </div>
                         </div>
                         {index < order.items.length - 1 && <Separator className="mt-4" />}

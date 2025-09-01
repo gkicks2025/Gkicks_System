@@ -38,30 +38,69 @@ export function AdminNotifications() {
 
   const fetchNotifications = async () => {
     try {
-      const response = await fetch('/api/admin/notifications')
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success) {
-          setNotifications({
-            newOrdersCount: data.newOrdersCount,
-            recentOrders: data.recentOrders
-          })
-        }
+      const response = await fetch('/api/admin/notifications', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-cache'
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      if (data.success) {
+        setNotifications({
+          newOrdersCount: data.newOrdersCount,
+          recentOrders: data.recentOrders
+        })
+      } else {
+        console.error('API returned error:', data.error || 'Unknown error')
       }
     } catch (error) {
       console.error('Failed to fetch notifications:', error)
+      // Set empty state on error to prevent infinite loading
+      setNotifications({
+        newOrdersCount: 0,
+        recentOrders: []
+      })
     } finally {
       setIsLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchNotifications()
+    // Only fetch if component is mounted
+    let isMounted = true
+    
+    const fetchWithRetry = async (retries = 3) => {
+      if (!isMounted) return
+      
+      try {
+        await fetchNotifications()
+      } catch (error) {
+        if (retries > 0 && isMounted) {
+          console.log(`Retrying notification fetch... ${retries} attempts left`)
+          setTimeout(() => fetchWithRetry(retries - 1), 2000)
+        }
+      }
+    }
+    
+    fetchWithRetry()
     
     // Poll for new notifications every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000)
+    const interval = setInterval(() => {
+      if (isMounted) {
+        fetchNotifications()
+      }
+    }, 30000)
     
-    return () => clearInterval(interval)
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+    }
   }, [])
 
   const getStatusColor = (status: string) => {

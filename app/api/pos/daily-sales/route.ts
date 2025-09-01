@@ -45,13 +45,13 @@ export async function GET(request: NextRequest) {
       SELECT 
         COUNT(DISTINCT ds.sale_date) as total_days,
         SUM(ds.total_transactions) as total_transactions,
-        SUM(ds.total_sales) as total_gross_sales,
+        SUM(ds.gross_sales) as total_gross_sales,
         SUM(ds.cash_sales) as total_cash_sales,
         SUM(ds.card_sales) as total_card_sales,
-        SUM(ds.other_sales) as total_digital_wallet_sales,
-        AVG(ds.total_sales) as avg_daily_sales,
-        MAX(ds.total_sales) as best_day_sales,
-        MIN(ds.total_sales) as worst_day_sales
+        SUM(ds.digital_wallet_sales) as total_digital_wallet_sales,
+        AVG(ds.gross_sales) as avg_daily_sales,
+        MAX(ds.gross_sales) as best_day_sales,
+        MIN(ds.gross_sales) as worst_day_sales
       FROM pos_daily_sales ds
       ${whereClause}
     `

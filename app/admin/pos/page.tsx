@@ -180,19 +180,20 @@ export default function POSPage() {
 
   const loadTransactions = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0]
-      const response = await fetch(`/api/pos/transactions?date=${today}`)
+      // Load all recent transactions (not just today's)
+      const response = await fetch('/api/pos/transactions?limit=100')
       if (response.ok) {
         const data = await response.json()
-        if (Array.isArray(data)) {
+        const transactionsArray = data.transactions || data
+        if (Array.isArray(transactionsArray)) {
           // Convert API format to component format
-          const formattedTransactions = data.map((t: any) => ({
-            id: t.transactionId || t.id,
-            items: t.items || [],
-            total: t.totalAmount || t.total || 0,
-            paymentMethod: t.paymentMethod || 'cash',
-            timestamp: t.createdAt || new Date().toISOString(),
-            customerName: t.customerInfo?.name || t.customerName
+          const formattedTransactions = transactionsArray.map((t: any) => ({
+            id: t.id,
+            items: JSON.parse(t.items || '[]'),
+            total: t.total_amount || t.total || 0,
+            paymentMethod: t.payment_method || 'cash',
+            timestamp: t.created_at || new Date().toISOString(),
+            customerName: t.customer_name
           }))
           setTransactions(formattedTransactions)
         }
@@ -231,9 +232,10 @@ export default function POSPage() {
       })
       
       if (response.ok) {
-        // Refresh transactions and inventory after successful save
+        // Refresh transactions, inventory, and daily sales after successful save
         await loadTransactions()
         await refreshInventory()
+        await loadDailySales()
         toast.success('Transaction saved successfully')
       } else {
         throw new Error('Failed to save transaction')
@@ -950,8 +952,8 @@ export default function POSPage() {
               <tr>
                 <td class="qty-col">${item.quantity}</td>
                 <td class="desc-col">${item.name}<br><small style="color: #666;">${item.brand} • ${item.color} • Size ${item.size}</small></td>
-                <td class="price-col">${item.price.toFixed(2)}</td>
-                <td class="amount-col">${(item.price * item.quantity).toFixed(2)}</td>
+                <td class="price-col">₱{item.price.toFixed(2)}</td>
+                <td class="amount-col">₱{(item.price * item.quantity).toFixed(2)}</td>
               </tr>
             `).join('')}
             ${Array.from({length: Math.max(0, 8 - transactionData.items.length)}, () => `
@@ -968,12 +970,12 @@ export default function POSPage() {
         <div class="totals-section">
           <div class="total-line">
             <span>Subtotal</span>
-            <span>${(transactionData.subtotal || transactionData.total).toFixed(2)}</span>
+            <span>₱{(transactionData.subtotal || transactionData.total).toFixed(2)}</span>
           </div>
           ${transactionData.discount ? `
             <div class="total-line">
               <span>Discount</span>
-              <span>-${transactionData.discount.toFixed(2)}</span>
+              <span>-₱{transactionData.discount.toFixed(2)}</span>
             </div>
           ` : ''}
           <div class="total-line">
@@ -982,7 +984,7 @@ export default function POSPage() {
           </div>
           <div class="total-line final-total">
             <span>Total</span>
-            <span>${transactionData.total.toFixed(2)}</span>
+            <span>₱{transactionData.total.toFixed(2)}</span>
           </div>
         </div>
         

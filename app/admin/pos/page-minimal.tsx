@@ -123,15 +123,18 @@ export default function POSPage() {
       const response = await fetch('/api/pos/transactions')
       if (response.ok) {
         const data = await response.json()
-        const formattedTransactions = data.map((transaction: any) => ({
-          id: transaction.transaction_id,
-          items: JSON.parse(transaction.items || '[]'),
-          total: transaction.total_amount,
-          paymentMethod: transaction.payment_method,
-          timestamp: transaction.created_at,
-          customerName: transaction.customer_name
-        }))
-        setTransactions(formattedTransactions)
+        const transactionsArray = data.transactions || data
+        if (Array.isArray(transactionsArray)) {
+          const formattedTransactions = transactionsArray.map((transaction: any) => ({
+            id: transaction.id,
+            items: JSON.parse(transaction.items || '[]'),
+            total: transaction.total_amount,
+            paymentMethod: transaction.payment_method,
+            timestamp: transaction.created_at,
+            customerName: transaction.customer_name
+          }))
+          setTransactions(formattedTransactions)
+        }
       } else {
         console.error('Failed to fetch transactions')
       }
@@ -158,6 +161,7 @@ export default function POSPage() {
       if (response.ok) {
         await loadTransactions()
         await refreshInventory()
+        await loadDailySales()
         toast.success('Transaction saved successfully')
       } else {
         throw new Error('Failed to save transaction')

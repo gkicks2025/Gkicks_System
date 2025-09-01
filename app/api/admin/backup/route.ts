@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/database/sqlite';
+import { executeQuery } from '@/lib/database/mysql';
 import fs from 'fs';
 import path from 'path';
 
@@ -11,13 +11,13 @@ export async function POST(request: NextRequest) {
     //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     // }
 
-    const db = await getDatabase();
-    
-    // Get all table names
-    const tables = await db.all(`
-      SELECT name FROM sqlite_master 
-      WHERE type='table' AND name NOT LIKE 'sqlite_%'
-      ORDER BY name
+    // Get all table names from MySQL
+    const tables = await executeQuery(`
+      SELECT TABLE_NAME as name 
+      FROM INFORMATION_SCHEMA.TABLES 
+      WHERE TABLE_SCHEMA = DATABASE() 
+      AND TABLE_TYPE = 'BASE TABLE'
+      ORDER BY TABLE_NAME
     `) as { name: string }[];
 
     let sqlDump = '';
@@ -25,54 +25,71 @@ export async function POST(request: NextRequest) {
     // Add header comment
     sqlDump += `-- GKICKS Database Backup\n`;
     sqlDump += `-- Generated on: ${new Date().toISOString()}\n`;
-    sqlDump += `-- Database: SQLite\n\n`;
+    sqlDump += `-- Database: MySQL\n\n`;
     
-    // Disable foreign key constraints during restore
-    sqlDump += `PRAGMA foreign_keys=OFF;\n\n`;
+    // Disable foreign key checks during restore
+    sqlDump += `SET FOREIGN_KEY_CHECKS = 0;\n\n`;
     
     for (const table of tables) {
       const tableName = table.name;
       
-      // Get table schema
-      const schema = await db.get(`
-        SELECT sql FROM sqlite_master 
-        WHERE type='table' AND name=?
-      `, [tableName]) as { sql: string } | undefined;
-      
-      if (schema) {
-        sqlDump += `-- Table structure for ${tableName}\n`;
-        sqlDump += `DROP TABLE IF EXISTS \`${tableName}\`;\n`;
-        sqlDump += `${schema.sql};\n\n`;
+      try {
+        // Get table structure
+        const createTableResult = await executeQuery(`SHOW CREATE TABLE \`${tableName}\``) as { 'Create Table': string }[];
         
-        // Get table data
-        const rows = await db.all(`SELECT * FROM \`${tableName}\``);
-        
-        if (rows.length > 0) {
-          sqlDump += `-- Data for table ${tableName}\n`;
+        if (createTableResult && createTableResult.length > 0) {
+          const createTableSQL = createTableResult[0]['Create Table'];
           
-          // Get column names
-          const columns = await db.all(`PRAGMA table_info(\`${tableName}\`)`) as { name: string; type: string }[];
-          const columnNames = columns.map(col => `\`${col.name}\``).join(', ');
+          sqlDump += `-- Table structure for ${tableName}\n`;
+          sqlDump += `DROP TABLE IF EXISTS \`${tableName}\`;\n`;
+          sqlDump += `${createTableSQL};\n\n`;
           
-          for (const row of rows) {
-            const values = columns.map((col: { name: string }) => {
-              const value = row[col.name];
-              if (value === null) return 'NULL';
-              if (typeof value === 'string') {
-                return `'${value.replace(/'/g, "''")}'`; // Escape single quotes
-              }
-              return value;
-            }).join(', ');
+          // Get table data
+          const rows = await executeQuery(`SELECT * FROM \`${tableName}\``);
+          
+          if (rows && rows.length > 0) {
+            sqlDump += `-- Data for table ${tableName}\n`;
             
-            sqlDump += `INSERT INTO \`${tableName}\` (${columnNames}) VALUES (${values});\n`;
+            // Get column information
+            const columns = await executeQuery(`
+              SELECT COLUMN_NAME as name, DATA_TYPE as type 
+              FROM INFORMATION_SCHEMA.COLUMNS 
+              WHERE TABLE_SCHEMA = DATABASE() 
+              AND TABLE_NAME = '${tableName}'
+              ORDER BY ORDINAL_POSITION
+            `) as { name: string; type: string }[];
+            
+            const columnNames = columns.map(col => `\`${col.name}\``).join(', ');
+            
+            for (const row of rows) {
+              const values = columns.map((col: { name: string }) => {
+                const value = (row as any)[col.name];
+                if (value === null || value === undefined) return 'NULL';
+                if (typeof value === 'string') {
+                  return `'${value.replace(/'/g, "\\'").replace(/\\/g, '\\\\')}'`; // Escape quotes and backslashes
+                }
+                if (value instanceof Date) {
+                  return `'${value.toISOString().slice(0, 19).replace('T', ' ')}'`;
+                }
+                if (typeof value === 'boolean') {
+                  return value ? '1' : '0';
+                }
+                return value;
+              }).join(', ');
+              
+              sqlDump += `INSERT INTO \`${tableName}\` (${columnNames}) VALUES (${values});\n`;
+            }
+            sqlDump += '\n';
           }
-          sqlDump += '\n';
         }
+      } catch (tableError) {
+        console.error(`Error processing table ${tableName}:`, tableError);
+        sqlDump += `-- Error processing table ${tableName}: ${tableError}\n\n`;
       }
     }
     
-    // Re-enable foreign key constraints
-    sqlDump += `PRAGMA foreign_keys=ON;\n`;
+    // Re-enable foreign key checks
+    sqlDump += `SET FOREIGN_KEY_CHECKS = 1;\n`;
     
     // Create response with SQL dump
     const response = new NextResponse(sqlDump, {
