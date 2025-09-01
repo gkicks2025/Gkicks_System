@@ -18,7 +18,7 @@ interface Order extends RowDataPacket {
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -27,9 +27,9 @@ export async function PATCH(
     }
 
     const { status } = await request.json()
-    const orderId = params.id
+    const { id: orderId } = await params
 
-    if (!status || !['pending', 'processing', 'shipped', 'delivered', 'cancelled'].includes(status)) {
+    if (!status || !['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'].includes(status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
     }
 
@@ -41,6 +41,24 @@ export async function PATCH(
 
     if (result.affectedRows === 0) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
+
+    // If order is marked as delivered, automatically mark notification as viewed
+    if (status === 'delivered') {
+      try {
+        // Get session to get admin user ID
+        const session = await getServerSession(authOptions)
+        if (session?.user && (session.user as any).id) {
+          await db.execute(
+            'INSERT IGNORE INTO notification_views (admin_user_id, order_id) VALUES (?, ?)',
+            [(session.user as any).id, orderId]
+          )
+          console.log(`✅ Automatically marked notification as viewed for delivered order ${orderId}`)
+        }
+      } catch (viewError) {
+        console.error('Error marking notification as viewed:', viewError)
+        // Don't fail the order update if notification marking fails
+      }
     }
 
     // Fetch updated order
@@ -81,7 +99,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check for JWT token in Authorization header or cookies
@@ -123,7 +141,7 @@ export async function DELETE(
       }
     }
 
-    const orderId = params.id
+    const { id: orderId } = await params
 
     console.log('🗑️ API: Deleting order:', orderId)
 

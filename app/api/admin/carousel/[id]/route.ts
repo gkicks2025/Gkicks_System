@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '../../../../../lib/database'
 
 // PUT - Update carousel slide
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const id = parseInt(params.id)
+    const { id: paramId } = await params
+    const id = parseInt(paramId)
     const body = await request.json()
     
     if (isNaN(id)) {
@@ -86,9 +87,10 @@ updateFields.push('updated_at = CURRENT_TIMESTAMP' as never)
 }
 
 // DELETE - Delete carousel slide
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const id = parseInt(params.id)
+    const { id: paramId } = await params
+    const id = parseInt(paramId)
     
     if (isNaN(id)) {
       return NextResponse.json(

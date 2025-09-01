@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { executeQuery } from '@/lib/database/mysql';
 import { RowDataPacket } from 'mysql2';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 
 interface OrderNotification {
   id: number;
@@ -15,31 +17,46 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔔 API: Fetching admin notifications...');
     
-    // Get count of new/pending orders (orders created in last 24 hours or with pending status)
+    // Get session to identify admin user
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user || !(session.user as any).id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const adminUserId = (session.user as any).id;
+    
+    // Get count of new/pending orders that haven't been viewed by this admin
     const newOrdersResult = await executeQuery(
-      `SELECT COUNT(*) as count FROM orders 
-       WHERE status IN ('pending', 'confirmed') 
-       OR created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
-      []
+      `SELECT COUNT(*) as count FROM orders o
+       LEFT JOIN notification_views nv ON o.id = nv.order_id AND nv.admin_user_id = ?
+       WHERE (o.status IN ('pending', 'confirmed') 
+       OR o.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR))
+       AND nv.id IS NULL`,
+      [adminUserId]
     ) as RowDataPacket[];
     
     const newOrdersCount = newOrdersResult[0]?.count || 0;
     
-    // Get recent orders for notification dropdown
+    // Get recent orders for notification dropdown (only unviewed by this admin)
     const recentOrdersResult = await executeQuery(
       `SELECT 
          o.id,
          o.order_number,
-         COALESCE(u.first_name, 'Guest') as customer_name,
+         o.customer_name,
          o.total_amount,
          o.status,
          o.created_at
        FROM orders o
-       LEFT JOIN users u ON o.user_id = u.id
+       LEFT JOIN notification_views nv ON o.id = nv.order_id AND nv.admin_user_id = ?
        WHERE o.status IN ('pending', 'confirmed', 'processing')
+       AND nv.id IS NULL
        ORDER BY o.created_at DESC
        LIMIT 10`,
-      []
+      [adminUserId]
     ) as RowDataPacket[];
     
     const recentOrders: OrderNotification[] = recentOrdersResult.map(row => ({

@@ -134,16 +134,55 @@ export function AdminNotifications() {
     return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
   }
 
+  const markNotificationsAsViewed = async (orderIds: number[]) => {
+    if (orderIds.length === 0) return
+    
+    try {
+      const response = await fetch('/api/admin/notifications/mark-viewed', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderIds })
+      })
+      
+      if (response.ok) {
+        console.log(`✅ Marked ${orderIds.length} notifications as viewed`)
+        // Refresh notifications to update count
+        fetchNotifications()
+      }
+    } catch (error) {
+      console.error('Failed to mark notifications as viewed:', error)
+    }
+  }
+
   const handleViewOrder = (orderId: number) => {
+    // Mark this specific notification as viewed
+    markNotificationsAsViewed([orderId])
     router.push(`/admin/orders?highlight=${orderId}`)
   }
 
   const handleViewAllOrders = () => {
+    // Mark all current notifications as viewed
+    const orderIds = notifications.recentOrders.map(order => order.id)
+    markNotificationsAsViewed(orderIds)
     router.push('/admin/orders')
   }
 
+  const handleDropdownOpen = () => {
+    // Mark all visible notifications as viewed when dropdown opens
+    const orderIds = notifications.recentOrders.map(order => order.id)
+    if (orderIds.length > 0) {
+      markNotificationsAsViewed(orderIds)
+    }
+  }
+
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={(open) => {
+      if (open) {
+        handleDropdownOpen()
+      }
+    }}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />

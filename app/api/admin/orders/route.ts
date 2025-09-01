@@ -16,31 +16,20 @@ export async function GET(request: NextRequest) {
       )
     }
     
-    // Fetch orders with complete information
+    // Fetch orders with available information
     const orders = await executeQuery(`
       SELECT 
         o.id,
         o.order_number,
+        o.customer_name,
+        o.customer_email,
+        o.total_amount as total,
         o.status,
         o.payment_status,
-        o.payment_method,
-        o.payment_screenshot,
-        o.subtotal,
-        o.tax_amount,
-        o.shipping_amount,
-        o.discount_amount,
-        o.total_amount as total,
-        o.customer_email,
         o.shipping_address,
-        o.billing_address,
-        o.notes,
         o.created_at,
-        o.updated_at,
-        u.first_name,
-        u.last_name,
-        u.email
+        o.updated_at
       FROM orders o
-      LEFT JOIN users u ON o.user_id = u.id
       ORDER BY o.created_at DESC
     `) as any[]
 
@@ -51,14 +40,14 @@ export async function GET(request: NextRequest) {
           `SELECT 
             oi.id,
             oi.quantity,
-            oi.price,
+            oi.unit_price as price,
             oi.size,
             oi.color,
-            p.name,
-            p.brand,
+            oi.product_name as name,
+            oi.product_brand as brand,
             p.image_url as image
           FROM order_items oi
-          JOIN products p ON oi.product_id = p.id
+          LEFT JOIN products p ON oi.product_id = p.id
           WHERE oi.order_id = ?`,
           [order.id]
         ) as any[]
@@ -73,18 +62,14 @@ export async function GET(request: NextRequest) {
         return {
           ...order,
           // Convert numeric fields to proper numbers
-          subtotal: Number(order.subtotal || 0),
-          tax_amount: Number(order.tax_amount || 0),
-          shipping_amount: Number(order.shipping_amount || 0),
-          discount_amount: Number(order.discount_amount || 0),
           total: Number(order.total || 0),
-          // Parse shipping address JSON
-          shippingAddress: order.shipping_address ? JSON.parse(order.shipping_address) : null,
-          // Add customer information
-          customerName: order.first_name ? (order.last_name ? `${order.first_name} ${order.last_name}`.trim() : order.first_name) : 'Unknown Customer',
-          customerEmail: order.customer_email || order.email || 'No email provided',
-          // Add payment method
-          paymentMethod: order.payment_method || 'Not specified',
+          // Parse shipping address if it's JSON, otherwise use as string
+          shippingAddress: order.shipping_address ? 
+            (order.shipping_address.startsWith('{') ? JSON.parse(order.shipping_address) : order.shipping_address) 
+            : null,
+          // Use customer information from orders table
+          customerName: order.customer_name || 'Unknown Customer',
+          customerEmail: order.customer_email || 'No email provided',
           // Add items
           items: processedItems
         }
