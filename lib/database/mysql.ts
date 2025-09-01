@@ -30,7 +30,7 @@ export async function testConnection() {
 }
 
 // Execute query function
-export async function executeQuery(query: string, params: any[] = []) {
+export async function executeQuery(query: string, params: (string | number | boolean | null)[] = []): Promise<any> {
   try {
     const [results] = await pool.execute(query, params);
     return results;

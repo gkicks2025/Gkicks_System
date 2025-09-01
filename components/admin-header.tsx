@@ -54,6 +54,7 @@ export function AdminHeader() {
     { href: "/admin", icon: Home, label: "Dashboard", active: pathname === "/admin", permission: "dashboard" },
     { href: "/admin/inventory", icon: Package, label: "Products", active: pathname === "/admin/inventory", permission: "inventory" },
     { href: "/admin/orders", icon: ShoppingCart, label: "Orders", active: pathname === "/admin/orders", permission: "orders" },
+    { href: "/admin/carousel", icon: Settings, label: "Carousel", active: pathname === "/admin/carousel", permission: "carousel" },
     { href: "/admin/analytics", icon: BarChart3, label: "Analytics", active: pathname === "/admin/analytics", permission: "analytics" },
     { href: "/admin/pos", icon: Calculator, label: "POS", active: pathname === "/admin/pos", permission: "pos" },
     { href: "/admin/mysql", icon: Database, label: "Database", active: pathname === "/admin/mysql", permission: "database" },

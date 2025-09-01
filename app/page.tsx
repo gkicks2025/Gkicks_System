@@ -3,13 +3,17 @@
 import { useState, useEffect } from "react"
 import { Hero } from "@/components/hero"
 import { ProductGrid } from "@/components/product-grid"
+import { PromotionalCarousel } from "@/components/promotional-carousel"
 import { useSearchParams } from "next/navigation"
 import type { Product } from "@/lib/product-data"
 import { fetchProductsFromAPI, saveProducts } from "@/lib/product-data"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function HomePage() {
+  const { user, loading } = useAuth()
   const [products, setProducts] = useState<Product[]>([])
   const [searchQuery, setSearchQuery] = useState("")
+  const [productsLoading, setProductsLoading] = useState(true)
   const searchParams = useSearchParams()
 
   useEffect(() => {
@@ -21,6 +25,7 @@ export default function HomePage() {
       setProducts(syncedProducts)
       // Save products to localStorage for other parts of the application
       saveProducts(syncedProducts)
+      setProductsLoading(false)
     }
     syncProducts()
   }, [])
@@ -34,11 +39,23 @@ export default function HomePage() {
     }
   }, [searchParams])
 
+  const isLoggedIn = !loading && !!user
+
   return (
     <div className="min-h-screen bg-background transition-colors">
       <main>
         {!searchQuery && <Hero />}
-        <ProductGrid products={products} searchQuery={searchQuery} />
+        {!searchQuery && !isLoggedIn && !loading && (
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+            <PromotionalCarousel />
+          </div>
+        )}
+        <ProductGrid 
+          products={products} 
+          searchQuery={searchQuery}
+          isLoggedIn={isLoggedIn}
+          loading={productsLoading || loading}
+        />
       </main>
     </div>
   )

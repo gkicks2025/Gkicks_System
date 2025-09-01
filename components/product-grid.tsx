@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { ProductCard } from "./product-card"
+import { ProductCardBrochure } from "./product-card-brochure"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -17,6 +18,8 @@ interface ProductGridProps {
   searchQuery?: string
   category?: string
   onWishlistUpdate?: (change: number) => void
+  isLoggedIn?: boolean
+  loading?: boolean
 }
 
 export function ProductGrid({
@@ -24,12 +27,15 @@ export function ProductGrid({
   searchQuery = "",
   category,
   onWishlistUpdate,
+  isLoggedIn = false,
+  loading: externalLoading = false,
 }: ProductGridProps) {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [displayedProducts, setDisplayedProducts] = useState<Product[]>([])
   const [sortBy, setSortBy] = useState("featured")
   const [filterBy, setFilterBy] = useState("all")
   const [loading, setLoading] = useState(true)
+  const isActuallyLoading = loading || externalLoading
   const [productsPerPage] = useState(8)
   const [currentPage, setCurrentPage] = useState(1)
   const [lastSyncTime, setLastSyncTime] = useState<Date>(new Date())
@@ -118,7 +124,7 @@ export function ProductGrid({
     setLoading(false)
   }
 
-  if (loading) {
+  if (isActuallyLoading) {
     return (
       <section className="py-16 bg-background">
         <div className="max-w-[98vw] xl:max-w-[96vw] 2xl:max-w-[94vw] mx-auto px-1 sm:px-2 lg:px-3 xl:px-2">
@@ -311,7 +317,11 @@ export function ProductGrid({
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
               {displayedProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                isLoggedIn ? (
+                  <ProductCard key={product.id} product={product} />
+                ) : (
+                  <ProductCardBrochure key={product.id} product={product} isLoggedIn={isLoggedIn} />
+                )
               ))}
             </div>
 
