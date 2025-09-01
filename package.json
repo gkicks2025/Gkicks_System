@@ -4,9 +4,13 @@
   "private": true,
   "scripts": {
     "build": "next build",
+    "build:fast": "SKIP_ENV_VALIDATION=1 next build",
     "dev": "next dev --turbopack",
+    "dev:fast": "next dev --turbopack --experimental-https=false",
     "lint": "next lint",
-    "start": "next start"
+    "lint:fix": "next lint --fix",
+    "start": "next start",
+    "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
     "@ai-sdk/openai": "latest",
