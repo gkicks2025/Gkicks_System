@@ -156,11 +156,10 @@ export function ProductCard({ product, onViewUpdate }: ProductCardProps) {
     >
       <CardContent className="p-0">
         <div className="relative overflow-hidden">
-          <div className="relative p-2">
+          <div className="relative p-1 sm:p-2">
             <div
-              className="relative overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
+              className="relative overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800 border-2 sm:border-4 border-yellow-400"
               style={{
-                border: "4px solid #facc15",
                 boxShadow: isHovered
                   ? "0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(250, 204, 21, 0.3)"
                   : "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(250, 204, 21, 0.2)",
@@ -170,7 +169,7 @@ export function ProductCard({ product, onViewUpdate }: ProductCardProps) {
               <img
                 src={currentImage}
                 alt={safeProduct.name}
-                className="w-full h-48 sm:h-64 object-cover transition-all duration-700"
+                className="w-full h-24 sm:h-32 md:h-40 lg:h-48 xl:h-56 object-cover transition-all duration-700"
                 style={{
                   filter: isHovered ? "brightness(1.1) contrast(1.1)" : "brightness(1) contrast(1)",
                   transform: isHovered ? "scale(1.05)" : "scale(1)",
@@ -249,17 +248,17 @@ export function ProductCard({ product, onViewUpdate }: ProductCardProps) {
         </div>
 
         <div
-          className="p-3 sm:p-4 space-y-2 sm:space-y-3 transition-all duration-500"
+          className="p-1 sm:p-2 md:p-3 lg:p-3 xl:p-4 space-y-1 sm:space-y-1 md:space-y-2 lg:space-y-2 transition-all duration-500"
           style={{
             transform: isHovered ? "translateY(-5px)" : "translateY(0px)",
           }}
         >
           <div>
-            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            <p className="text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg text-gray-500 dark:text-gray-400 uppercase tracking-wide">
               {safeProduct.brand}
             </p>
             <h3
-              className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white group-hover:text-yellow-400 transition-colors line-clamp-2 cursor-pointer hover:underline"
+              className="font-semibold text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl text-gray-900 dark:text-white group-hover:text-yellow-400 transition-colors line-clamp-2 cursor-pointer hover:underline"
               onClick={handleNameClick}
             >
               {safeProduct.name}
@@ -268,12 +267,12 @@ export function ProductCard({ product, onViewUpdate }: ProductCardProps) {
 
           <div className="flex items-center justify-between">
             <div className="flex flex-col flex-1">
-              <div className="flex items-center space-x-2">
-                <span className="text-base sm:text-lg font-bold text-gray-900 dark:text-yellow-400">
+              <div className="flex items-center space-x-1 sm:space-x-2">
+                <span className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-gray-900 dark:text-yellow-400">
                   ₱{(safeProduct.price || 0).toLocaleString()}
                 </span>
                 {safeProduct.originalPrice && (
-                  <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 line-through">
+                  <span className="text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg text-gray-500 dark:text-gray-400 line-through">
                     ₱{safeProduct.originalPrice.toLocaleString()}
                   </span>
                 )}

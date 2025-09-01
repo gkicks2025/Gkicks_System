@@ -121,7 +121,7 @@ export function ProductGrid({
   if (loading) {
     return (
       <section className="py-16 bg-background">
-        <div className="container mx-auto px-4">
+        <div className="max-w-[98vw] xl:max-w-[96vw] 2xl:max-w-[94vw] mx-auto px-1 sm:px-2 lg:px-3 xl:px-2">
           {/* Header Skeleton */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
             <div className="flex items-center justify-between w-full">
@@ -138,7 +138,7 @@ export function ProductGrid({
           </div>
           
           {/* Product Grid Skeleton */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
             {Array.from({ length: 8 }).map((_, index) => (
               <div key={index} className="bg-card border border-border rounded-lg overflow-hidden">
                 <div className="p-2">
@@ -163,12 +163,12 @@ export function ProductGrid({
 
   return (
     <section className="py-16 bg-background">
-      <div className="container mx-auto px-4">
+      <div className="max-w-[98vw] xl:max-w-[96vw] 2xl:max-w-[94vw] mx-auto px-1 sm:px-2 lg:px-3 xl:px-2">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div className="flex items-center justify-between w-full">
             <div>
-              <h2 className="text-3xl font-bold text-foreground mb-2">
+              <h2 className="text-[4vw] sm:text-3xl font-bold text-foreground mb-2">
                 {searchQuery
                   ? `Search Results for "${searchQuery}"`
                   : category
@@ -177,26 +177,22 @@ export function ProductGrid({
               </h2>
             </div>
 
-            <div className="flex items-center gap-4">
-              <p className="text-muted-foreground">
-                {filteredProducts.length} {filteredProducts.length === 1 ? "product" : "products"}
-                {displayedProducts.length < filteredProducts.length && ` (showing ${displayedProducts.length})`}
-              </p>
+            <div className="flex items-center gap-2 sm:gap-4">
 
               {/* Sync Button */}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleForceSync}
-                className="flex items-center gap-2"
+                className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2"
               >
-                <RefreshCw className="h-4 w-4" />
-                Sync
+                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Sync</span>
               </Button>
 
               {/* Sort Dropdown */}
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-32 border-2 border-primary bg-primary/10">
+                <SelectTrigger className="w-20 sm:w-32 border-2 border-primary bg-primary/10 text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border">
@@ -313,7 +309,7 @@ export function ProductGrid({
           </Card>
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
               {displayedProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
@@ -333,16 +329,7 @@ export function ProductGrid({
           </>
         )}
 
-        {/* Product Count Summary */}
-        {displayedProducts.length > 0 && remainingProducts === 0 && (
-          <div className="text-center mt-12">
-            <p className="text-muted-foreground">
-              Showing all {filteredProducts.length} products
-              {searchQuery && ` matching "${searchQuery}"`}
-              {category && ` in ${category} category`}
-            </p>
-          </div>
-        )}
+
       </div>
     </section>
   )

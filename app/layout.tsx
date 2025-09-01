@@ -20,13 +20,20 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <script src="https://elfsightcdn.com/platform.js" async></script>
       </head>
-      <body className="font-sans">
+      <body className="font-sans antialiased min-h-screen bg-background">
         <Providers>
-          <Header />
-          <main>{children}</main>
-          <Footer />
+          <div className="flex min-h-screen flex-col">
+            <Header />
+            <main className="flex-1 w-full">
+              <div className="w-full px-2 sm:px-4 lg:px-6 xl:px-8">
+                {children}
+              </div>
+            </main>
+            <Footer />
+          </div>
           <div className="elfsight-app-1645323a-e0ed-4f5c-a082-273ee0550c9c" data-elfsight-app-lazy></div>
         </Providers>
       </body>

@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
-import { Search, Plus, Minus, ShoppingCart, CreditCard, QrCode, Receipt, Trash2, Settings } from "lucide-react"
+import { Search, Plus, Minus, ShoppingCart, CreditCard, QrCode, Receipt, Trash2, Settings, Menu, X, ChevronDown, ChevronUp } from "lucide-react"
 import {
   type ProductInventory,
 } from "@/lib/admin-data"
@@ -94,6 +94,12 @@ export default function POSPage() {
   const [drawerStatus, setDrawerStatus] = useState<'open' | 'closed' | 'unknown'>('unknown')
   const [showCashDrawerDialog, setShowCashDrawerDialog] = useState(false)
 
+  // Mobile navigation state
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [showMoreProducts, setShowMoreProducts] = useState(false)
+  const [showMoreCartItems, setShowMoreCartItems] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
 
   const sizes = ["5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
 
@@ -120,6 +126,18 @@ export default function POSPage() {
     refreshInventory()
     loadDailySales()
     loadTransactions()
+  }, [])
+
+  // Mobile detection useEffect
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    
+    return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
   const refreshInventory = async () => {
@@ -980,7 +998,7 @@ export default function POSPage() {
             setTimeout(function() {
               window.close();
             }, 1000);
-          }
+          };
         </script>
       </body>
       </html>
@@ -995,15 +1013,103 @@ export default function POSPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-yellow-500">Point of Sale</h1>
-            <p className="text-lg text-muted-foreground mt-2">Process sales and manage transactions</p>
+    <div className="min-h-screen bg-background">
+      <div className="mobile-container">
+        {/* Mobile Header */}
+        {isMobile && (
+          <div className="mobile-section py-4">
+            <div className="mobile-card flex items-center justify-between">
+              <div>
+                <h1 className="text-xl font-bold text-yellow-500">POS System</h1>
+                <p className="text-xs text-muted-foreground mt-1">Point of Sale</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="h-10 w-10 p-0 hover:bg-muted"
+              >
+                {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-6">
+        )}
+
+        {/* Mobile Navigation Menu */}
+        {isMobile && isMobileMenuOpen && (
+          <div className="mobile-card mb-4 space-y-4 animate-slide-up">
+            <div className="grid grid-cols-2 gap-3">
+              {currentSession ? (
+                <>
+                  <div className="col-span-2 px-3 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium text-center">
+                    Session Active
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setShowSessionDialog(true)
+                      setIsMobileMenuOpen(false)
+                    }}
+                    variant="outline"
+                    className="mobile-button text-sm"
+                  >
+                    End Shift
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  onClick={() => {
+                    setShowSessionDialog(true)
+                    setIsMobileMenuOpen(false)
+                  }}
+                  className="col-span-2 mobile-button bg-primary text-primary-foreground text-sm"
+                >
+                  Start Shift
+                </Button>
+              )}
+              <Button
+                onClick={() => {
+                  setIsRefundDialogOpen(true)
+                  setIsMobileMenuOpen(false)
+                }}
+                variant="outline"
+                className="mobile-button text-sm"
+              >
+                <Receipt className="w-4 h-4 mr-2" />
+                Refund
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowCashDrawerDialog(true)
+                  setIsMobileMenuOpen(false)
+                }}
+                variant="outline"
+                className="mobile-button text-sm"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Drawer
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="mobile-card text-center">
+                <p className="text-xs text-muted-foreground mb-1">Daily Sales</p>
+                <p className="text-lg font-bold text-green-600">{formatCurrency(dailySales)}</p>
+              </div>
+              <div className="mobile-card text-center">
+                <p className="text-xs text-muted-foreground mb-1">Transactions</p>
+                <p className="text-lg font-bold text-blue-600">{transactions.length}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Desktop Header */}
+        {!isMobile && (
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+            <div>
+              <h1 className="text-4xl font-bold text-yellow-500">Point of Sale</h1>
+              <p className="text-lg text-muted-foreground mt-2">Process sales and manage transactions</p>
+            </div>
+            <div className="flex items-center gap-6">
             {currentSession ? (
               <div className="flex items-center gap-2">
                 <div className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
@@ -1056,32 +1162,33 @@ export default function POSPage() {
             </Button>
           </div>
         </div>
+        )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="mobile-grid lg:grid-cols-3 gap-4 lg:gap-6">
           {/* Product Selection */}
-          <div className="lg:col-span-2">
-            <Card className="bg-card border-border">
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-foreground">Products</CardTitle>
-                  <div className="space-y-2 w-80">
+          <div className="lg:col-span-2 order-2 lg:order-1">
+            <Card className="mobile-card">
+              <CardHeader className="mb-4">
+                <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
+                  <CardTitle className="text-lg font-semibold text-foreground">Products</CardTitle>
+                  <div className="space-y-3 w-full lg:w-80">
                     <div className="relative">
-                      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-5 w-5" />
+                      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                       <Input
                         placeholder="Search products..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-12 bg-background border-border text-foreground placeholder-muted-foreground"
+                        className="mobile-input pl-12"
                       />
                     </div>
                     <div className="relative">
-                      <QrCode className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-5 w-5" />
+                      <QrCode className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                       <Input
                         placeholder="Scan or enter barcode..."
                         value={barcodeInput}
                         onChange={(e) => setBarcodeInput(e.target.value)}
                         onKeyPress={handleBarcodeKeyPress}
-                        className="pl-12 bg-background border-border text-foreground placeholder-muted-foreground"
+                        className="mobile-input pl-12"
                         disabled={isScanning}
                       />
                       {isScanning && (
@@ -1094,7 +1201,7 @@ export default function POSPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[600px]">
+                <ScrollArea className={isMobile ? "h-[400px]" : "h-[600px]"}>
                   {filteredInventory.length === 0 ? (
                     <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                       <ShoppingCart className="h-12 w-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
@@ -1102,8 +1209,9 @@ export default function POSPage() {
                       <p className="text-sm">Check inventory or adjust search terms</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {filteredInventory.map((product) => (
+                    <>
+                      <div className={`grid gap-4 ${isMobile ? 'grid-cols-2' : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'}`}>
+                        {(isMobile && !showMoreProducts ? filteredInventory.slice(0, 6) : filteredInventory).map((product) => (
                         <Card
                           key={product.id}
                           className="cursor-pointer hover:shadow-lg transition-shadow bg-card border-border hover:border-yellow-400"
@@ -1189,8 +1297,30 @@ export default function POSPage() {
                             </div>
                           </CardContent>
                         </Card>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                      {isMobile && filteredInventory.length > 6 && (
+                        <div className="mt-4 text-center">
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowMoreProducts(!showMoreProducts)}
+                            className="w-full"
+                          >
+                            {showMoreProducts ? (
+                              <>
+                                <ChevronUp className="w-4 h-4 mr-2" />
+                                Show Less
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="w-4 h-4 mr-2" />
+                                Show More ({filteredInventory.length - 6} more)
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </ScrollArea>
               </CardContent>
@@ -1198,7 +1328,7 @@ export default function POSPage() {
           </div>
 
           {/* Cart and Checkout */}
-          <div className="space-y-6">
+          <div className={`space-y-6 ${isMobile ? 'order-1' : ''}`}>
             {/* Cart */}
             <Card className="bg-card border-border">
               <CardHeader>
@@ -1212,21 +1342,22 @@ export default function POSPage() {
                       className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
-                      Clear
+                      {isMobile ? '' : 'Clear'}
                     </Button>
                   )}
                 </div>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-80">
+                <ScrollArea className={isMobile ? "h-60" : "h-80"}>
                   {cart.length === 0 ? (
                     <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                       <ShoppingCart className="h-8 w-8 mx-auto mb-2 text-gray-400 dark:text-gray-500" />
                       <p>Cart is empty</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      {cart.map((item, index) => (
+                    <>
+                      <div className="space-y-3">
+                        {(isMobile && !showMoreCartItems ? cart.slice(0, 3) : cart).map((item, index) => (
                         <div
                           key={`${item.productId}-${item.color}-${item.size}`}
                           className="border border-border rounded-lg p-3 bg-muted"
@@ -1277,8 +1408,31 @@ export default function POSPage() {
                         </p>
                           </div>
                         </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                      {isMobile && cart.length > 3 && (
+                        <div className="mt-3 text-center">
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowMoreCartItems(!showMoreCartItems)}
+                            className="w-full text-xs"
+                            size="sm"
+                          >
+                            {showMoreCartItems ? (
+                              <>
+                                <ChevronUp className="w-3 h-3 mr-1" />
+                                Show Less
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="w-3 h-3 mr-1" />
+                                Show More ({cart.length - 3} more)
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </ScrollArea>
                 {cart.length > 0 && (
@@ -1361,12 +1515,12 @@ export default function POSPage() {
                     </div>
                     <Dialog open={isCheckoutDialogOpen} onOpenChange={setIsCheckoutDialogOpen}>
                       <DialogTrigger asChild>
-                        <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" size="lg">
-                          <CreditCard className="h-5 w-5 mr-2" />
+                        <Button className={`w-full bg-primary hover:bg-primary/90 text-primary-foreground ${isMobile ? 'text-sm py-3' : ''}`} size={isMobile ? "default" : "lg"}>
+                          <CreditCard className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} mr-2`} />
                           Checkout
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="max-w-md bg-card border-border">
+                      <DialogContent className={`${isMobile ? 'max-w-[95vw] w-full mx-2' : 'max-w-md'} bg-card border-border`}>
                         <DialogHeader>
                           <DialogTitle className="text-foreground">Checkout</DialogTitle>
                         </DialogHeader>
