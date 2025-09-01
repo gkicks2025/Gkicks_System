@@ -22,6 +22,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -110,7 +115,21 @@ export default function InventoryPage() {
   const [variantStockProduct, setVariantStockProduct] = useState<Product | null>(null)
   const [variantStockData, setVariantStockData] = useState<Record<string, Record<string, number>>>({})
   const [updatingVariantStock, setUpdatingVariantStock] = useState(false)
+  const [collapsedColorways, setCollapsedColorways] = useState<Set<string>>(new Set());
   const [expandedProducts, setExpandedProducts] = useState<Set<number>>(new Set())
+
+  // Toggle colorway collapse state
+  const toggleColorwayCollapse = (color: string) => {
+    setCollapsedColorways(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(color)) {
+        newSet.delete(color)
+      } else {
+        newSet.add(color)
+      }
+      return newSet
+    })
+  }
   const [uploadingImages, setUploadingImages] = useState(false)
   const [uploading3DModel, setUploading3DModel] = useState(false)
 
@@ -434,6 +453,9 @@ export default function InventoryPage() {
     // Initialize variant stock data from product
     const variants = product.variants || {}
     setVariantStockData(variants)
+    // Initialize all colorways as collapsed
+    const allColors = product.colors || []
+    setCollapsedColorways(new Set(allColors))
     setIsVariantStockDialogOpen(true)
   }
 
@@ -2256,9 +2278,22 @@ export default function InventoryPage() {
           <div className="space-y-6">
             {variantStockProduct?.colors && variantStockProduct.colors.length > 0 ? (
               variantStockProduct.colors.map((color) => (
-                <div key={color} className="space-y-4">
-                  <h4 className="text-lg font-semibold text-foreground capitalize">{color}</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <Collapsible key={color} open={!collapsedColorways.has(color)} onOpenChange={() => toggleColorwayCollapse(color)}>
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="flex items-center justify-between w-full p-0 h-auto hover:bg-transparent"
+                    >
+                      <h4 className="text-lg font-semibold text-foreground capitalize">{color}</h4>
+                      <ChevronDown
+                        className={`h-4 w-4 transition-transform duration-200 ${
+                          collapsedColorways.has(color) ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-4 mt-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {variantStockProduct.sizes?.map((size) => {
                       const currentStock = variantStockData[color]?.[size] || 0
                       return (
@@ -2287,8 +2322,9 @@ export default function InventoryPage() {
                         </div>
                       )
                     })}
-                  </div>
-                </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               ))
             ) : (
               <div className="text-center py-8">

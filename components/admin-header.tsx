@@ -6,7 +6,7 @@ import Image from "next/image"
 import { useRouter, usePathname } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { useAdmin } from "@/contexts/admin-context"
-import { Menu, X, Home, Package, ShoppingCart, BarChart3, Calculator, User, Settings, LogOut, Database } from "lucide-react"
+import { Menu, X, Home, Package, ShoppingCart, BarChart3, Calculator, User, Settings, LogOut, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -57,7 +57,7 @@ export function AdminHeader() {
     { href: "/admin/carousel", icon: Settings, label: "Carousel", active: pathname === "/admin/carousel", permission: "carousel" },
     { href: "/admin/analytics", icon: BarChart3, label: "Analytics", active: pathname === "/admin/analytics", permission: "analytics" },
     { href: "/admin/pos", icon: Calculator, label: "POS", active: pathname === "/admin/pos", permission: "pos" },
-    { href: "/admin/mysql", icon: Database, label: "Database", active: pathname === "/admin/mysql", permission: "database" },
+    { href: "/admin/backup", icon: Shield, label: "Backup", active: pathname === "/admin/backup", permission: "backup" },
   ]
   
   const navigationItems = allNavigationItems.filter(item => {
