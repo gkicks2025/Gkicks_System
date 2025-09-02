@@ -19,7 +19,7 @@ async function testProfileUpdate() {
         sms_notifications: true,
         email_notifications: true,
         preferred_language: 'en',
-        currency: 'USD'
+        currency: 'PHP'
       })
     };
     

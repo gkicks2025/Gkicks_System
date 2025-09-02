@@ -653,8 +653,8 @@ export default function InventoryPage() {
         'SKU': product.sku || 'N/A',
         'Category': product.category,
         'Brand': product.brand,
-        'Price': `$${product.price}`,
-        'Original Price': product.originalPrice ? `$${product.originalPrice}` : 'N/A',
+        'Price': `₱${product.price}`,
+        'Original Price': product.originalPrice ? `₱${product.originalPrice}` : 'N/A',
         'Stock Quantity': product.stock_quantity ?? 0,
         'Low Stock Threshold': product.low_stock_threshold ?? 10,
         'Status': product.is_active ? 'Active' : 'Inactive',
@@ -975,10 +975,10 @@ export default function InventoryPage() {
                   <TableCell className="text-foreground">{product.brand}</TableCell>
                   <TableCell className="text-foreground">
                     <div className="flex flex-col">
-                      <span className="font-medium">${product.price}</span>
+                      <span className="font-medium">₱{product.price}</span>
                       {product.originalPrice && product.originalPrice > product.price && (
                         <span className="text-sm text-muted-foreground line-through">
-                          ${product.originalPrice}
+                          ₱{product.originalPrice}
                         </span>
                       )}
                     </div>

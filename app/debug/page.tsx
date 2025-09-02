@@ -104,7 +104,7 @@ export default function DebugPage() {
                         {product.name}
                       </h3>
                       <p className="text-gray-600 dark:text-gray-400">
-                        {product.brand} • ${product.price} • {product.category}
+                        {product.brand} • ₱{product.price} • {product.category}
                       </p>
                       <div className="flex gap-2 mt-2">
                         {product.isNew && (
