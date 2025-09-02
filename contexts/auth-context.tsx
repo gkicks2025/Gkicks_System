@@ -191,7 +191,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async () => {
     try {
-      await nextAuthSignIn('google', { callbackUrl: '/' });
+      await nextAuthSignIn('google', { callbackUrl: '/auth' });
     } catch (error) {
       console.error("Google sign in error:", error);
       toast({
@@ -213,7 +213,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem('auth_token');
       }
       
-      await nextAuthSignOut({ callbackUrl: '/auth' });
+      await nextAuthSignOut({ callbackUrl: '/' });
       dispatch({ type: "SET_USER", payload: null });
       toast({
         title: "Signed out",

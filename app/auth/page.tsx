@@ -21,9 +21,11 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (user && !loading) {
-      // Check if user is admin and redirect accordingly
+      // Check if user is admin/staff and redirect accordingly
       if (user.email === "gkcksdmn@gmail.com") {
         router.push("/admin")
+      } else if (user.email === "gkicksstaff@gmail.com") {
+        router.push("/admin/orders")
       } else {
         router.push("/") // Redirect to home if already logged in
       }
