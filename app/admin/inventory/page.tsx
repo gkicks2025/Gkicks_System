@@ -164,7 +164,7 @@ export default function InventoryPage() {
   const [colorInput, setColorInput] = useState("")
   const [sizeInput, setSizeInput] = useState("")
   
-  // Check admin authentication - allow viewing but restrict editing
+  // Check admin authentication and redirect if not authenticated
   useEffect(() => {
     console.log('🔍 Admin State:', adminState)
     console.log('🔍 Is Authenticated:', adminState.isAuthenticated)
@@ -172,15 +172,22 @@ export default function InventoryPage() {
     const token = localStorage.getItem('auth_token')
     console.log('🔍 Token in localStorage:', token)
     
-    // Show warning if not authenticated but don't redirect
+    // Only redirect if we're sure the user is not authenticated and not loading
     if (!adminState.isLoading && !adminState.isAuthenticated) {
-      toast({
-        title: "Limited Access",
-        description: "You can view inventory but need admin login to make changes",
-        variant: "default",
-      })
+      // Add a small delay to prevent rapid redirects and race conditions
+      const redirectTimer = setTimeout(() => {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in as admin to access inventory management",
+          variant: "destructive",
+        })
+        // Use replace instead of push to prevent back button issues
+        router.replace('/admin/login')
+      }, 100)
+      
+      return () => clearTimeout(redirectTimer)
     }
-  }, [adminState.isLoading, adminState.isAuthenticated, toast])
+  }, [adminState.isLoading, adminState.isAuthenticated, router, toast])
 
   const categories = ["Men", "Women", "Kids"]
   const brands = ["Nike", "Adidas", "Converse", "New Balance", "ASICS"]
@@ -189,15 +196,17 @@ export default function InventoryPage() {
   const loadProducts = async () => {
     try {
       setLoading(true)
-      console.log('🔍 INVENTORY: Loading products from API...')
-      const response = await fetch('/api/products')
+      const token = localStorage.getItem('auth_token')
+      const response = await fetch('/api/products', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
       if (response.ok) {
         const data = await response.json()
-        console.log('✅ INVENTORY: Successfully loaded', data.length, 'products')
         // API returns products array directly, not wrapped in { products: [] }
         setProducts(Array.isArray(data) ? data : [])
       } else {
-        console.error('❌ INVENTORY: Failed to load products, status:', response.status)
         toast({
           title: "Error",
           description: "Failed to load products",
@@ -205,7 +214,7 @@ export default function InventoryPage() {
         })
       }
     } catch (error) {
-      console.error('❌ INVENTORY: Error loading products:', error)
+      console.error('Error loading products:', error)
       toast({
         title: "Error",
         description: "Failed to load products",
@@ -216,11 +225,12 @@ export default function InventoryPage() {
     }
   }
 
-  // Load products on component mount
+  // Load products on component mount only if authenticated
   useEffect(() => {
-    console.log('🚀 INVENTORY: Component mounted, calling loadProducts...')
-    loadProducts()
-  }, [])
+    if (adminState.isAuthenticated) {
+      loadProducts()
+    }
+  }, [adminState.isAuthenticated])
 
   // Handle image upload
   const uploadImages = async (files: File[]): Promise<string[]> => {
