@@ -91,9 +91,9 @@ export default function WishlistPage() {
 
   if (wishlistState.items.length === 0) {
     return (
-      <div className="min-h-screen bg-background/95 backdrop-blur flex flex-col transition-colors">
+      <div className="min-h-screen bg-background flex flex-col transition-colors">
         <main className="flex-1 container mx-auto px-4 py-8">
-          <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          <Card className="bg-card border-border">
             <CardContent className="text-center py-8 sm:py-12">
               <Heart className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
               <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-yellow-400 mb-2">
@@ -116,23 +116,23 @@ export default function WishlistPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background/95 backdrop-blur flex flex-col transition-colors">
+    <div className="min-h-screen bg-background flex flex-col transition-colors">
       <main className="flex-1 container mx-auto px-4 py-6 sm:py-8">
         <div className="mb-6 sm:mb-8">
           <Button
             variant="ghost"
             onClick={() => router.back()}
-            className="mb-4 -ml-4 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-yellow-400"
+            className="mb-4 -ml-4 text-muted-foreground hover:text-yellow-400"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-yellow-400">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground dark:text-yellow-400">
                 My Wishlist
               </h1>
-              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">
+              <p className="text-sm sm:text-base text-muted-foreground mt-1 sm:mt-2">
                 {wishlistState.items.length} {wishlistState.items.length === 1 ? "item" : "items"} saved
               </p>
             </div>
@@ -169,7 +169,7 @@ export default function WishlistPage() {
             return (
               <Card
                 key={item.id}
-                className="group relative bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200"
+                className="group relative bg-card border-border hover:shadow-lg transition-all duration-200"
               >
                 <CardContent className="p-4">
                   <div className="absolute top-2 left-2 z-10">
@@ -177,7 +177,7 @@ export default function WishlistPage() {
                       type="checkbox"
                       checked={selectedItems.has(item.id.toString())}
                       onChange={() => toggleItemSelection(item.id.toString())}
-                      className="w-4 h-4 text-yellow-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-yellow-400 dark:focus:ring-yellow-500 focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800"
+                      className="w-4 h-4 text-yellow-400 bg-background border-border rounded focus:ring-yellow-400 focus:ring-2 focus:ring-offset-2 focus:ring-offset-background"
                     />
                   </div>
 
@@ -190,7 +190,7 @@ export default function WishlistPage() {
                     <Trash2 className="h-4 w-4" />
                   </Button>
 
-                  <div className="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg mb-4 overflow-hidden">
+                  <div className="aspect-square bg-muted rounded-lg mb-4 overflow-hidden">
                     <Image
                       src={item.image || "/placeholder.svg"}
                       alt={item.name}
@@ -206,13 +206,13 @@ export default function WishlistPage() {
 
                   <div className="space-y-2">
                     <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-medium text-sm text-gray-900 dark:text-white line-clamp-2 leading-tight">
+                      <h3 className="font-medium text-sm text-foreground line-clamp-2 leading-tight">
                         {item.name}
                       </h3>
                       {item.addedDate && (
                         <Badge
                           variant="secondary"
-                          className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 flex-shrink-0"
+                          className="text-xs bg-muted text-muted-foreground flex-shrink-0"
                         >
                           {new Date(item.addedDate).toLocaleDateString()}
                         </Badge>
@@ -220,7 +220,7 @@ export default function WishlistPage() {
                     </div>
 
                     {item.brand && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{item.brand}</p>
+                      <p className="text-xs text-muted-foreground">{item.brand}</p>
                     )}
 
                     {item.colors && item.colors.length > 0 && (
@@ -228,13 +228,13 @@ export default function WishlistPage() {
                         {item.colors.slice(0, 4).map((color, index) => (
                           <div
                             key={index}
-                            className="w-4 h-4 rounded-full border-2 border-white dark:border-gray-600 shadow-sm ring-1 ring-gray-200 dark:ring-gray-500"
+                            className="w-4 h-4 rounded-full border-2 border-background shadow-sm ring-1 ring-border"
                             style={{ backgroundColor: color.toLowerCase() }}
                             title={color}
                           />
                         ))}
                         {item.colors.length > 4 && (
-                          <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
+                          <span className="text-xs text-muted-foreground ml-1">
                             +{item.colors.length - 4}
                           </span>
                         )}
@@ -250,27 +250,27 @@ export default function WishlistPage() {
                               className={`h-3 w-3 transition-colors ${
                                 i < Math.floor(item.rating ?? 0)
                                   ? "text-yellow-400 fill-current"
-                                  : "text-gray-300 dark:text-gray-600"
+                                  : "text-muted-foreground"
                               }`}
                             />
                           ))}
                         </div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">({item.rating})</span>
+                        <span className="text-xs text-muted-foreground">({item.rating})</span>
                       </div>
                     )}
 
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold text-gray-900 dark:text-white">
+                        <span className="text-lg font-bold text-foreground">
                           ₱{item.price.toLocaleString()}
                         </span>
                         {item.originalPrice && item.originalPrice > item.price && (
-                          <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
+                          <span className="text-sm text-muted-foreground line-through">
                             ₱{item.originalPrice.toLocaleString()}
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                      <p className="text-xs text-muted-foreground">
                         ₱{(item.price * 1.12).toLocaleString()} (incl. 12% VAT)
                       </p>
                     </div>
@@ -285,7 +285,7 @@ export default function WishlistPage() {
                       <Button
                         variant="outline"
                         onClick={() => router.push(`/product/${item.id}`)}
-                        className="flex-1 text-xs py-2 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 hover:text-gray-900 dark:hover:text-gray-100"
+                        className="flex-1 text-xs py-2 border-border hover:bg-muted text-foreground hover:text-foreground"
                       >
                         View Details
                       </Button>
@@ -298,11 +298,11 @@ export default function WishlistPage() {
         </div>
 
         {wishlistState.items.length > 0 && (
-          <div className="flex flex-col sm:flex-row gap-4 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex flex-col sm:flex-row gap-4 mt-8 pt-6 border-t border-border">
             <Button
               onClick={() => router.push("/")}
               variant="outline"
-              className="flex-1 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 hover:text-gray-900 dark:hover:text-gray-100"
+              className="flex-1 border-border hover:bg-muted text-foreground hover:text-foreground"
             >
               Continue Shopping
             </Button>
