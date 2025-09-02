@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
       activeProducts: 0,
       lowStockProducts: 0,
       outOfStockProducts: 0,
+      inStockProducts: 0,
       totalOrders: 0,
       pendingOrders: 0,
       completedOrders: 0,
@@ -40,7 +41,8 @@ export async function GET(request: NextRequest) {
           COUNT(*) as total_products,
           SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active_products,
           SUM(CASE WHEN stock_quantity > 0 AND stock_quantity <= 5 THEN 1 ELSE 0 END) as low_stock_products,
-          SUM(CASE WHEN stock_quantity = 0 THEN 1 ELSE 0 END) as out_of_stock_products
+          SUM(CASE WHEN stock_quantity = 0 THEN 1 ELSE 0 END) as out_of_stock_products,
+          SUM(CASE WHEN stock_quantity > 5 THEN 1 ELSE 0 END) as in_stock_products
         FROM products
       `)
       
@@ -50,20 +52,20 @@ export async function GET(request: NextRequest) {
         dashboardStats.activeProducts = parseInt(stats.active_products) || 0
         dashboardStats.lowStockProducts = parseInt(stats.low_stock_products) || 0
         dashboardStats.outOfStockProducts = parseInt(stats.out_of_stock_products) || 0
+        dashboardStats.inStockProducts = parseInt(stats.in_stock_products) || 0
       }
     } catch (error) {
       console.warn('Warning: Error fetching product stats:', error)
     }
     
-    // Fetch orders statistics
+    // Fetch orders statistics (including POS transactions)
     try {
       const orderStats = await executeQuery(`
         SELECT 
-          COUNT(*) as total_orders,
-          SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_orders,
-          SUM(CASE WHEN status IN ('completed', 'delivered') THEN 1 ELSE 0 END) as completed_orders,
-          SUM(CASE WHEN status IN ('completed', 'delivered') THEN total_amount ELSE 0 END) as total_revenue
-        FROM orders
+          (SELECT COUNT(*) FROM orders) + (SELECT COUNT(*) FROM pos_transactions WHERE status = 'completed') as total_orders,
+          (SELECT COUNT(*) FROM orders WHERE status = 'pending') as pending_orders,
+          (SELECT COUNT(*) FROM orders WHERE status IN ('completed', 'delivered')) + (SELECT COUNT(*) FROM pos_transactions WHERE status = 'completed') as completed_orders,
+          (SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE status NOT IN ('cancelled', 'refunded')) + (SELECT COALESCE(SUM(total_amount), 0) FROM pos_transactions WHERE status = 'completed') as total_revenue
       `)
       
       if (Array.isArray(orderStats) && orderStats.length > 0) {
@@ -132,17 +134,35 @@ export async function GET(request: NextRequest) {
       console.warn('Warning: Error fetching top products:', error)
     }
     
-    // Fetch sales data for the last 7 days
+    // Fetch sales data for the last 7 days (including POS transactions)
     try {
       const salesData = await executeQuery(`
         SELECT 
-          DATE(created_at) as date,
-          SUM(total_amount) as revenue,
-          COUNT(*) as orders
-        FROM orders
-        WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-          AND status IN ('completed', 'delivered')
-        GROUP BY DATE(created_at)
+          date,
+          SUM(revenue) as revenue,
+          SUM(orders) as orders
+        FROM (
+          SELECT 
+            DATE(created_at) as date,
+            SUM(total_amount) as revenue,
+            COUNT(*) as orders
+          FROM orders
+          WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+            AND status NOT IN ('cancelled', 'refunded')
+          GROUP BY DATE(created_at)
+          
+          UNION ALL
+          
+          SELECT 
+            DATE(created_at) as date,
+            SUM(total_amount) as revenue,
+            COUNT(*) as orders
+          FROM pos_transactions
+          WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+            AND status = 'completed'
+          GROUP BY DATE(created_at)
+        ) combined_sales
+        GROUP BY date
         ORDER BY date ASC
       `)
       
@@ -163,9 +183,9 @@ export async function GET(request: NextRequest) {
         ORDER BY count DESC
       `)
       
-      dashboardStats.categoryData = categoryData?.map(row => ({
+      dashboardStats.categoryData = categoryData?.map((row: { category: string; count: number }) => ({
         name: row.category || 'Other',
-        value: parseInt(row.count) || 0
+        value: String(row.count || 0)
       })) || []
     } catch (error) {
       console.warn('Warning: Error fetching category data:', error)

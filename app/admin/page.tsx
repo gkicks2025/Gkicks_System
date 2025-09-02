@@ -28,6 +28,7 @@ interface DashboardStats {
   activeProducts: number
   lowStockProducts: number
   outOfStockProducts: number
+  inStockProducts: number
   totalOrders: number
   pendingOrders: number
   completedOrders: number
@@ -211,7 +212,7 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-500">
-                {stats.totalProducts - stats.lowStockProducts - stats.outOfStockProducts}
+                {stats.inStockProducts}
               </div>
               <p className="text-xs text-muted-foreground">Products with adequate stock</p>
             </CardContent>
