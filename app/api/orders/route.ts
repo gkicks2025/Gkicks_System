@@ -48,18 +48,18 @@ export async function GET(request: NextRequest) {
       `SELECT 
         id,
         order_number,
+        customer_name,
+        customer_email,
         status,
         payment_status,
         payment_method,
+        payment_screenshot,
         subtotal,
         tax_amount,
         shipping_amount,
         discount_amount,
         total_amount as total,
-        customer_email,
         shipping_address,
-        billing_address,
-        notes,
         created_at,
         updated_at
       FROM orders 
@@ -75,14 +75,14 @@ export async function GET(request: NextRequest) {
           `SELECT 
             oi.id,
             oi.quantity,
-            oi.price,
+            oi.unit_price as price,
             oi.size,
             oi.color,
-            p.name,
-            p.brand,
+            oi.product_name as name,
+            oi.product_brand as brand,
             p.image_url
           FROM order_items oi
-          JOIN products p ON oi.product_id = p.id
+          LEFT JOIN products p ON oi.product_id = p.id
           WHERE oi.order_id = ?`,
           [order.id]
         ) as any[]
@@ -256,15 +256,17 @@ export async function POST(request: NextRequest) {
     for (const item of items) {
       await executeQuery(
         `INSERT INTO order_items (
-           order_id, product_id, quantity, size, color, price
-         ) VALUES (?, ?, ?, ?, ?, ?)`,
+           order_id, product_id, product_name, quantity, size, color, unit_price, total_price
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           orderId,
           item.product_id,
+          item.product_name || 'Unknown Product',
           item.quantity,
           item.size || null,
           item.color || null,
-          item.price
+          item.price,
+          item.price * item.quantity
         ]
       )
     }

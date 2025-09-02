@@ -976,7 +976,7 @@ export default function CartPage() {
                           {item.quantity}x {item.product_name}
                         </span>
                         <span className="flex-shrink-0 text-gray-900 dark:text-white">
-                          ₱{((item.price || 0) * (item.quantity || 0)).toLocaleString()}
+                          ₱{((item.unit_price || 0) * (item.quantity || 0)).toLocaleString()}
                         </span>
                       </div>
                     ))}
