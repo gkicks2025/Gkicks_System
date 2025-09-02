@@ -9,10 +9,41 @@ export async function GET(request: NextRequest) {
     
     // Check authentication
     const session = await getServerSession(authOptions)
-    if (!session) {
+    if (!session?.user?.email) {
+      console.log('❌ Analytics API: No session or email found')
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
+      )
+    }
+    
+    // Check if user has admin/staff role
+    const userEmail = session.user.email
+    console.log('🔍 Analytics API: Checking admin status for:', userEmail)
+    
+    try {
+      const adminCheck = await executeQuery(
+        'SELECT role FROM admin_users WHERE email = ? AND is_active = 1',
+        [userEmail]
+      )
+      
+      const isLegacyAdmin = userEmail === 'gkcksdmn@gmail.com'
+      const hasAdminAccess = (adminCheck && Array.isArray(adminCheck) && adminCheck.length > 0) || isLegacyAdmin
+      
+      if (!hasAdminAccess) {
+        console.log('❌ Analytics API: User does not have admin access:', userEmail)
+        return NextResponse.json(
+          { error: 'Unauthorized - Admin access required' },
+          { status: 403 }
+        )
+      }
+      
+      console.log('✅ Analytics API: User has admin access:', userEmail)
+    } catch (error) {
+      console.error('❌ Analytics API: Error checking admin status:', error)
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
       )
     }
     
@@ -83,7 +114,7 @@ export async function GET(request: NextRequest) {
         p.category,
         COUNT(DISTINCT oi.order_id) as orders,
         SUM(oi.quantity) as items_sold,
-        SUM(oi.price * oi.quantity) as revenue
+        SUM(price * oi.quantity) as revenue
       FROM order_items oi
       JOIN products p ON oi.product_id = p.id
       JOIN orders o ON oi.order_id = o.id
@@ -101,7 +132,7 @@ export async function GET(request: NextRequest) {
         p.brand,
         p.category,
         SUM(oi.quantity) as total_sold,
-        SUM(oi.price * oi.quantity) as revenue,
+        SUM(price * oi.quantity) as revenue,
         COUNT(DISTINCT oi.order_id) as order_count
       FROM order_items oi
       JOIN products p ON oi.product_id = p.id

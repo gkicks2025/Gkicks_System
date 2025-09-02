@@ -9,10 +9,41 @@ export async function GET(request: NextRequest) {
     
     // Check authentication
     const session = await getServerSession(authOptions)
-    if (!session) {
+    if (!session?.user?.email) {
+      console.log('❌ Orders API: No session or email found')
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
+      )
+    }
+    
+    // Check if user has admin/staff role
+    const userEmail = session.user.email
+    console.log('🔍 Orders API: Checking admin status for:', userEmail)
+    
+    try {
+      const adminCheck = await executeQuery(
+        'SELECT role FROM admin_users WHERE email = ? AND is_active = 1',
+        [userEmail]
+      )
+      
+      const isLegacyAdmin = userEmail === 'gkcksdmn@gmail.com'
+      const hasAdminAccess = (adminCheck && Array.isArray(adminCheck) && adminCheck.length > 0) || isLegacyAdmin
+      
+      if (!hasAdminAccess) {
+        console.log('❌ Orders API: User does not have admin access:', userEmail)
+        return NextResponse.json(
+          { error: 'Unauthorized - Admin access required' },
+          { status: 403 }
+        )
+      }
+      
+      console.log('✅ Orders API: User has admin access:', userEmail)
+    } catch (error) {
+      console.error('❌ Orders API: Error checking admin status:', error)
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
       )
     }
     

@@ -60,7 +60,9 @@ export default function AdminDashboard() {
 
       console.log("Fetching dashboard data...")
 
-      const response = await fetch('/api/admin/dashboard')
+      const response = await fetch('/api/admin/dashboard', {
+      credentials: 'include'
+    })
       if (!response.ok) {
         throw new Error('Failed to fetch dashboard data')
       }

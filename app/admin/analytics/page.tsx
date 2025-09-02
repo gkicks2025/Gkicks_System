@@ -50,9 +50,17 @@ export default function AnalyticsPage() {
       setLoading(true)
       setError(null)
       
-      const response = await fetch('/api/admin/analytics')
+      const response = await fetch('/api/admin/analytics', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch analytics data')
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(errorData.error || 'Failed to fetch analytics data')
       }
       
       const data = await response.json()

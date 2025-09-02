@@ -52,7 +52,9 @@ export default function AdminOrdersPage() {
   const loadOrders = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch('/api/admin/orders')
+      const response = await fetch('/api/admin/orders', {
+      credentials: 'include'
+    })
       if (response.ok) {
         const allOrders = await response.json()
         setOrders(allOrders || [])
