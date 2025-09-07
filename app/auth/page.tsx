@@ -298,23 +298,23 @@ export default function AuthPage() {
   const isDark = resolvedTheme === "dark"
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background text-white p-4">
+    <div className={`min-h-screen flex flex-col items-center justify-center bg-background p-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
       <div className="text-center mb-8">
         <Image 
-          src={isDark ? "/images/gkicks-transparent-logo.png" : "/images/gkicks-main-logo.png"} 
+          src="/images/gkicks-transparent-logo.png" 
           alt="GKicks Logo" 
           width={100} 
           height={100} 
           className="mx-auto mb-4" 
         />
         <h1 className="text-3xl font-bold text-yellow-400 mb-2">Welcome to GKicks</h1>
-        <p className="text-gray-400">Your premium sneaker destination</p>
+        <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Your premium sneaker destination</p>
       </div>
 
-      <div className="w-full max-w-md bg-gray-800 rounded-lg shadow-lg p-6 sm:p-8">
+      <div className={`w-full max-w-md rounded-lg shadow-lg p-6 sm:p-8 ${isDark ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
         <div className="text-center mb-6">
           <h2 className="text-xl font-bold text-yellow-400 mb-2">{isSignUp ? "Create Account" : "Sign In"}</h2>
-          <p className="text-gray-400 text-sm">
+          <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             {isSignUp ? "Create your account to get started" : "Sign in with your account to continue"}
           </p>
         </div>
@@ -323,7 +323,7 @@ export default function AuthPage() {
           {isSignUp && (
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-300 mb-1">
+                <label htmlFor="firstName" className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   First Name
                 </label>
                 <Input
@@ -331,13 +331,13 @@ export default function AuthPage() {
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  className="w-full bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-yellow-400 focus:ring-yellow-400"
+                  className={`w-full focus:border-yellow-400 focus:ring-yellow-400 ${isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'}`}
                   placeholder="First name"
                   required={isSignUp}
                 />
               </div>
               <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-300 mb-1">
+                <label htmlFor="lastName" className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   Last Name
                 </label>
                 <Input
@@ -345,7 +345,7 @@ export default function AuthPage() {
                   type="text"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  className="w-full bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-yellow-400 focus:ring-yellow-400"
+                  className={`w-full focus:border-yellow-400 focus:ring-yellow-400 ${isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'}`}
                   placeholder="Last name"
                   required={isSignUp}
                 />
@@ -354,22 +354,22 @@ export default function AuthPage() {
           )}
           
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">
-              Gmail account
+            <label htmlFor="email" className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+              Email
             </label>
             <Input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-yellow-400 focus:ring-yellow-400"
+              className={`w-full focus:border-yellow-400 focus:ring-yellow-400 ${isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'}`}
               placeholder="Enter your email"
               required
             />
           </div>
           
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="password" className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
               Password
             </label>
             <div className="relative">
@@ -378,14 +378,14 @@ export default function AuthPage() {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-yellow-400 focus:ring-yellow-400 pr-10"
+                className={`w-full focus:border-yellow-400 focus:ring-yellow-400 pr-10 ${isDark ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'}`}
                 placeholder="Enter your password"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 focus:outline-none"
+                className={`absolute right-3 top-1/2 transform -translate-y-1/2 focus:outline-none ${isDark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-800'}`}
               >
                 {showPassword ? (
                   <EyeOff className="h-4 w-4" />
@@ -415,7 +415,7 @@ export default function AuthPage() {
               setShowForgotPassword(false)
               setShowForgotEmail(false)
             }}
-            className="text-blue-400 hover:text-blue-300 text-sm underline"
+            className={`text-sm underline ${isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'}`}
           >
             {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Create one"}
           </button>
