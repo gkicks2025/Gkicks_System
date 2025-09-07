@@ -20,14 +20,27 @@ export async function GET(request: NextRequest) {
     // Get session to identify admin user
     const session = await getServerSession(authOptions);
     
-    if (!session?.user || !(session.user as any).id) {
+    if (!session?.user?.email) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: 'Unauthorized - No session' },
         { status: 401 }
       );
     }
 
-    const adminUserId = (session.user as any).id;
+    // Get admin user ID from database
+    const adminUserResult = await executeQuery(
+      'SELECT id FROM users WHERE email = ? AND is_admin = 1',
+      [session.user.email]
+    ) as RowDataPacket[];
+    
+    if (adminUserResult.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized - Not an admin' },
+        { status: 401 }
+      );
+    }
+    
+    const adminUserId = adminUserResult[0].id;
     
     // Get count of new/pending orders that haven't been viewed by this admin
     const newOrdersResult = await executeQuery(

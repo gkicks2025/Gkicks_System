@@ -1,7 +1,6 @@
 "use client";
 
 import React, { createContext, useContext, useReducer, useEffect } from "react";
-import { useSession, signIn as nextAuthSignIn, signOut as nextAuthSignOut } from "next-auth/react";
 import { useToast } from "@/hooks/use-toast";
 
 export interface User {
@@ -28,10 +27,12 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   tokenReady: boolean;
-  signInWithGoogle: () => Promise<void>;
+  login: (provider: string) => Promise<void>;
+  logout: () => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
   updateUserData: (updates: Partial<User>) => void;
+  checkAuthStatus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -50,10 +51,9 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession();
   const [state, dispatch] = useReducer(authReducer, {
     user: null,
-    loading: status === "loading",
+    loading: true,
     tokenReady: false,
   });
   const { toast } = useToast();
@@ -102,26 +102,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Sync NextAuth session with our auth state and generate JWT token
+  // Check authentication status on app load
   useEffect(() => {
-    dispatch({ type: "SET_LOADING", payload: status === "loading" });
-    
-    if (session?.user) {
-      const user = session.user as User;
-      dispatch({ type: "SET_USER", payload: user });
-      dispatch({ type: "SET_TOKEN_READY", payload: false });
-      
-      // Generate JWT token for API calls
-      generateJWTToken();
-    } else {
-      dispatch({ type: "SET_USER", payload: null });
-      dispatch({ type: "SET_TOKEN_READY", payload: false });
-      // Clear token when user signs out
-      if (typeof window !== "undefined") {
-        localStorage.removeItem('auth_token');
-      }
-    }
-  }, [session, status]);
+    checkAuthStatus();
+  }, []);
 
   // Check if we need to fetch profile on app initialization (when token exists but profile wasn't fetched)
   useEffect(() => {
@@ -156,55 +140,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 
 
-  // Generate JWT token from NextAuth session
-  const generateJWTToken = async () => {
+  // Check if user is authenticated
+  const checkAuthStatus = async () => {
     try {
-      // Clear any existing malformed token first
-      if (typeof window !== "undefined") {
-        localStorage.removeItem('auth_token');
-      }
+      dispatch({ type: "SET_LOADING", payload: true });
       
-      const response = await fetch('/api/auth/session-to-jwt', {
-        method: 'POST',
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        dispatch({ type: "SET_USER", payload: null });
+        dispatch({ type: "SET_TOKEN_READY", payload: false });
+        dispatch({ type: "SET_LOADING", payload: false });
+        return;
+      }
+
+      // Verify token with backend
+      const response = await fetch('/api/auth/me', {
+        method: 'GET',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
 
       if (response.ok) {
-        const data = await response.json();
-        if (typeof window !== "undefined" && data.token) {
-          localStorage.setItem('auth_token', data.token);
-          dispatch({ type: "SET_TOKEN_READY", payload: true });
-          
-          // Fetch complete user profile data after token is ready
-          await fetchUserProfile(data.token);
-        }
+        const userData = await response.json();
+        // Map is_admin to role field for consistency
+        const user = {
+          ...userData.user,
+          role: userData.user.is_admin ? 'admin' : 'customer'
+        };
+        dispatch({ type: "SET_USER", payload: user });
+        dispatch({ type: "SET_TOKEN_READY", payload: true });
+        
+        // Fetch complete user profile data
+        await fetchUserProfile(token);
       } else {
+        // Token is invalid, clear it
+        localStorage.removeItem('auth_token');
+        dispatch({ type: "SET_USER", payload: null });
         dispatch({ type: "SET_TOKEN_READY", payload: false });
       }
     } catch (error) {
-      console.error('Failed to generate JWT token:', error);
+      console.error('Failed to check auth status:', error);
+      localStorage.removeItem('auth_token');
+      dispatch({ type: "SET_USER", payload: null });
       dispatch({ type: "SET_TOKEN_READY", payload: false });
-    }
-  };
-
-  const signInWithGoogle = async () => {
-    try {
-      await nextAuthSignIn('google', { callbackUrl: '/auth' });
-    } catch (error) {
-      console.error("Google sign in error:", error);
-      toast({
-        title: "Sign In Error",
-        description: "Failed to sign in with Google. Please try again.",
-        variant: "destructive",
-      });
     } finally {
       dispatch({ type: "SET_LOADING", payload: false });
     }
   };
 
 
+
+
+
+  const login = async (provider: string) => {
+    // This method is primarily used by admin context
+    // For regular users, authentication is handled via OAuth flows
+    console.log(`Login with ${provider} - handled by OAuth flow`);
+  };
+
+  const logout = async () => {
+    await signOut();
+  };
 
   const signOut = async () => {
     try {
@@ -213,12 +211,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem('auth_token');
       }
       
-      await nextAuthSignOut({ callbackUrl: '/' });
+      // Call logout API endpoint
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
       dispatch({ type: "SET_USER", payload: null });
+      dispatch({ type: "SET_TOKEN_READY", payload: false });
+      
       toast({
         title: "Signed out",
         description: "You have been signed out successfully.",
       });
+      
+      // Redirect to auth page
+      window.location.href = '/auth';
     } catch (error) {
       console.error("Sign out error:", error);
       toast({
@@ -332,13 +342,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Initialize and check for existing authentication on app startup
   useEffect(() => {
     const initializeAuth = async () => {
-      // Only run if we don't have a session yet but have a stored token
+      // Only run if we don't have a user yet but have a stored token
       const storedToken = localStorage.getItem('auth_token')
       
-      if (storedToken && !session && !state.user) {
+      if (storedToken && !state.user) {
         dispatch({ type: "SET_TOKEN_READY", payload: true })
         await fetchUserProfile(storedToken)
-      } else if (!storedToken && !session) {
+      } else if (!storedToken) {
         dispatch({ type: "SET_TOKEN_READY", payload: false })
       }
     }
@@ -352,10 +362,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user: state.user,
         loading: state.loading,
         tokenReady: state.tokenReady,
-        signInWithGoogle,
+        login,
+        logout,
         signOut,
         updateProfile,
         updateUserData,
+        checkAuthStatus,
       }}
     >
       {children}

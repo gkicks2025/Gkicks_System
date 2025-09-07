@@ -1,20 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/database/mysql'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import jwt from 'jsonwebtoken'
+
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret'
 
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 API: Fetching admin dashboard data from MySQL database...')
     
-    // Check authentication
-    const session = await getServerSession(authOptions)
-    if (!session) {
+    // Check authentication using JWT token
+    let token = request.cookies.get('auth-token')?.value
+    
+    // If no cookie token, try Authorization header
+    if (!token) {
+      const authHeader = request.headers.get('authorization')
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7)
+      }
+    }
+
+    if (!token) {
+      console.log('❌ Dashboard API: No token provided')
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'No authentication token provided' },
         { status: 401 }
       )
     }
+
+    // Verify token
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as { userId: string, email: string }
+    } catch (error) {
+      console.log('❌ Dashboard API: Invalid token')
+      return NextResponse.json(
+        { error: 'Invalid authentication token' },
+        { status: 401 }
+      )
+    }
+
+    // Check if user is admin
+    const adminUsers = await executeQuery(
+      'SELECT id, email, is_admin FROM users WHERE id = ? AND is_admin = 1',
+      [decoded.userId]
+    ) as any[]
+
+    if (adminUsers.length === 0) {
+      console.log('❌ Dashboard API: User is not admin:', decoded.email)
+      return NextResponse.json(
+        { error: 'Access denied. Admin privileges required.' },
+        { status: 403 }
+      )
+    }
+
+    console.log('✅ Dashboard API: Admin access granted for:', decoded.email)
     
     // Initialize dashboard stats
     const dashboardStats = {

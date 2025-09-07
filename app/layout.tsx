@@ -34,7 +34,6 @@ export default function RootLayout({
             </main>
             <Footer />
           </div>
-          <div className="elfsight-app-1645323a-e0ed-4f5c-a082-273ee0550c9c" data-elfsight-app-lazy></div>
         </Providers>
       </body>
     </html>

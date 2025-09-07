@@ -8,10 +8,17 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret'
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('🔐 JWT: Attempting to convert session to JWT...')
+    
     // Get the NextAuth session
     const session = await getServerSession(authOptions)
     
+    console.log('🔐 JWT: Session found:', !!session)
+    console.log('🔐 JWT: User in session:', !!session?.user)
+    console.log('🔐 JWT: User email:', session?.user?.email)
+    
     if (!session || !session.user) {
+      console.log('❌ JWT: No active session found')
       return NextResponse.json(
         { error: 'No active session found' },
         { status: 401 }
@@ -21,7 +28,7 @@ export async function POST(request: NextRequest) {
     // Get user from database to get the user ID
     const userArray = await executeQuery(
       'SELECT id, email, first_name, last_name, is_admin FROM users WHERE email = ?',
-      [session.user.email]
+      [session.user.email || null]
     ) as any[]
 
     if (userArray.length === 0) {

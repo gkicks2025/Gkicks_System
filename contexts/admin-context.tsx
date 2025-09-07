@@ -38,7 +38,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated: false,
   })
 
-  const { user: authUser, signInWithGoogle, signOut } = useAuth()
+  const { user: authUser, login: signIn, logout: signOut } = useAuth()
 
   // Check if current authenticated user is an admin
   useEffect(() => {
@@ -68,27 +68,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
           const data = await response.json()
           console.log("Admin user found:", data.user)
           
-          // Generate JWT token for admin user
-          try {
-            const tokenResponse = await fetch('/api/auth/session-to-jwt', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-            })
-            
-            if (tokenResponse.ok) {
-              const tokenData = await tokenResponse.json()
-              if (typeof window !== "undefined" && tokenData.token) {
-                console.log('✅ Admin JWT token generated and stored')
-                localStorage.setItem('auth_token', tokenData.token)
-              }
-            } else {
-              console.error('Failed to generate admin JWT token:', tokenResponse.status)
-            }
-          } catch (tokenError) {
-            console.error('Error generating admin JWT token:', tokenError)
-          }
+          // JWT token is already handled by the main auth system
+          console.log('✅ Admin status verified, using existing JWT token')
           
           setState({
             user: data.user,
@@ -123,7 +104,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
       // First, sign in with Google auth
       try {
-        await signInWithGoogle()
+        await signIn('google')
       } catch (error) {
         console.error("Auth error: Login failed", error)
         setState((prev) => ({ ...prev, isLoading: false }))
@@ -156,27 +137,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json()
       console.log("Admin login successful:", data.user)
       
-      // Generate JWT token for admin user
-      try {
-        const tokenResponse = await fetch('/api/auth/session-to-jwt', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        })
-        
-        if (tokenResponse.ok) {
-          const tokenData = await tokenResponse.json()
-          if (typeof window !== "undefined" && tokenData.token) {
-            console.log('✅ Admin login JWT token generated and stored')
-            localStorage.setItem('auth_token', tokenData.token)
-          }
-        } else {
-          console.error('Failed to generate admin login JWT token:', tokenResponse.status)
-        }
-      } catch (tokenError) {
-        console.error('Error generating admin login JWT token:', tokenError)
-      }
+      // JWT token is already handled by the main auth system
+      console.log('✅ Admin login successful, using existing JWT token')
       
       setState({
         user: data.user,

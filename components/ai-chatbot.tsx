@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { MessageCircle, X, RotateCcw, Minimize2, Maximize2, Send, Bot, User } from "lucide-react"
+import { MessageCircle, X, RotateCcw, Minimize2, Maximize2, Send, Bot, User, ExternalLink } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 export function AIChatbot() {
@@ -68,9 +68,11 @@ export function AIChatbot() {
               variant="ghost"
               size="sm"
               onClick={() => setShowElfsightWidget(!showElfsightWidget)}
-              className="h-8 px-2 text-xs text-black hover:bg-black/10"
+              className="h-8 px-2 text-xs text-black hover:bg-black/10 flex items-center space-x-1"
+              title={showElfsightWidget ? "Switch to Custom Chat" : "Switch to Elfsight Widget"}
             >
-              {showElfsightWidget ? "Custom" : "Elfsight"}
+              <ExternalLink className="h-3 w-3" />
+              <span>{showElfsightWidget ? "Custom" : "Elfsight"}</span>
             </Button>
             <Button
               variant="ghost"

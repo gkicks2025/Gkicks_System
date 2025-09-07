@@ -23,12 +23,24 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         // Map NextAuth session to our User interface
         let role: 'admin' | 'staff' | 'customer' = 'customer' // Default role for all users
+        let userId = ''
         
-        // Check admin_users table first for staff/admin roles
+        // Get user from database to get proper ID and role
         try {
+          const dbUser = await executeQuery(
+            'SELECT id, is_admin FROM users WHERE email = ?',
+            [session.user.email || null]
+          )
+          
+          if (dbUser && Array.isArray(dbUser) && dbUser.length > 0) {
+            userId = (dbUser as any[])[0].id.toString()
+            role = (dbUser as any[])[0].is_admin ? 'admin' : 'customer'
+          }
+          
+          // Check admin_users table for staff/admin roles
           const adminUser = await executeQuery(
             'SELECT role FROM admin_users WHERE email = ? AND is_active = 1',
-            [session.user.email]
+            [session.user.email || null]
           )
           
           if (adminUser && Array.isArray(adminUser) && adminUser.length > 0) {
@@ -38,7 +50,7 @@ export const authOptions: NextAuthOptions = {
             role = 'admin'
           }
         } catch (error) {
-          console.error('Error checking admin_users table:', error)
+          console.error('Error checking database for user:', error)
           // Fallback to legacy admin check
           if (session.user.email === 'gkcksdmn@gmail.com') {
             role = 'admin'
@@ -46,7 +58,7 @@ export const authOptions: NextAuthOptions = {
         }
         
         const user: User = {
-          id: token.sub || '',
+          id: userId || token.sub || '',
           email: session.user.email || '',
           firstName: session.user.name?.split(' ')[0] || '',
           lastName: session.user.name?.split(' ').slice(1).join(' ') || '',
@@ -54,7 +66,7 @@ export const authOptions: NextAuthOptions = {
           avatar: session.user.image || '',
         }
         
-        console.log('🔍 Auth: User session created -', user.email, 'role:', user.role)
+        console.log('🔍 Auth: User session created -', user.email, 'role:', user.role, 'id:', user.id)
         
         // Store user in database if needed
         await storeUserInDatabase(user)
@@ -88,9 +100,9 @@ async function storeUserInDatabase(user: User) {
         'INSERT INTO users (email, first_name, last_name, avatar_url, is_admin) VALUES (?, ?, ?, ?, ?)',
         [
           user.email,
-          user.firstName,
-          user.lastName,
-          user.avatar,
+          user.firstName || '',
+          user.lastName || '',
+          user.avatar || '',
           user.role === 'admin' ? 1 : 0
         ]
       )
@@ -99,7 +111,7 @@ async function storeUserInDatabase(user: User) {
       // Update existing user (including admin status)
       await executeQuery(
         'UPDATE users SET first_name = ?, last_name = ?, avatar_url = ?, is_admin = ? WHERE email = ?',
-        [user.firstName, user.lastName, user.avatar, user.role === 'admin' ? 1 : 0, user.email]
+        [user.firstName || '', user.lastName || '', user.avatar || '', user.role === 'admin' ? 1 : 0, user.email || '']
       )
       console.log('✅ Auth: User updated in database:', user.email)
     }
