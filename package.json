@@ -72,7 +72,7 @@
     "next": "15.2.4",
     "next-auth": "^4.24.11",
     "next-themes": "latest",
-    "nodemailer": "^7.0.5",
+    "nodemailer": "^7.0.6",
     "react": "^19",
     "react-day-picker": "8.10.1",
     "react-dom": "^19",

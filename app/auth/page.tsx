@@ -1,18 +1,19 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { useTheme } from "next-themes"
-import { Eye, EyeOff } from "lucide-react"
+import { Eye, EyeOff, Mail } from "lucide-react"
 
 export default function AuthPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const { resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
@@ -27,10 +28,19 @@ export default function AuthPage() {
   const [forgotSuccess, setForgotSuccess] = useState<string | null>(null)
   const [forgotLoading, setForgotLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [showResendVerification, setShowResendVerification] = useState(false)
+  const [resendEmail, setResendEmail] = useState('')
+  const [resendLoading, setResendLoading] = useState(false)
 
   useEffect(() => {
     setMounted(true)
-  }, [])
+    
+    // Check for resend verification action
+    const action = searchParams.get('action')
+    if (action === 'resend-verification') {
+      setShowResendVerification(true)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     if (user && !loading) {
@@ -103,11 +113,41 @@ export default function AuthPage() {
           window.location.href = "/"
         }
       } else {
-        toast({
-          title: "Error",
-          description: data.message || "Authentication failed. Please try again.",
-          variant: "destructive",
-        })
+        // Handle specific error cases
+        if (data.requiresVerification) {
+          toast({
+            title: "Email Verification Required",
+            description: data.message || "Please verify your email address before signing in.",
+            variant: "destructive",
+          })
+          // Optionally redirect to a resend verification page or show resend option
+        } else if (isSignUp && data.requiresVerification !== undefined) {
+          toast({
+            title: "Registration Successful!",
+            description: data.message || "Please check your email to verify your account.",
+          })
+          // Clear form after successful registration
+          setEmail("")
+          setPassword("")
+          setFirstName("")
+          setLastName("")
+          setIsSignUp(false) // Switch back to login form
+        } else if (isSignUp && response.status === 409) {
+          // User already exists - suggest signing in instead
+          toast({
+            title: "Account Already Exists",
+            description: "An account with this email already exists. Please sign in instead or use a different email.",
+            variant: "destructive",
+          })
+          // Switch to sign in mode
+          setIsSignUp(false)
+        } else {
+          toast({
+            title: "Error",
+            description: data.message || data.error || "Authentication failed. Please try again.",
+            variant: "destructive",
+          })
+        }
       }
     } catch (error) {
       console.error("Authentication error:", error)
@@ -146,6 +186,48 @@ export default function AuthPage() {
       setForgotError('An error occurred. Please try again.')
     } finally {
       setForgotLoading(false)
+    }
+  }
+
+  const handleResendVerification = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setResendLoading(true)
+
+    try {
+      const response = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: resendEmail }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        toast({
+          title: "Verification Email Sent",
+          description: data.message,
+        })
+        setResendEmail('')
+        setShowResendVerification(false)
+        // Redirect back to normal auth page
+        router.push('/auth')
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || 'Failed to send verification email',
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: 'An error occurred. Please try again.',
+        variant: "destructive",
+      })
+    } finally {
+      setResendLoading(false)
     }
   }
 
@@ -278,13 +360,20 @@ export default function AuthPage() {
         </div>
 
         {!isSignUp && (
-          <div className="mt-4 text-center">
+          <div className="mt-4 text-center space-y-2">
             <button
               type="button"
               onClick={() => setShowForgotEmailModal(true)}
-              className="text-blue-400 hover:text-blue-300 text-sm underline bg-transparent border-none cursor-pointer"
+              className="text-blue-400 hover:text-blue-300 text-sm underline bg-transparent border-none cursor-pointer block mx-auto"
             >
               Forgot email?
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowResendVerification(true)}
+              className="text-green-400 hover:text-green-300 text-sm underline bg-transparent border-none cursor-pointer block mx-auto"
+            >
+              Resend verification email
             </button>
           </div>
         )}
@@ -350,6 +439,67 @@ export default function AuthPage() {
                     </div>
                   ) : (
                     'Send Reset Link'
+                  )}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Resend Verification Modal */}
+      {showResendVerification && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-800/90 backdrop-blur-sm rounded-2xl p-6 w-full max-w-md border border-gray-700">
+            <div className="flex items-center mb-4">
+              <Mail className="h-6 w-6 text-blue-400 mr-3" />
+              <h3 className="text-xl font-bold text-white">Resend Verification Email</h3>
+            </div>
+            <p className="text-gray-300 text-sm mb-4">
+              Enter your email address to receive a new verification link.
+            </p>
+            <form onSubmit={handleResendVerification} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-gray-300 text-sm font-medium">Email Address</label>
+                <Input
+                  type="email"
+                  value={resendEmail}
+                  onChange={(e) => setResendEmail(e.target.value)}
+                  placeholder="Enter your email address"
+                  className="bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
+                  required
+                />
+              </div>
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                <p className="text-blue-400 text-sm">
+                  📧 <strong>Note:</strong> If your account exists and is unverified, you'll receive a new verification email.
+                </p>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setShowResendVerification(false)
+                    setResendEmail('')
+                    router.push('/auth')
+                  }}
+                  variant="outline"
+                  className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={resendLoading}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                >
+                  {resendLoading ? (
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Sending...
+                    </div>
+                  ) : (
+                    'Send Verification Email'
                   )}
                 </Button>
               </div>

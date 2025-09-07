@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { executeQuery } from '@/lib/database/mysql'
+import { generateVerificationToken, sendVerificationEmail } from '@/lib/email/email-service'
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,42 +48,42 @@ export async function POST(request: NextRequest) {
     const saltRounds = 12
     const hashedPassword = await bcrypt.hash(password, saltRounds)
 
-    // Create user
+    // Create user with email_verified set to false
     const insertResult = await executeQuery(
-      'INSERT INTO users (email, password_hash, first_name, last_name, is_admin, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
-      [email, hashedPassword, firstName, lastName, false]
+      'INSERT INTO users (email, password_hash, first_name, last_name, is_admin, email_verified, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+      [email, hashedPassword, firstName, lastName, false, false]
     ) as any
     const userId = insertResult.insertId
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { 
-        userId, 
-        email,
-        role: 'user'
-      },
-      process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: '7d' }
+    // Generate verification token
+    const verificationToken = generateVerificationToken()
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours from now
+
+    // Store verification token in database
+    await executeQuery(
+      'INSERT INTO email_verification_tokens (user_id, token, expires_at) VALUES (?, ?, ?)',
+      [userId, verificationToken, expiresAt]
     )
 
+    // Send verification email
+    const emailSent = await sendVerificationEmail(email, firstName, verificationToken)
+    if (!emailSent) {
+      console.warn('⚠️ Failed to send verification email, but user was created')
+    }
+
+    // Return success response without JWT token (user needs to verify email first)
     const response = NextResponse.json({
-      message: 'Registration successful',
+      message: 'Registration successful! Please check your email to verify your account.',
       user: {
         id: userId,
         email,
         first_name: firstName,
         last_name: lastName,
-        role: 'user'
+        role: 'user',
+        email_verified: false
       },
-      token
-    })
-
-    // Set HTTP-only cookie
-    response.cookies.set('auth-token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 // 7 days
+      requiresVerification: true,
+      emailSent
     })
 
     return response
