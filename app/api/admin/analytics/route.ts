@@ -1,24 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/database/mysql'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import jwt from 'jsonwebtoken'
+
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret'
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 API: Fetching analytics data from MySQL database...')
+    console.log('🔍 API: Fetching analytics data from MySQL database... (recompiled)')
     
-    // Check authentication
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      console.log('❌ Analytics API: No session or email found')
+    // Check authentication using JWT token
+    let token = request.cookies.get('auth-token')?.value
+    
+    // If no cookie token, try Authorization header
+    if (!token) {
+      const authHeader = request.headers.get('authorization')
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7)
+      }
+    }
+
+    if (!token) {
+      console.log('❌ Analytics API: No token provided')
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'No authentication token provided' },
+        { status: 401 }
+      )
+    }
+
+    // Verify token
+    let decoded
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as { userId: string, email: string }
+    } catch (error) {
+      console.log('❌ Analytics API: Invalid token')
+      return NextResponse.json(
+        { error: 'Invalid authentication token' },
         { status: 401 }
       )
     }
     
     // Check if user has admin/staff role
-    const userEmail = session.user.email
+    const userEmail = decoded.email
     console.log('🔍 Analytics API: Checking admin status for:', userEmail)
     
     try {
@@ -38,7 +60,7 @@ export async function GET(request: NextRequest) {
         )
       }
       
-      console.log('✅ Analytics API: User has admin access:', userEmail)
+      console.log('✅ Analytics API: Admin access granted for:', userEmail)
     } catch (error) {
       console.error('❌ Analytics API: Error checking admin status:', error)
       return NextResponse.json(
