@@ -371,6 +371,174 @@ Please log in to the admin panel to process this order.
   }
 }
 
+// Send password reset email
+export async function sendPasswordResetEmail(
+  email: string,
+  firstName: string,
+  resetUrl: string
+): Promise<boolean> {
+  try {
+    const transporter = createTransporter();
+
+    const mailOptions = {
+      from: `"GKICKS Support" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Reset Your GKICKS Password',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Reset Your Password</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">🔒 Password Reset</h1>
+          </div>
+          
+          <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef;">
+            <h2 style="color: #495057; margin-top: 0;">Hello ${firstName}!</h2>
+            
+            <p style="font-size: 16px; margin-bottom: 25px;">We received a request to reset your password for your GKICKS account. If you didn't make this request, you can safely ignore this email.</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${resetUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">Reset My Password</a>
+            </div>
+            
+            <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 20px 0;">
+              <p style="margin: 0; font-size: 14px; color: #856404;">
+                <strong>⚠️ Important:</strong> This link will expire in 1 hour for security reasons.
+              </p>
+            </div>
+            
+            <p style="font-size: 14px; color: #6c757d; margin-top: 25px;">If the button doesn't work, copy and paste this link into your browser:</p>
+            <p style="font-size: 12px; color: #6c757d; word-break: break-all; background: #f8f9fa; padding: 10px; border-radius: 5px;">${resetUrl}</p>
+            
+            <hr style="border: none; border-top: 1px solid #e9ecef; margin: 30px 0;">
+            
+            <p style="font-size: 12px; color: #6c757d; text-align: center; margin: 0;">
+              This email was sent by GKICKS. If you have any questions, please contact our support team.
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+Hello ${firstName}!
+
+We received a request to reset your password for your GKICKS account.
+
+To reset your password, click the following link:
+${resetUrl}
+
+This link will expire in 1 hour for security reasons.
+
+If you didn't request this password reset, you can safely ignore this email.
+
+Best regards,
+GKICKS Support Team
+      `,
+    };
+
+    const result = await transporter.sendMail(mailOptions);
+    console.log('Password reset email sent successfully:', result.messageId);
+    return true;
+  } catch (error) {
+    console.error('Failed to send password reset email:', error);
+    return false;
+  }
+}
+
+// Send email recovery notification
+export async function sendEmailRecoveryNotification(
+  email: string,
+  firstName: string,
+  recoveryEmail: string
+): Promise<boolean> {
+  try {
+    const transporter = createTransporter();
+
+    const mailOptions = {
+      from: `"GKICKS Support" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Your GKICKS Account Email Address',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Your Account Email</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #ff7b00 0%, #ff8f00 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">📧 Account Recovery</h1>
+          </div>
+          
+          <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef;">
+            <h2 style="color: #333; margin-top: 0;">Hello ${firstName}!</h2>
+            
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              You requested account recovery information for your GKICKS account.
+            </p>
+            
+            <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+              <h3 style="color: #856404; margin: 0 0 10px 0;">Account Recovery Confirmation:</h3>
+              <p style="font-size: 16px; color: #856404; margin: 0;">Your account has been found and this recovery email has been sent to: <strong>${email}</strong></p>
+            </div>
+            
+            <p style="font-size: 14px; color: #6c757d; margin-bottom: 20px;">
+              If you're having trouble accessing your account, you can use the password reset feature or contact our support team.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/auth" 
+                 style="background: #ff7b00; color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; display: inline-block;">
+                Sign In Now
+              </a>
+            </div>
+            
+            <div style="border-top: 1px solid #dee2e6; padding-top: 20px; margin-top: 30px;">
+              <p style="font-size: 12px; color: #6c757d; margin-bottom: 10px;">
+                <strong>Security Note:</strong> If you didn't request this email recovery, please contact our support team immediately.
+              </p>
+            </div>
+            
+            <p style="font-size: 12px; color: #6c757d; text-align: center; margin: 0;">
+              This email was sent by GKICKS. If you have any questions, please contact our support team.
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+Hello ${firstName}!
+
+You requested account recovery information for your GKICKS account.
+
+Account Recovery Confirmation: Your account has been found and this recovery email has been sent to: ${email}
+
+If you're having trouble accessing your account, you can use the password reset feature or contact our support team.
+
+Sign in at: ${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/auth
+
+If you didn't request this account recovery, please contact our support team immediately.
+
+Best regards,
+GKICKS Support Team
+      `,
+    };
+
+    const result = await transporter.sendMail(mailOptions);
+    console.log('Email recovery notification sent successfully:', result.messageId);
+    return true;
+  } catch (error) {
+    console.error('Failed to send email recovery notification:', error);
+    return false;
+  }
+}
+
 // Test email configuration
 export async function testEmailConfiguration(): Promise<boolean> {
   try {

@@ -50,10 +50,17 @@ export default function VerifyEmailPage() {
           setMessage('Your email has been verified successfully! Welcome to GKICKS Shop!')
           // Store a flag to indicate successful verification
           localStorage.setItem('email_verified', 'true')
-          // Redirect to login after 3 seconds
+          
+          // Check if auth token is provided in URL
+          const authToken = searchParams.get('token')
+          if (authToken) {
+            localStorage.setItem('auth_token', authToken)
+          }
+          
+          // Redirect to profile page immediately
           setTimeout(() => {
-            router.push('/auth?verified=true')
-          }, 3000)
+            router.push('/profile')
+          }, 1500)
           break
         case 'already-verified':
           setStatus('already-verified')
@@ -98,10 +105,10 @@ export default function VerifyEmailPage() {
           description: "Welcome to GKICKS Shop! You can now access all features.",
         })
         
-        // Redirect to home page after 3 seconds
+        // Redirect to profile page immediately
         setTimeout(() => {
-          router.push('/')
-        }, 3000)
+          router.push('/profile')
+        }, 1500)
       } else {
         if (data.error?.includes('already verified')) {
           setStatus('already-verified')
@@ -131,6 +138,10 @@ export default function VerifyEmailPage() {
 
   const handleGoHome = () => {
     router.push('/')
+  }
+
+  const handleGoToProfile = () => {
+    router.push('/profile')
   }
 
   const getStatusIcon = () => {
@@ -194,10 +205,13 @@ export default function VerifyEmailPage() {
                 </p>
               </div>
               <p className="text-sm text-gray-600">
-                Redirecting you to the homepage in a few seconds...
+                Redirecting you to your account in a few seconds...
               </p>
-              <Button onClick={handleGoHome} className="w-full">
-                Go to Homepage Now
+              <Button onClick={handleGoToProfile} className="w-full">
+                Go to My Account Now
+              </Button>
+              <Button onClick={handleGoHome} variant="outline" className="w-full">
+                Go to Homepage
               </Button>
             </div>
           )}

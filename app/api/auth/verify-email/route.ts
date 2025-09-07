@@ -168,8 +168,20 @@ export async function GET(request: NextRequest) {
       console.warn('⚠️ Failed to send welcome email, but verification was successful')
     }
 
-    // Redirect to success page
-    return NextResponse.redirect(new URL('/verify-email?status=success', request.url))
+    // Generate JWT token for the verified user
+    const authToken = jwt.sign(
+      { 
+        userId, 
+        email,
+        role: 'user',
+        verified: true
+      },
+      process.env.JWT_SECRET || 'fallback-secret',
+      { expiresIn: '7d' }
+    )
+
+    // Redirect to success page with auth token
+    return NextResponse.redirect(new URL(`/verify-email?status=success&token=${authToken}`, request.url))
 
   } catch (error) {
     console.error('Email verification error:', error)

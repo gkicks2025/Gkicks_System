@@ -31,6 +31,14 @@ export default function AuthPage() {
   const [showResendVerification, setShowResendVerification] = useState(false)
   const [resendEmail, setResendEmail] = useState('')
   const [resendLoading, setResendLoading] = useState(false)
+  const [showForgotEmailRecoveryModal, setShowForgotEmailRecoveryModal] = useState(false)
+  const [forgotEmailRecovery, setForgotEmailRecovery] = useState('')
+  const [forgotEmailError, setForgotEmailError] = useState<string | null>(null)
+  const [forgotEmailSuccess, setForgotEmailSuccess] = useState<string | null>(null)
+  const [forgotEmailLoading, setForgotEmailLoading] = useState(false)
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [showForgotEmail, setShowForgotEmail] = useState(false)
+  const [failedAttempts, setFailedAttempts] = useState(0)
 
   useEffect(() => {
     setMounted(true)
@@ -94,6 +102,11 @@ export default function AuthPage() {
       const data = await response.json()
 
       if (response.ok) {
+        // Reset failed attempts on successful login
+        setFailedAttempts(0)
+        setShowForgotPassword(false)
+        setShowForgotEmail(false)
+        
         // Store auth token first
         if (data.token) {
           localStorage.setItem('auth_token', data.token)
@@ -104,13 +117,16 @@ export default function AuthPage() {
           description: isSignUp ? "Account created successfully!" : "Signed in successfully!",
         })
         
-        // Immediate redirect based on user role using window.location for instant navigation
-        if (data.user?.email === "gkcksdmn@gmail.com") {
-          window.location.href = "/admin"
-        } else if (data.user?.email === "gkicksstaff@gmail.com") {
-          window.location.href = "/admin/orders"
-        } else {
-          window.location.href = "/"
+        // Only redirect for sign in, not sign up
+        if (!isSignUp) {
+          // Immediate redirect based on user role using window.location for instant navigation
+          if (data.user?.email === "gkcksdmn@gmail.com") {
+            window.location.href = "/admin"
+          } else if (data.user?.email === "gkicksstaff@gmail.com") {
+            window.location.href = "/admin/orders"
+          } else {
+            window.location.href = "/"
+          }
         }
       } else {
         // Handle specific error cases
@@ -124,14 +140,13 @@ export default function AuthPage() {
         } else if (isSignUp && data.requiresVerification !== undefined) {
           toast({
             title: "Registration Successful!",
-            description: data.message || "Please check your email to verify your account.",
+            description: "We sent an email to your Gmail. Please check your inbox to verify your account.",
           })
           // Clear form after successful registration
           setEmail("")
           setPassword("")
           setFirstName("")
           setLastName("")
-          setIsSignUp(false) // Switch back to login form
         } else if (isSignUp && response.status === 409) {
           // User already exists - suggest signing in instead
           toast({
@@ -142,6 +157,18 @@ export default function AuthPage() {
           // Switch to sign in mode
           setIsSignUp(false)
         } else {
+          // Increment failed attempts for login failures
+          if (!isSignUp) {
+            const newFailedAttempts = failedAttempts + 1
+            setFailedAttempts(newFailedAttempts)
+            
+            // Show forgot options after 5 failed attempts
+            if (newFailedAttempts >= 5) {
+              setShowForgotPassword(true)
+              setShowForgotEmail(true)
+            }
+          }
+          
           toast({
             title: "Error",
             description: data.message || data.error || "Authentication failed. Please try again.",
@@ -207,12 +234,11 @@ export default function AuthPage() {
       if (response.ok) {
         toast({
           title: "Verification Email Sent",
-          description: data.message,
+          description: `Your verification email has been sent to your Gmail account (${resendEmail}). Please check your inbox and spam folder.`,
         })
         setResendEmail('')
         setShowResendVerification(false)
-        // Redirect back to normal auth page
-        router.push('/auth')
+        // Stay on current page after sending email
       } else {
         toast({
           title: "Error",
@@ -228,6 +254,36 @@ export default function AuthPage() {
       })
     } finally {
       setResendLoading(false)
+    }
+  }
+
+  const handleForgotEmailRecovery = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setForgotEmailError(null)
+    setForgotEmailSuccess(null)
+    setForgotEmailLoading(true)
+
+    try {
+      const response = await fetch('/api/auth/forgot-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: forgotEmailRecovery }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setForgotEmailSuccess(data.message)
+        setForgotEmailRecovery('')
+      } else {
+        setForgotEmailError(data.error || 'Failed to recover email')
+      }
+    } catch (error) {
+      setForgotEmailError('An error occurred. Please try again.')
+    } finally {
+      setForgotEmailLoading(false)
     }
   }
 
@@ -352,7 +408,13 @@ export default function AuthPage() {
         <div className="mt-6 text-center">
           <button
             type="button"
-            onClick={() => setIsSignUp(!isSignUp)}
+            onClick={() => {
+              setIsSignUp(!isSignUp)
+              // Reset failed attempts when switching modes
+              setFailedAttempts(0)
+              setShowForgotPassword(false)
+              setShowForgotEmail(false)
+            }}
             className="text-blue-400 hover:text-blue-300 text-sm underline"
           >
             {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Create one"}
@@ -361,13 +423,40 @@ export default function AuthPage() {
 
         {!isSignUp && (
           <div className="mt-4 text-center space-y-2">
-            <button
-              type="button"
-              onClick={() => setShowForgotEmailModal(true)}
-              className="text-blue-400 hover:text-blue-300 text-sm underline bg-transparent border-none cursor-pointer block mx-auto"
-            >
-              Forgot email?
-            </button>
+            {showForgotPassword && (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowForgotEmailModal(true)
+                  setShowForgotPassword(false)
+                }}
+                className="text-blue-400 hover:text-blue-300 text-sm underline bg-transparent border-none cursor-pointer block mx-auto"
+              >
+                Forgot password?
+              </button>
+            )}
+            {showForgotEmail && (
+              <button
+                type="button"
+                onClick={async () => {
+                  setForgotEmailLoading(true)
+                  await new Promise(resolve => setTimeout(resolve, 500))
+                  setShowForgotEmailRecoveryModal(true)
+                  setForgotEmailLoading(false)
+                }}
+                disabled={forgotEmailLoading}
+                className={`text-blue-400 hover:text-blue-300 text-sm underline bg-transparent border-none cursor-pointer block mx-auto transition-opacity ${
+                  forgotEmailLoading ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                {forgotEmailLoading ? 'Loading...' : 'Forgot email?'}
+              </button>
+            )}
+          </div>
+        )}
+
+        {isSignUp && (
+          <div className="mt-4 text-center">
             <button
               type="button"
               onClick={() => setShowResendVerification(true)}
@@ -481,7 +570,6 @@ export default function AuthPage() {
                   onClick={() => {
                     setShowResendVerification(false)
                     setResendEmail('')
-                    router.push('/auth')
                   }}
                   variant="outline"
                   className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700"
@@ -500,6 +588,75 @@ export default function AuthPage() {
                     </div>
                   ) : (
                     'Send Verification Email'
+                  )}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Forgot Email Recovery Modal */}
+      {showForgotEmailRecoveryModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-800/90 backdrop-blur-sm rounded-2xl p-6 w-full max-w-md border border-gray-700">
+            <h3 className="text-xl font-bold text-white mb-4">Recover Your Email</h3>
+            <p className="text-gray-300 text-sm mb-4">
+              Enter your email address to receive account recovery information.
+            </p>
+            <form onSubmit={handleForgotEmailRecovery} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-gray-300 text-sm font-medium">Email Address</label>
+                <Input
+                  type="email"
+                  value={forgotEmailRecovery}
+                  onChange={(e) => setForgotEmailRecovery(e.target.value)}
+                  placeholder="Enter your email address"
+                  className="bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-orange-500"
+                  required
+                />
+              </div>
+              {forgotEmailError && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                  <p className="text-red-400 text-sm">{forgotEmailError}</p>
+                </div>
+              )}
+              {forgotEmailSuccess && (
+                <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+                  <p className="text-green-400 text-sm">{forgotEmailSuccess}</p>
+                </div>
+              )}
+              <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3">
+                <p className="text-orange-400 text-sm">
+                  📧 <strong>Note:</strong> We'll send account recovery information to this email address if it exists in our system.
+                </p>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotEmailRecoveryModal(false)
+                    setForgotEmailRecovery('')
+                    setForgotEmailError(null)
+                    setForgotEmailSuccess(null)
+                  }}
+                  variant="outline"
+                  className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={forgotEmailLoading}
+                  className="flex-1 bg-orange-600 hover:bg-orange-700"
+                >
+                  {forgotEmailLoading ? (
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Recovering...
+                    </div>
+                  ) : (
+                    'Recover Email'
                   )}
                 </Button>
               </div>

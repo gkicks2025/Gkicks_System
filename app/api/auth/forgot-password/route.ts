@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { executeQuery } from '@/lib/database/mysql'
+import { sendPasswordResetEmail } from '@/lib/email-service'
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,13 +55,16 @@ export async function POST(request: NextRequest) {
       [user.id, email, resetToken, tokenExpiry]
     )
 
-    // In a real application, you would send an email here
-    // For now, we'll just log the reset link (remove this in production)
+    // Send password reset email
     const resetUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/auth/reset-password?token=${resetToken}`
-    console.log(`Password reset link for ${email}: ${resetUrl}`)
-
-    // TODO: Send email with reset link
-    // await sendPasswordResetEmail(email, user.first_name, resetUrl)
+    
+    try {
+      await sendPasswordResetEmail(email, user.first_name, resetUrl)
+      console.log(`Password reset email sent to: ${email}`)
+    } catch (emailError) {
+      console.error('Failed to send password reset email:', emailError)
+      // Continue execution - don't fail the request if email fails
+    }
 
     return NextResponse.json(
       { message: 'If an account with that email exists, a password reset link has been sent.' },

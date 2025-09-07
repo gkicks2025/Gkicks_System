@@ -115,7 +115,7 @@ export function Header({ onSearch }: HeaderProps) {
           <Link href="/" className="flex items-center space-x-2 mr-4 sm:mr-8">
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center">
               <Image
-              src="/images/gkicks-transparent-logo.png"
+              src="/images/kicks-logo.jpeg"
               alt="GKICKS"
               width={32}
               height={32}
