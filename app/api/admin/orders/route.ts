@@ -1,24 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/database/mysql'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import jwt from 'jsonwebtoken'
+
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret'
 
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 API: Fetching orders from MySQL database...')
     
-    // Check authentication
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      console.log('❌ Orders API: No session or email found')
+    // Check authentication using JWT token
+    let token = request.cookies.get('auth-token')?.value
+    
+    // If no cookie token, try Authorization header
+    if (!token) {
+      const authHeader = request.headers.get('authorization')
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7)
+      }
+    }
+
+    if (!token) {
+      console.log('❌ Orders API: No token provided')
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'No authentication token provided' },
+        { status: 401 }
+      )
+    }
+
+    // Verify token
+    let decoded: any
+    try {
+      decoded = jwt.verify(token, JWT_SECRET)
+    } catch (error) {
+      console.log('❌ Orders API: Invalid token')
+      return NextResponse.json(
+        { error: 'Invalid authentication token' },
         { status: 401 }
       )
     }
     
     // Check if user has admin/staff role
-    const userEmail = session.user.email
+    const userEmail = decoded.email
     console.log('🔍 Orders API: Checking admin status for:', userEmail)
     
     try {
@@ -118,8 +140,37 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session) {
+    // Check authentication using JWT token
+    let token = request.cookies.get('auth-token')?.value
+    
+    // If no cookie token, try Authorization header
+    if (!token) {
+      const authHeader = request.headers.get('authorization')
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7)
+      }
+    }
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'No authentication token provided' },
+        { status: 401 }
+      )
+    }
+
+    // Verify token
+    try {
+      jwt.verify(token, JWT_SECRET)
+    } catch (error) {
+      return NextResponse.json(
+        { error: 'Invalid authentication token' },
+        { status: 401 }
+      )
+    }
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (error) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

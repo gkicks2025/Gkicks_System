@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { executeQuery } from '@/lib/database/mysql';
 import { RowDataPacket } from 'mysql2';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
 
 interface OrderNotification {
   id: number;
@@ -17,12 +18,33 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔔 API: Fetching admin notifications...');
     
-    // Get session to identify admin user
-    const session = await getServerSession(authOptions);
+    // Check authentication using JWT token
+    let token = request.cookies.get('auth-token')?.value;
     
-    if (!session?.user?.email) {
+    // If no cookie token, try Authorization header
+    if (!token) {
+      const authHeader = request.headers.get('authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+      }
+    }
+
+    if (!token) {
+      console.log('❌ Notifications API: No token provided');
       return NextResponse.json(
-        { success: false, error: 'Unauthorized - No session' },
+        { success: false, error: 'No authentication token provided' },
+        { status: 401 }
+      );
+    }
+
+    // Verify token
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (error) {
+      console.log('❌ Notifications API: Invalid token');
+      return NextResponse.json(
+        { success: false, error: 'Invalid authentication token' },
         { status: 401 }
       );
     }
@@ -30,16 +52,18 @@ export async function GET(request: NextRequest) {
     // Get admin user ID from database
     const adminUserResult = await executeQuery(
       'SELECT id FROM users WHERE email = ? AND is_admin = 1',
-      [session.user.email]
+      [decoded.email]
     ) as RowDataPacket[];
     
     if (adminUserResult.length === 0) {
+      console.log('❌ Notifications API: User is not an admin:', decoded.email);
       return NextResponse.json(
         { success: false, error: 'Unauthorized - Not an admin' },
         { status: 401 }
       );
     }
     
+    console.log('✅ Notifications API: Admin access granted for:', decoded.email);
     const adminUserId = adminUserResult[0].id;
     
     // Get count of new/pending orders that haven't been viewed by this admin

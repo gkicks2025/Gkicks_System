@@ -34,16 +34,17 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (user && !loading) {
-      // Check if user is admin/staff and redirect accordingly
+      // Only redirect if user is already logged in when visiting the auth page
+      // Don't redirect during the login process as that's handled in handleSubmit
       if (user.email === "gkcksdmn@gmail.com") {
-        router.push("/admin")
+        window.location.href = "/admin"
       } else if (user.email === "gkicksstaff@gmail.com") {
-        router.push("/admin/orders")
+        window.location.href = "/admin/orders"
       } else {
-        router.push("/") // Redirect to home if already logged in
+        window.location.href = "/"
       }
     }
-  }, [user, loading, router])
+  }, [user, loading])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -83,23 +84,23 @@ export default function AuthPage() {
       const data = await response.json()
 
       if (response.ok) {
+        // Store auth token first
+        if (data.token) {
+          localStorage.setItem('auth_token', data.token)
+        }
+        
         toast({
           title: "Success",
           description: isSignUp ? "Account created successfully!" : "Signed in successfully!",
         })
         
-        // Store auth token
-        if (data.token) {
-          localStorage.setItem('auth_token', data.token)
-        }
-        
-        // Redirect based on user role
+        // Immediate redirect based on user role using window.location for instant navigation
         if (data.user?.email === "gkcksdmn@gmail.com") {
-          router.push("/admin")
+          window.location.href = "/admin"
         } else if (data.user?.email === "gkicksstaff@gmail.com") {
-          router.push("/admin/orders")
+          window.location.href = "/admin/orders"
         } else {
-          router.push("/")
+          window.location.href = "/"
         }
       } else {
         toast({

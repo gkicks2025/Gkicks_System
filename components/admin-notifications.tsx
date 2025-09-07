@@ -38,10 +38,12 @@ export function AdminNotifications() {
 
   const fetchNotifications = async () => {
     try {
+      const token = localStorage.getItem('jwt_token')
       const response = await fetch('/api/admin/notifications', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
         },
         cache: 'no-cache'
       })

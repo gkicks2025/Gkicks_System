@@ -52,9 +52,15 @@ export default function AdminOrdersPage() {
   const loadOrders = async () => {
     setIsLoading(true)
     try {
+      const token = localStorage.getItem('jwt_token')
       const response = await fetch('/api/admin/orders', {
-      credentials: 'include'
-    })
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        cache: 'no-cache'
+      })
       if (response.ok) {
         const allOrders = await response.json()
         setOrders(allOrders || [])
