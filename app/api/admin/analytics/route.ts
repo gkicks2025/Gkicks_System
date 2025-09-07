@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
         p.category,
         COUNT(DISTINCT oi.order_id) as orders,
         SUM(oi.quantity) as items_sold,
-        SUM(price * oi.quantity) as revenue
+        SUM(oi.price * oi.quantity) as revenue
       FROM order_items oi
       JOIN products p ON oi.product_id = p.id
       JOIN orders o ON oi.order_id = o.id
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
         p.brand,
         p.category,
         SUM(oi.quantity) as total_sold,
-        SUM(price * oi.quantity) as revenue,
+        SUM(oi.price * oi.quantity) as revenue,
         COUNT(DISTINCT oi.order_id) as order_count
       FROM order_items oi
       JOIN products p ON oi.product_id = p.id
@@ -147,16 +147,16 @@ export async function GET(request: NextRequest) {
     // Customer analytics (combining orders and POS transactions)
     const customerStats = await executeQuery(`
       SELECT 
-        COUNT(DISTINCT COALESCE(user_id, customer_name)) as total_customers,
+        COUNT(DISTINCT COALESCE(user_id, customer_email)) as total_customers,
         AVG(total_amount) as avg_order_value,
         COUNT(*) as total_orders
       FROM (
-        SELECT user_id, NULL as customer_name, total_amount
+        SELECT user_id, NULL as customer_email, total_amount
         FROM orders 
         WHERE status IN ('completed', 'delivered', 'processing', 'pending')
           AND created_at >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
         UNION ALL
-        SELECT NULL as user_id, customer_name, total_amount
+        SELECT NULL as user_id, customer_email, total_amount
         FROM pos_transactions 
         WHERE status = 'completed'
           AND created_at >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
@@ -168,14 +168,14 @@ export async function GET(request: NextRequest) {
       SELECT 
         COUNT(*) as orders,
         SUM(total_amount) as revenue,
-        COUNT(DISTINCT COALESCE(user_id, customer_name)) as customers
+        COUNT(DISTINCT COALESCE(user_id, customer_email)) as customers
       FROM (
-        SELECT user_id, NULL as customer_name, total_amount
+        SELECT user_id, NULL as customer_email, total_amount
         FROM orders 
         WHERE created_at >= ? 
           AND status IN ('completed', 'delivered', 'processing', 'pending')
         UNION ALL
-        SELECT NULL as user_id, customer_name, total_amount
+        SELECT NULL as user_id, customer_email, total_amount
         FROM pos_transactions 
         WHERE created_at >= ?
           AND status = 'completed'
@@ -186,14 +186,14 @@ export async function GET(request: NextRequest) {
       SELECT 
         COUNT(*) as orders,
         SUM(total_amount) as revenue,
-        COUNT(DISTINCT COALESCE(user_id, customer_name)) as customers
+        COUNT(DISTINCT COALESCE(user_id, customer_email)) as customers
       FROM (
-        SELECT user_id, NULL as customer_name, total_amount
+        SELECT user_id, NULL as customer_email, total_amount
         FROM orders 
         WHERE created_at >= ? AND created_at <= ?
           AND status IN ('completed', 'delivered', 'processing', 'pending')
         UNION ALL
-        SELECT NULL as user_id, customer_name, total_amount
+        SELECT NULL as user_id, customer_email, total_amount
         FROM pos_transactions 
         WHERE created_at >= ? AND created_at <= ?
           AND status = 'completed'
@@ -236,7 +236,7 @@ export async function GET(request: NextRequest) {
         total_amount,
         status,
         created_at,
-        customer_name as customer_info
+        customer_email as customer_info
       FROM pos_transactions 
       WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
       ORDER BY created_at DESC

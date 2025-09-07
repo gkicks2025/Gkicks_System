@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
     try {
       const userResult = await executeQuery(
         'SELECT id FROM users WHERE email = ?',
-        [session.user.email]
+ 
       )
       if (Array.isArray(userResult) && userResult.length > 0) {
         adminUserId = (userResult[0] as any).id
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
       // Insert transaction
       const insertTransactionQuery = `
         INSERT INTO pos_transactions (
-          transaction_id, user_id, customer_name,
+          transaction_id, user_id, customer_email,
           subtotal, total_amount, payment_method, payment_reference,
           cash_received, change_given, receipt_number, transaction_date
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())

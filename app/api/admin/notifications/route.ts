@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
       `SELECT 
          o.id,
          o.order_number,
-         o.customer_name,
+         o.customer_email,
          o.total_amount,
          o.status,
          o.created_at
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     const recentOrders: OrderNotification[] = recentOrdersResult.map(row => ({
       id: row.id,
       order_number: row.order_number,
-      customer_name: row.customer_name,
+      customer_name: row.customer_email || 'Unknown Customer',
       total_amount: parseFloat(row.total_amount),
       status: row.status,
       created_at: row.created_at

@@ -6,7 +6,6 @@ import { RowDataPacket, ResultSetHeader } from 'mysql2'
 
 interface Order extends RowDataPacket {
   id: string
-  customer_name: string
   customer_email: string
   customer_phone: string
   shipping_address: string
@@ -76,7 +75,7 @@ export async function PATCH(
     // Format the response to match the expected Order interface
     const formattedOrder = {
       id: order.id,
-      customerName: order.customer_name,
+      customerName: order.customer_email,
       customerEmail: order.customer_email,
       customerPhone: order.customer_phone,
       shippingAddress: order.shipping_address,

@@ -48,7 +48,6 @@ export async function GET(request: NextRequest) {
       `SELECT 
         id,
         order_number,
-        customer_name,
         customer_email,
         status,
         payment_status,
@@ -337,7 +336,7 @@ export async function POST(request: NextRequest) {
     try {
       const staffNotificationData = {
         orderNumber: orderNumber,
-        customerName: order.customer_name || 'Guest Customer',
+        customerName: order.customer_email || 'Guest Customer',
         customerEmail: order.customer_email || 'No email provided',
         total: total,
         itemCount: items.reduce((sum, item) => sum + item.quantity, 0),

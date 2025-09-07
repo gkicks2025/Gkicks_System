@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     
     // Check recent POS transactions
     const recentPos = await executeQuery(
-      'SELECT id, customer_name, total_amount, status, created_at FROM pos_transactions ORDER BY created_at DESC LIMIT 5'
+      'SELECT id, customer_email, total_amount, status, created_at FROM pos_transactions ORDER BY created_at DESC LIMIT 5'
     )
     console.log('Recent POS transactions:', recentPos)
     

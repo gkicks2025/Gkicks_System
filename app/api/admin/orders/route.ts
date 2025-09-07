@@ -52,7 +52,6 @@ export async function GET(request: NextRequest) {
       SELECT 
         o.id,
         o.order_number,
-        o.customer_name,
         o.customer_email,
         o.total_amount as total,
         o.status,
@@ -71,11 +70,9 @@ export async function GET(request: NextRequest) {
           `SELECT 
             oi.id,
             oi.quantity,
-            oi.unit_price as price,
-            oi.size,
-            oi.color,
-            oi.product_name as name,
-            oi.product_brand as brand,
+            oi.price,
+            p.name,
+            p.brand,
             p.image_url as image
           FROM order_items oi
           LEFT JOIN products p ON oi.product_id = p.id
@@ -99,7 +96,7 @@ export async function GET(request: NextRequest) {
             (order.shipping_address.startsWith('{') ? JSON.parse(order.shipping_address) : order.shipping_address) 
             : null,
           // Use customer information from orders table
-          customerName: order.customer_name || 'Unknown Customer',
+          customerName: order.customer_email || 'Unknown Customer',
           customerEmail: order.customer_email || 'No email provided',
           // Add items
           items: processedItems
