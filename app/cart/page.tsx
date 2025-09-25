@@ -905,11 +905,11 @@ export default function CartPage() {
                 {qrPaymentMethod === "gcash" ? "GCash Payment" : "PayMaya Payment"}
               </DialogTitle>
             </DialogHeader>
-            <div className="flex flex-col items-center space-y-4 p-4 sm:p-6">
+            <div className="flex flex-col items-center p-4 sm:p-6">
               <div className="w-48 h-48 sm:w-64 sm:h-64 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-lg flex items-center justify-center">
                 {qrPaymentMethod === "gcash" ? (
                   <Image
-                    src="/images/gcash-logo.png"
+                    src="/images/cash.png"
                     alt="GCash QR Code"
                     width={200}
                     height={200}
@@ -917,7 +917,7 @@ export default function CartPage() {
                   />
                 ) : (
                   <Image
-                    src="/images/maya-logo.png"
+                    src="/images/ayam.png"
                     alt="PayMaya QR Code"
                     width={200}
                     height={200}
@@ -925,14 +925,12 @@ export default function CartPage() {
                   />
                 )}
               </div>
+              
+              {/* Spacing between QR code and text */}
+              <div className="h-8"></div>
+              
               <div className="text-center">
                 <p className="text-lg font-semibold text-gray-900 dark:text-yellow-400">₱{(total || 0).toLocaleString()}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 px-4">
-                  Scan this QR code with your {qrPaymentMethod === "gcash" ? "GCash" : "PayMaya"} app
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                  Upload payment screenshot after completing the payment
-                </p>
               </div>
               
               {/* Screenshot Upload in QR Dialog */}
