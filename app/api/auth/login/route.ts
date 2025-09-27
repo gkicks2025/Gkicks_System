@@ -5,7 +5,24 @@ import { executeQuery } from '@/lib/database/mysql'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    // Debug: Log the raw request body
+    const rawBody = await request.text()
+    console.log('Raw request body:', rawBody)
+    
+    // Parse the JSON
+    let parsedBody
+    try {
+      parsedBody = JSON.parse(rawBody)
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError)
+      console.error('Raw body that failed to parse:', rawBody)
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      )
+    }
+    
+    const { email, password } = parsedBody
 
     if (!email || !password) {
       return NextResponse.json(

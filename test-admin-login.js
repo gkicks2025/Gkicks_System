@@ -1,132 +1,93 @@
+const mysql = require('mysql2/promise');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+
+// MySQL connection configuration
+const dbConfig = {
+  host: '127.0.0.1',
+  port: 3306,
+  user: 'gkicks_user',
+  password: 'GKicks2024!SecurePass',
+  database: 'gkicks'
+};
+
+const JWT_SECRET = 'Pm3ugukSzrUv3qf2U27+0fdcVsS3cqwKev/BERfeNkM=';
+
 async function testAdminLogin() {
+  let connection;
+  
   try {
     console.log('🔍 Testing admin login...');
     
-    // Try to login with admin user
-    const adminEmail = 'gkcksdmn@gmail.com';
-    console.log(`🔑 Attempting login with admin: ${adminEmail}`);
+    // Connect to database
+    connection = await mysql.createConnection(dbConfig);
+    console.log('✅ Connected to MySQL database');
     
-    // Try common passwords for admin
-    const passwords = ['admin123', 'admin', 'password', 'gkicks123', 'gkcksdmn123', '123456'];
-    let loginSuccess = false;
-    let token = null;
+    // Check admin user
+    const [adminRows] = await connection.execute(
+      'SELECT id, email, role, password_hash, is_active FROM admin_users WHERE email = ?',
+      ['gkcksdmn@gmail.com']
+    );
     
-    for (const password of passwords) {
-      try {
-        console.log(`  Trying password: ${password}`);
-        const loginResponse = await fetch('http://localhost:3000/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: adminEmail,
-            password: password
-          })
-        });
-        
-        console.log(`  Login response status: ${loginResponse.status}`);
-        
-        if (loginResponse.ok) {
-          const loginData = await loginResponse.json();
-          token = loginData.token;
-          console.log(`✅ Admin login successful with password: ${password}`);
-          console.log('User data:', loginData.user);
-          loginSuccess = true;
-          break;
-        } else {
-          const errorText = await loginResponse.text();
-          console.log(`  Login failed: ${errorText}`);
-        }
-      } catch (e) {
-        console.log(`  Error with password ${password}: ${e.message}`);
-      }
-    }
-    
-    if (!loginSuccess) {
-      console.log('❌ Could not login with admin user');
-      console.log('🔧 Let me check if there are any password hashes in the database...');
-      
-      // Check password hashes in database
-      const mysql = require('mysql2/promise');
-      const conn = await mysql.createConnection({
-        host: 'localhost',
-        user: 'root',
-        password: '',
-        database: 'gkicks'
-      });
-      
-      const [adminUsers] = await conn.execute('SELECT id, email, password_hash FROM admin_users WHERE email = ?', [adminEmail]);
-      console.log('Admin user data:', adminUsers);
-      
-      if (adminUsers.length > 0 && adminUsers[0].password_hash) {
-        console.log('Password hash exists, but none of the test passwords worked');
-        console.log('Hash preview:', adminUsers[0].password_hash.substring(0, 20) + '...');
-      } else {
-        console.log('No password hash found for admin user');
-      }
-      
-      await conn.end();
+    if (adminRows.length === 0) {
+      console.log('❌ Admin user not found');
       return;
     }
     
-    console.log('📤 Testing message API with admin token...');
-    
-    // First create a conversation
-    const convResponse = await fetch('http://localhost:3000/api/support/conversations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        user_email: 'test@example.com',
-        user_name: 'Test User',
-        subject: 'Admin Test Message',
-        message_content: 'Testing message API with admin authentication'
-      })
+    const admin = adminRows[0];
+    console.log('✅ Admin user found:', {
+      id: admin.id,
+      email: admin.email,
+      role: admin.role,
+      is_active: admin.is_active
     });
     
-    console.log('Conversation creation status:', convResponse.status);
-    const convText = await convResponse.text();
-    console.log('Conversation response:', convText);
+    // Verify password
+    const isPasswordValid = await bcrypt.compare('admin123', admin.password_hash);
+    console.log('🔐 Password verification:', isPasswordValid ? '✅ VALID' : '❌ INVALID');
     
-    if (convResponse.ok) {
-      const convData = JSON.parse(convText);
-      const conversationId = convData.conversation.id;
-      console.log('✅ Created conversation with ID:', conversationId);
-      
-      // Now send a message
-      console.log('📤 Sending message...');
-      const messageResponse = await fetch('http://localhost:3000/api/support/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          conversation_id: conversationId,
-          message_content: 'This is a test message from admin!',
-          sender_type: 'admin'
-        })
+    if (!isPasswordValid) {
+      console.log('❌ Password verification failed');
+      return;
+    }
+    
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        userId: admin.id,
+        email: admin.email,
+        role: admin.role
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    
+    console.log('🎫 Generated JWT token:', token.substring(0, 50) + '...');
+    
+    // Test token verification
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      console.log('✅ Token verification successful:', {
+        userId: decoded.userId,
+        email: decoded.email,
+        role: decoded.role
       });
       
-      console.log('Message response status:', messageResponse.status);
-      const messageText = await messageResponse.text();
-      console.log('Message response:', messageText);
+      // Output the token for testing
+      console.log('\n🔑 Use this token for testing:');
+      console.log('Authorization: Bearer ' + token);
       
-      if (messageResponse.ok) {
-        console.log('✅ Message sent successfully!');
-        console.log('🎉 The message API is working correctly with admin authentication!');
-      } else {
-        console.log('❌ Message sending failed');
-        console.log('This indicates there is still an issue with the message API');
-      }
-    } else {
-      console.log('❌ Conversation creation failed');
+    } catch (tokenError) {
+      console.log('❌ Token verification failed:', tokenError.message);
     }
     
   } catch (error) {
-    console.error('❌ Test failed:', error.message);
-    console.error('Stack:', error.stack);
+    console.error('❌ Error:', error.message);
+  } finally {
+    if (connection) {
+      await connection.end();
+      console.log('\n🔌 Database connection closed');
+    }
   }
 }
 

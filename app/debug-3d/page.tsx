@@ -2,6 +2,22 @@
 
 import React, { useEffect, useState } from 'react'
 
+// Helper function to convert model URL to API endpoint
+function convertToApiUrl(modelUrl: string): string {
+  if (!modelUrl) return modelUrl;
+  
+  // If it's already an API URL, return as is
+  if (modelUrl.includes('/api/serve-3d-model')) {
+    return modelUrl;
+  }
+  
+  // Extract filename from the URL
+  const filename = modelUrl.split('/').pop();
+  if (!filename) return modelUrl;
+  
+  return `/api/serve-3d-model?filename=${encodeURIComponent(filename)}`;
+}
+
 export default function Debug3DPage() {
   const [modelViewerReady, setModelViewerReady] = useState(false)
   const [logs, setLogs] = useState<string[]>([])
@@ -10,6 +26,9 @@ export default function Debug3DPage() {
     console.log(message)
     setLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`])
   }
+
+  // Convert the model URL to use the new API endpoint
+  const modelUrl = convertToApiUrl('/uploads/3d-models/3d-model-1757479007733-tqe0o56m9l.glb');
 
   useEffect(() => {
     addLog('🔍 Checking model-viewer availability...')
@@ -56,7 +75,7 @@ export default function Debug3DPage() {
           <div className="bg-gray-100 rounded-lg p-4" style={{ height: '400px' }}>
             {modelViewerReady ? (
               React.createElement('model-viewer', {
-                src: '/uploads/3d-models/3d-model-1757479007733-tqe0o56m9l.glb',
+                src: modelUrl,
                 alt: 'Test 3D Model',
                 'auto-rotate': true,
                 'camera-controls': true,
@@ -102,7 +121,7 @@ export default function Debug3DPage() {
             <h3 className="font-semibold">Quick Tests</h3>
             <button 
               onClick={() => {
-                fetch('/uploads/3d-models/3d-model-1757479007733-tqe0o56m9l.glb', { method: 'HEAD' })
+                fetch(modelUrl, { method: 'HEAD' })
                   .then(response => {
                     addLog(`📁 File accessibility: ${response.status} ${response.statusText}`)
                     addLog(`📏 Content-Length: ${response.headers.get('content-length')} bytes`)

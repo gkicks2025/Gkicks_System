@@ -193,6 +193,7 @@ export async function GET(request: NextRequest) {
       let colors = [];
       let colorImages = {};
       let galleryImages = [];
+      let sizes = [];
       
       try {
         colors = item.colors ? JSON.parse(item.colors) : [];
@@ -213,6 +214,13 @@ export async function GET(request: NextRequest) {
       } catch (e) {
         console.warn('Failed to parse gallery_images for product', item.id, ':', e);
         galleryImages = [];
+      }
+      
+      try {
+        sizes = item.sizes ? JSON.parse(item.sizes) : [];
+      } catch (e) {
+        console.warn('Failed to parse sizes for product', item.id, ':', e);
+        sizes = [];
       }
       
       return {
@@ -236,8 +244,8 @@ export async function GET(request: NextRequest) {
         sku: item.sku || '',
         stock_quantity: parseInt(item.stock_quantity) || 0,
         low_stock_threshold: parseInt(item.low_stock_threshold) || 10,
-        sizes: item.sizes ? JSON.parse(item.sizes) : [],
-        variants: item.variants ? JSON.parse(item.variants) : {},
+        sizes,
+        variants: {}, // Default empty object since variants column doesn't exist
         created_at: item.created_at,
         updated_at: item.updated_at,
         isDeleted: false,

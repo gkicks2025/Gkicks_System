@@ -7,11 +7,11 @@ async function executeSchema() {
   
   // Database configuration
   const config = {
-    host: 'localhost',
-    port: 3306,
-    user: 'root',
-    password: '',
-    database: 'gkicks',
+    host: process.env.DB_HOST || '127.0.0.1',
+    port: process.env.DB_PORT || 3306,
+    user: process.env.DB_USER || 'gkicks_user',
+    password: process.env.DB_PASS || 'GKicks2024!SecurePass',
+    database: process.env.DB_NAME || 'gkicks',
     multipleStatements: true
   };
 

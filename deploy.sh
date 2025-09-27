@@ -15,12 +15,15 @@ NC='\033[0m' # No Color
 # Configuration
 APP_NAME="gkicks"
 DOMAIN="g-kicks.shop"
-APP_DIR="/var/www/gkicks-shop/GKICKS-SHOP-2.0"
+APP_DIR="/var/www/gkicks"
 LOG_DIR="/var/log/gkicks"
 BACKUP_DIR="/var/backups/gkicks"
 NGINX_AVAILABLE="/etc/nginx/sites-available"
 NGINX_ENABLED="/etc/nginx/sites-enabled"
 DATE=$(date +%Y%m%d_%H%M%S)
+DB_NAME="gkicks"
+DB_USER="gkicks_user"
+DB_PASS="GKicks2024!SecurePass"
 
 # Functions
 log_info() {

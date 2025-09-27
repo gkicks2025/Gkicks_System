@@ -8,10 +8,10 @@ async function setupMainDatabase() {
   try {
     // Create connection
     const connection = await mysql.createConnection({
-      host: 'localhost',
-      user: 'root',
-      password: '',
-      database: 'gkicks',
+      host: process.env.DB_HOST || '127.0.0.1',
+      user: process.env.DB_USER || 'gkicks_user',
+      password: process.env.DB_PASS || 'GKicks2024!SecurePass',
+      database: process.env.DB_NAME || 'gkicks',
       multipleStatements: true
     });
     

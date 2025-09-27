@@ -51,6 +51,12 @@ function Model3D({ url, productColors = [] }: { url: string; productColors?: str
       setError(null)
       
       try {
+        // First check if the URL is accessible
+        const response = await fetch(url, { method: 'HEAD' })
+        if (!response.ok) {
+          throw new Error(`Model file not found (${response.status}): ${url}`)
+        }
+
         const filename = url.split('/').pop() || ''
         const fileExtension = filename.split('.').pop()?.toLowerCase()
         
@@ -60,11 +66,20 @@ function Model3D({ url, productColors = [] }: { url: string; productColors?: str
         if (fileExtension === 'glb' || fileExtension === 'gltf') {
           const gltfLoader = new GLTFLoader()
           const gltf = await gltfLoader.loadAsync(url)
+          
+          if (!gltf || !gltf.scene) {
+            throw new Error('Invalid GLB/GLTF file: No scene data found')
+          }
+          
           obj = gltf.scene
         } else {
           // Handle OBJ files
           const objLoader = new OBJLoader()
           obj = await objLoader.loadAsync(url)
+          
+          if (!obj) {
+            throw new Error('Invalid OBJ file: Failed to load model data')
+          }
         }
         
         // Process the model
@@ -101,8 +116,26 @@ function Model3D({ url, productColors = [] }: { url: string; productColors?: str
         setLoadedModel(obj)
         setIsLoading(false)
       } catch (error) {
-        console.error('Error loading 3D model:', error)
-        setError(error instanceof Error ? error.message : 'Failed to load 3D model')
+        console.error('❌ Model loading error:', error)
+        console.error('❌ Error details:', {
+          type: 'loadfailure',
+          sourceError: error,
+          url: url
+        })
+        console.error('❌ Error type:', typeof error)
+        
+        let errorMessage = 'Failed to load 3D model'
+        if (error instanceof Error) {
+          if (error.message.includes('404') || error.message.includes('not found')) {
+            errorMessage = 'Model file not found on server'
+          } else if (error.message.includes('Invalid')) {
+            errorMessage = error.message
+          } else {
+            errorMessage = error.message
+          }
+        }
+        
+        setError(errorMessage)
         setIsLoading(false)
       }
     }
@@ -167,11 +200,32 @@ interface ModelViewer3DProps {
   productColors?: string[]
 }
 
+// Helper function to convert model URLs to use the new API endpoint
+function convertToApiUrl(modelUrl: string): string {
+  // If the URL already uses the API endpoint, return as is
+  if (modelUrl.includes('/api/serve-3d-model')) {
+    return modelUrl
+  }
+  
+  // Extract filename from the original URL
+  const filename = modelUrl.split('/').pop()
+  if (!filename) {
+    return modelUrl // Return original if we can't extract filename
+  }
+  
+  // Convert to API endpoint URL
+  return `/api/serve-3d-model?filename=${encodeURIComponent(filename)}`
+}
+
 export default function ModelViewer3D({ modelUrl, filename, className = '', productColors = [] }: ModelViewer3DProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [autoRotate, setAutoRotate] = useState(false)
-  const [brightness, setBrightness] = useState(1.0)
-  const [isBrightnessMinimized, setIsBrightnessMinimized] = useState(false)
+  const [autoRotate, setAutoRotate] = useState(true)
+  const [brightness, setBrightness] = useState(1)
+  const [showControls, setShowControls] = useState(true)
+  const [modelError, setModelError] = useState<string | null>(null)
+
+  // Convert the modelUrl to use the new API endpoint
+  const apiModelUrl = convertToApiUrl(modelUrl)
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen)
@@ -213,8 +267,12 @@ export default function ModelViewer3D({ modelUrl, filename, className = '', prod
             <directionalLight position={[10, 10, 5]} intensity={1 * brightness} />
             <pointLight position={[-10, -10, -5]} intensity={0.5 * brightness} />
             
-            <Suspense fallback={null}>
-              <Model3D url={modelUrl} productColors={productColors} />
+            <Suspense fallback={<Loader />}>
+              <Model3DWrapper 
+                url={apiModelUrl} 
+                productColors={productColors} 
+                onError={setModelError}
+              />
             </Suspense>
             
             <OrbitControls 
@@ -270,7 +328,7 @@ export default function ModelViewer3D({ modelUrl, filename, className = '', prod
             <pointLight position={[-10, -10, -5]} intensity={0.5 * brightness} />
             
             <Suspense fallback={null}>
-              <Model3D url={modelUrl} productColors={productColors} />
+              <Model3D url={apiModelUrl} productColors={productColors} />
             </Suspense>
             
             <OrbitControls 
@@ -302,12 +360,12 @@ export default function ModelViewer3D({ modelUrl, filename, className = '', prod
                   variant="ghost"
                   size="sm"
                   className="text-white hover:bg-white/20 h-6 w-6 p-0"
-                  onClick={() => setIsBrightnessMinimized(!isBrightnessMinimized)}
+                  onClick={() => setShowControls(!showControls)}
                 >
-                  {isBrightnessMinimized ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
+                  {!showControls ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
                 </Button>
               </div>
-              {!isBrightnessMinimized && (
+              {showControls && (
                 <Slider
                   value={[brightness]}
                   onValueChange={(value) => setBrightness(value[0])}
@@ -317,6 +375,14 @@ export default function ModelViewer3D({ modelUrl, filename, className = '', prod
                   className="w-full"
                 />
               )}
+                <Slider
+                  value={[brightness]}
+                  onValueChange={(value) => setBrightness(value[0])}
+                  max={3}
+                  min={0.1}
+                  step={0.1}
+                  className="w-full"
+                />
             </div>
           </div>
 
@@ -340,6 +406,166 @@ export default function ModelViewer3D({ modelUrl, filename, className = '', prod
           </div>
         </div>
       )}
+
+      {/* Error Overlay */}
+      {modelError && <ErrorDisplay error={modelError} />}
     </>
   )
+}
+
+// Error Display Component
+function ErrorDisplay({ error }: { error: string }) {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-90 z-20">
+      <div className="text-center p-6 bg-white rounded-lg shadow-lg max-w-md">
+        <div className="text-red-500 text-4xl mb-4">⚠️</div>
+        <h3 className="text-lg font-semibold text-gray-800 mb-2">3D Model Error</h3>
+        <p className="text-gray-600 text-sm">{error}</p>
+        <p className="text-gray-500 text-xs mt-2">Please check if the model file exists or try refreshing the page.</p>
+      </div>
+    </div>
+  )
+}
+
+// Wrapper component to handle error communication
+function Model3DWrapper({ url, productColors = [], onError }: { 
+  url: string; 
+  productColors?: string[]; 
+  onError: (error: string | null) => void 
+}) {
+  const meshRef = useRef<any>(null)
+  const [loadedModel, setLoadedModel] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!url || !THREE || !OBJLoader || !GLTFLoader) return
+
+    const loadModel = async () => {
+      setIsLoading(true)
+      setError(null)
+      onError(null) // Clear parent error state
+      
+      try {
+        // First check if the URL is accessible
+        const response = await fetch(url, { method: 'HEAD' })
+        if (!response.ok) {
+          throw new Error(`Model file not found (${response.status}): ${url}`)
+        }
+
+        const filename = url.split('/').pop() || ''
+        const fileExtension = filename.split('.').pop()?.toLowerCase()
+        
+        let obj: any
+        
+        // Handle GLB/GLTF files
+        if (fileExtension === 'glb' || fileExtension === 'gltf') {
+          const gltfLoader = new GLTFLoader()
+          const gltf = await gltfLoader.loadAsync(url)
+          
+          if (!gltf || !gltf.scene) {
+            throw new Error('Invalid GLB/GLTF file: No scene data found')
+          }
+          
+          obj = gltf.scene
+        } else {
+          // Handle OBJ files
+          const objLoader = new OBJLoader()
+          obj = await objLoader.loadAsync(url)
+          
+          if (!obj) {
+            throw new Error('Invalid OBJ file: Failed to load model data')
+          }
+        }
+        
+        // Process the model
+        obj.traverse((child: any) => {
+          if (child.isMesh) {
+            child.castShadow = true
+            child.receiveShadow = true
+            
+            // Apply materials if available
+            if (child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach((mat: any) => {
+                  mat.roughness = 0.3
+                  mat.metalness = 0.1
+                })
+              } else {
+                child.material.roughness = 0.3
+                child.material.metalness = 0.1
+              }
+            }
+          }
+        })
+        
+        // Center and scale the model
+        const box = new THREE.Box3().setFromObject(obj)
+        const center = box.getCenter(new THREE.Vector3())
+        const size = box.getSize(new THREE.Vector3())
+        const maxDim = Math.max(size.x, size.y, size.z)
+        const scale = 3 / maxDim
+        
+        obj.scale.setScalar(scale)
+        obj.position.sub(center.multiplyScalar(scale))
+        
+        setLoadedModel(obj)
+        setIsLoading(false)
+      } catch (error) {
+        console.error('❌ Model loading error:', error)
+        console.error('❌ Error details:', {
+          type: 'loadfailure',
+          sourceError: error,
+          url: url
+        })
+        console.error('❌ Error type:', typeof error)
+        
+        let errorMessage = 'Failed to load 3D model'
+        if (error instanceof Error) {
+          if (error.message.includes('404') || error.message.includes('not found')) {
+            errorMessage = 'Model file not found on server'
+          } else if (error.message.includes('Invalid')) {
+            errorMessage = error.message
+          } else {
+            errorMessage = error.message
+          }
+        }
+        
+        setError(errorMessage)
+        onError(errorMessage) // Communicate error to parent
+        setIsLoading(false)
+      }
+    }
+
+    loadModel()
+  }, [url, onError])
+
+  // Auto-rotation using useFrame
+  if (useFrame) {
+    useFrame(() => {
+      if (meshRef.current) {
+        meshRef.current.rotation.y += 0.01
+      }
+    })
+  }
+
+  if (error) {
+    return (
+      <mesh ref={meshRef}>
+        <boxGeometry args={[2, 2, 2]} />
+        <meshStandardMaterial color="red" />
+      </mesh>
+    )
+  }
+
+  if (isLoading || !loadedModel) {
+    return (
+      <mesh ref={meshRef}>
+        <boxGeometry args={[2, 2, 2]} />
+        <meshStandardMaterial color="gray" />
+      </mesh>
+    )
+  }
+
+  return <primitive ref={meshRef} object={loadedModel} />
 }

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Set Admin Token</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Set Admin Authentication Token</h1>
+        
+        <div class="status info">
+            This page will set a valid admin token in localStorage to fix the analytics authentication issue.
+        </div>
+        
+        <button onclick="setAdminToken()">Set Admin Token</button>
+        <button onclick="checkToken()">Check Current Token</button>
+        <button onclick="testAnalytics()">Test Analytics API</button>
+        <button onclick="clearToken()">Clear Token</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Valid admin token generated from the server
+        const ADMIN_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMsImVtYWlsIjoiZ2tja3NkbW5AZ21haWwuY29tIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzU4ODk4NTQzLCJleHAiOjE3NTg5ODQ5NDN9.2JbnQe7xFQRH-AwguT2rdWRZFzRJYQr_Bn8uShmTqM8';
+        
+        function setAdminToken() {
+            localStorage.setItem('auth_token', ADMIN_TOKEN);
+            document.getElementById('results').innerHTML = `
+                <div class="status success">
+                    ✅ Admin token has been set in localStorage!
+                    <br><br>
+                    <strong>Token:</strong> ${ADMIN_TOKEN.substring(0, 50)}...
+                    <br><br>
+                    You can now navigate to the analytics page and it should work properly.
+                </div>
+            `;
+        }
+        
+        function checkToken() {
+            const token = localStorage.getItem('auth_token');
+            const resultsDiv = document.getElementById('results');
+            
+            if (token) {
+                // Try to decode the token
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    const now = Math.floor(Date.now() / 1000);
+                    const isExpired = payload.exp && payload.exp < now;
+                    
+                    resultsDiv.innerHTML = `
+                        <div class="status ${isExpired ? 'error' : 'success'}">
+                            ${isExpired ? '⚠️' : '✅'} Token found in localStorage
+                            <br><br>
+                            <strong>User ID:</strong> ${payload.userId}<br>
+                            <strong>Email:</strong> ${payload.email}<br>
+                            <strong>Role:</strong> ${payload.role}<br>
+                            <strong>Expires:</strong> ${new Date(payload.exp * 1000).toLocaleString()}<br>
+                            <strong>Status:</strong> ${isExpired ? 'EXPIRED' : 'VALID'}
+                        </div>
+                    `;
+                } catch (e) {
+                    resultsDiv.innerHTML = `
+                        <div class="status error">
+                            ❌ Invalid token format
+                        </div>
+                    `;
+                }
+            } else {
+                resultsDiv.innerHTML = `
+                    <div class="status error">
+                        ❌ No token found in localStorage
+                    </div>
+                `;
+            }
+        }
+        
+        async function testAnalytics() {
+            const token = localStorage.getItem('auth_token');
+            const resultsDiv = document.getElementById('results');
+            
+            if (!token) {
+                resultsDiv.innerHTML = `<div class="status error">❌ No token available for testing</div>`;
+                return;
+            }
+            
+            try {
+                resultsDiv.innerHTML = `<div class="status info">🔄 Testing Analytics API...</div>`;
+                
+                const response = await fetch('/api/admin/analytics', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultsDiv.innerHTML = `
+                        <div class="status success">
+                            ✅ Analytics API Success!
+                            <br><br>
+                            The analytics page should now load properly.
+                            <br><br>
+                            <a href="/admin/analytics" target="_blank">
+                                <button>Open Analytics Page</button>
+                            </a>
+                        </div>
+                    `;
+                } else {
+                    const errorData = await response.text();
+                    resultsDiv.innerHTML = `
+                        <div class="status error">
+                            ❌ Analytics API Failed (${response.status})
+                            <br><br>
+                            ${errorData}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="status error">
+                        ❌ Network Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        function clearToken() {
+            localStorage.removeItem('auth_token');
+            document.getElementById('results').innerHTML = `
+                <div class="status info">
+                    Token cleared from localStorage
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

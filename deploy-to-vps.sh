@@ -7,7 +7,7 @@
 set -e
 
 # Configuration
-VPS_IP="72.60.111.2"
+VPS_IP="72.60.198.110"
 DOMAIN="g-kicks.shop"
 APP_NAME="gkicks"
 APP_DIR="/var/www/gkicks"

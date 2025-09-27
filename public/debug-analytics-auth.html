@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Analytics Authentication</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .success {
+            color: #28a745;
+            background-color: #d4edda;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .error {
+            color: #dc3545;
+            background-color: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .info {
+            color: #17a2b8;
+            background-color: #d1ecf1;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug Analytics Authentication</h1>
+        
+        <div class="info">
+            <strong>Purpose:</strong> Debug analytics authentication issues and test API endpoints
+        </div>
+
+        <div>
+            <button class="button" onclick="checkToken()">1. Check Auth Token</button>
+            <button class="button" onclick="testLogin()">2. Test Admin Login</button>
+            <button class="button" onclick="testAnalyticsAPI()">3. Test Analytics API</button>
+            <button class="button" onclick="clearAll()">Clear Results</button>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = type;
+            div.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            results.appendChild(div);
+        }
+
+        function clearAll() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function checkToken() {
+            log('🔍 Checking authentication token...', 'info');
+            
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                log('❌ No auth token found in localStorage', 'error');
+                return;
+            }
+            
+            log(`✅ Token found: ${token.substring(0, 50)}...`, 'success');
+            
+            // Try to decode JWT token (basic check)
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                log(`📋 Token payload: <pre>${JSON.stringify(payload, null, 2)}</pre>`, 'info');
+                
+                const now = Math.floor(Date.now() / 1000);
+                if (payload.exp && payload.exp < now) {
+                    log('⚠️ Token has expired!', 'error');
+                } else {
+                    log('✅ Token is not expired', 'success');
+                }
+            } catch (e) {
+                log(`❌ Error decoding token: ${e.message}`, 'error');
+            }
+        }
+
+        async function testLogin() {
+            log('🔑 Testing admin login...', 'info');
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'gkcksdmn@gmail.com',
+                        password: 'admin123'
+                    })
+                });
+                
+                log(`📡 Login response status: ${response.status}`, 'info');
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    log(`❌ Login failed: ${errorText}`, 'error');
+                    return;
+                }
+                
+                const data = await response.json();
+                log('✅ Login successful!', 'success');
+                log(`📋 Response: <pre>${JSON.stringify(data, null, 2)}</pre>`, 'info');
+                
+                if (data.token) {
+                    localStorage.setItem('auth_token', data.token);
+                    log('💾 Token saved to localStorage', 'success');
+                }
+                
+            } catch (error) {
+                log(`❌ Login error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAnalyticsAPI() {
+            log('📊 Testing analytics API...', 'info');
+            
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                log('❌ No token available. Please login first.', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/admin/analytics', {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+                
+                log(`📡 Analytics API response status: ${response.status}`, 'info');
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    log(`❌ Analytics API failed: ${errorText}`, 'error');
+                    return;
+                }
+                
+                const data = await response.json();
+                log('✅ Analytics API successful!', 'success');
+                log(`📋 Data keys: ${Object.keys(data).join(', ')}`, 'info');
+                
+                // Show some sample data
+                if (data.currentMonth) {
+                    log(`📈 Current month stats: Orders: ${data.currentMonth.orders}, Revenue: ₱${data.currentMonth.revenue}`, 'success');
+                }
+                
+            } catch (error) {
+                log(`❌ Analytics API error: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-check token on page load
+        window.addEventListener('load', () => {
+            log('🚀 Debug page loaded. Click buttons to test authentication.', 'info');
+        });
+    </script>
+</body>
+</html>

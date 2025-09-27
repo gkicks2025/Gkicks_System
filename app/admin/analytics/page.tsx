@@ -53,12 +53,15 @@ export default function AnalyticsPage() {
       setLoading(true)
       setError(null)
       
+      // Get token from localStorage like the dashboard does
+      const token = localStorage.getItem('auth_token')
       const response = await fetch('/api/admin/analytics', {
         method: 'GET',
-        credentials: 'include',
         headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json',
         },
+        credentials: 'include'
       })
       
       if (!response.ok) {

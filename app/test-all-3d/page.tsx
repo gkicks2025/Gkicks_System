@@ -2,35 +2,51 @@
 
 import { ThreeDProductViewer } from "@/components/3d-product-viewer-simple"
 
+// Helper function to convert model URL to API endpoint
+function convertToApiUrl(modelUrl: string): string {
+  if (!modelUrl) return modelUrl;
+  
+  // If it's already an API URL, return as is
+  if (modelUrl.includes('/api/serve-3d-model')) {
+    return modelUrl;
+  }
+  
+  // Extract filename from the URL
+  const filename = modelUrl.split('/').pop();
+  if (!filename) return modelUrl;
+  
+  return `/api/serve-3d-model?filename=${encodeURIComponent(filename)}`;
+}
+
 const products3D = [
   {
     id: 4,
     name: "Nike Air Max 90",
-    modelUrl: "/uploads/3d-models/3d-model-1755401068512-crbyfclm9bd.obj",
+    modelUrl: convertToApiUrl("/uploads/3d-models/3d-model-1755401068512-crbyfclm9bd.obj"),
     fallbackImage: "/images/air-max-97-se.png"
   },
   {
     id: 5,
     name: "Adidas Ultraboost 22",
-    modelUrl: "/uploads/3d-models/3d-model-1755401258080-qbpz0hc4gq9.obj",
+    modelUrl: convertToApiUrl("/uploads/3d-models/3d-model-1755401258080-qbpz0hc4gq9.obj"),
     fallbackImage: "/images/ultraboost-23.png"
   },
   {
     id: 6,
     name: "Converse Chuck Taylor",
-    modelUrl: "/uploads/3d-models/3d-model-1755401734176-77w7afsi6dd.obj",
+    modelUrl: convertToApiUrl("/uploads/3d-models/3d-model-1755401734176-77w7afsi6dd.obj"),
     fallbackImage: "/images/chuck-taylor.png"
   },
   {
     id: 7,
     name: "Nike Air Force 1 Low Sneaker for Men",
-    modelUrl: "/uploads/3d-models/3d-model-1755401741211-hxf7jkowt3.obj",
+    modelUrl: convertToApiUrl("/uploads/3d-models/3d-model-1755401741211-hxf7jkowt3.obj"),
     fallbackImage: "/uploads/products/product-1756053416272-uu6dltiu3ma.png"
   },
   {
     id: 17,
     name: "Adizero EVO SL Shoes",
-    modelUrl: "/uploads/3d-models/3d-model-1755401963319-7iripzl10m5.obj",
+    modelUrl: convertToApiUrl("/uploads/3d-models/3d-model-1755401963319-7iripzl10m5.obj"),
     fallbackImage: "/uploads/products/product-1756558359905-72uo5icwvwe.avif"
   }
 ]
