@@ -247,7 +247,11 @@ export async function GET(request: NextRequest) {
         sizes,
         variants: (() => {
           try {
-            return item.variants ? JSON.parse(item.variants) : {};
+            console.log(`🔍 Product ${item.id} variants raw:`, item.variants);
+            console.log(`🔍 Product ${item.id} variants type:`, typeof item.variants);
+            const parsed = item.variants ? JSON.parse(item.variants) : {};
+            console.log(`🔍 Product ${item.id} variants parsed:`, parsed);
+            return parsed;
           } catch (e) {
             console.warn('Failed to parse variants for product', item.id, ':', e);
             return {};
