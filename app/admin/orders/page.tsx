@@ -603,10 +603,18 @@ export default function AdminOrdersPage() {
                                       <span className="text-foreground font-medium">Payment Screenshot:</span>
                                       <div className="mt-2 border rounded-lg overflow-hidden max-w-sm">
                                         <img 
-                                          src={selectedOrder.payment_screenshot} 
+                                          src={selectedOrder.payment_screenshot?.startsWith('/uploads/') 
+                                            ? `/api/uploads/payment-screenshots/${selectedOrder.payment_screenshot.split('/').pop()}`
+                                            : selectedOrder.payment_screenshot
+                                          } 
                                           alt="Payment Screenshot" 
                                           className="w-full h-auto max-h-64 object-contain hover:opacity-80 transition-opacity"
-                                          onClick={() => window.open(selectedOrder.payment_screenshot, '_blank')}
+                                          onClick={() => window.open(
+                                            selectedOrder.payment_screenshot?.startsWith('/uploads/') 
+                                              ? `/api/uploads/payment-screenshots/${selectedOrder.payment_screenshot.split('/').pop()}`
+                                              : selectedOrder.payment_screenshot || '', 
+                                            '_blank'
+                                          )}
                                           style={{ cursor: 'pointer' }}
                                         />
                                       </div>

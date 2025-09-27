@@ -164,7 +164,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 API: Fetching products from MySQL database...');
     
     const query = `
-      SELECT * FROM products 
+      SELECT *, variants FROM products 
       WHERE is_active = 1 AND (is_deleted = 0 OR is_deleted IS NULL)
       ORDER BY created_at DESC
     `;
@@ -245,7 +245,14 @@ export async function GET(request: NextRequest) {
         stock_quantity: parseInt(item.stock_quantity) || 0,
         low_stock_threshold: parseInt(item.low_stock_threshold) || 10,
         sizes,
-        variants: {}, // Default empty object since variants column doesn't exist
+        variants: (() => {
+          try {
+            return item.variants ? JSON.parse(item.variants) : {};
+          } catch (e) {
+            console.warn('Failed to parse variants for product', item.id, ':', e);
+            return {};
+          }
+        })(),
         created_at: item.created_at,
         updated_at: item.updated_at,
         isDeleted: false,

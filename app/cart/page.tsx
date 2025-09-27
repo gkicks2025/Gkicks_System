@@ -177,9 +177,13 @@ export default function CartPage() {
         
         const { url } = await uploadResponse.json()
         
-        // Store the uploaded file URL instead of the file object
+        // Extract filename from the URL and create API route URL
+        const filename = url.split('/').pop()
+        const apiUrl = `/api/uploads/payment-screenshots/${filename}`
+        
+        // Store the uploaded file URL and API URL for preview
         setPaymentScreenshot(url)
-        setScreenshotPreview(url)
+        setScreenshotPreview(apiUrl)
         
         toast({
           title: "Screenshot Uploaded",
@@ -899,95 +903,118 @@ export default function CartPage() {
 
         {/* QR Code Dialog */}
         <Dialog open={showQRDialog} onOpenChange={setShowQRDialog}>
-          <DialogContent className="sm:max-w-md bg-card border-border">
-            <DialogHeader>
-              <DialogTitle className="text-center text-base sm:text-lg text-gray-900 dark:text-yellow-400">
+          <DialogContent className="max-w-6xl bg-card border-border">
+            <DialogHeader className="pb-6">
+              <DialogTitle className="text-center text-xl sm:text-2xl font-bold text-gray-900 dark:text-yellow-400">
                 {qrPaymentMethod === "gcash" ? "GCash Payment" : "PayMaya Payment"}
               </DialogTitle>
+              <p className="text-center text-lg font-semibold text-gray-700 dark:text-gray-300 mt-2">
+                Total Amount: ₱{(total || 0).toLocaleString()}
+              </p>
             </DialogHeader>
-            <div className="flex flex-col items-center p-4 sm:p-6">
-              <div className="w-48 h-48 sm:w-64 sm:h-64 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-lg flex items-center justify-center">
-                {qrPaymentMethod === "gcash" ? (
-                  <Image
-                    src="/images/cash.png"
-                    alt="GCash QR Code"
-                    width={200}
-                    height={200}
-                    className="object-contain"
-                  />
-                ) : (
-                  <Image
-                    src="/images/ayam.png"
-                    alt="PayMaya QR Code"
-                    width={200}
-                    height={200}
-                    className="object-contain"
-                  />
-                )}
+            <div className="flex flex-col xl:flex-row items-center xl:items-start gap-8 p-6 sm:p-8">
+              {/* QR Code Section */}
+              <div className="flex flex-col items-center space-y-6 xl:w-1/2">
+                 <div className="w-[450px] h-[450px] flex items-center justify-center mx-auto mt-8">
+                   {qrPaymentMethod === "gcash" ? (
+                     <Image
+                       src="/images/cashg.png"
+                       alt="GCash QR Code"
+                       width={450}
+                       height={450}
+                       className="object-contain mx-auto"
+                     />
+                   ) : (
+                     <Image
+                       src="/images/ayam.png"
+                       alt="PayMaya QR Code"
+                       width={450}
+                       height={450}
+                       className="object-contain mx-auto"
+                     />
+                   )}
+                 </div>
               </div>
               
-              {/* Spacing between QR code and text */}
-              <div className="h-8"></div>
-              
-              <div className="text-center">
-                <p className="text-lg font-semibold text-gray-900 dark:text-yellow-400">₱{(total || 0).toLocaleString()}</p>
-              </div>
-              
-              {/* Screenshot Upload in QR Dialog */}
-              <div className="w-full space-y-2">
-                <Label className="text-sm text-gray-700 dark:text-gray-300">
-                  Payment Screenshot *
-                </Label>
-                <div className="relative">
-                  <input
-                    id="qrPaymentScreenshot"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleScreenshotUpload}
-                    className="hidden"
-                  />
-                  <label
-                    htmlFor="qrPaymentScreenshot"
-                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <Upload className="w-8 h-8 mb-2 text-gray-500 dark:text-gray-400" />
-                      <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                        <span className="font-semibold">Click to upload</span> payment screenshot
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG or JPEG (MAX. 10MB)</p>
-                    </div>
-                  </label>
+              {/* Payment Instructions and Upload Section */}
+              <div className="flex-1 xl:w-1/2 space-y-8">
+                {/* Payment Instructions */}
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 p-6 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
+                  <h3 className="text-xl font-bold text-blue-900 dark:text-blue-100 mb-4 flex items-center gap-2">
+                    <Receipt className="w-5 h-5" />
+                    Payment Instructions
+                  </h3>
+                  <ol className="text-base text-blue-800 dark:text-blue-200 space-y-3 list-decimal list-inside">
+                    <li className="font-medium">Open your {qrPaymentMethod === "gcash" ? "GCash" : "PayMaya"} app</li>
+                    <li className="font-medium">Scan the QR code or enter ₱{(total || 0).toLocaleString()} manually</li>
+                    <li className="font-medium">Complete the payment transaction</li>
+                    <li className="font-medium">Take a screenshot of the successful payment confirmation</li>
+                    <li className="font-medium">Upload the screenshot in the section below</li>
+                  </ol>
                 </div>
-                {screenshotPreview && (
-                  <div className="mt-2">
-                    <img
-                      src={screenshotPreview}
-                      alt="Payment screenshot preview"
-                      className="max-w-full h-32 object-contain border border-gray-200 dark:border-gray-600 rounded mx-auto"
-                    />
+                
+                {/* Screenshot Upload */}
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm space-y-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Upload className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                    <Label className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+                      Upload Payment Screenshot *
+                    </Label>
                   </div>
-                )}
+                  <div className="relative">
+                    <input
+                      id="qrPaymentScreenshot"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleScreenshotUpload}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="qrPaymentScreenshot"
+                      className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all duration-200"
+                    >
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <Upload className="w-10 h-10 mb-3 text-gray-500 dark:text-gray-400" />
+                        <p className="mb-2 text-base text-gray-600 dark:text-gray-300">
+                          <span className="font-semibold">Click to upload</span> your payment screenshot
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">PNG, JPG or JPEG (MAX. 10MB)</p>
+                      </div>
+                    </label>
+                  </div>
+                  {screenshotPreview && (
+                    <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Preview:</p>
+                      <img
+                        src={screenshotPreview}
+                        alt="Payment screenshot preview"
+                        className="max-w-full h-40 object-contain border border-gray-200 dark:border-gray-600 rounded-lg mx-auto"
+                      />
+                    </div>
+                  )}
+                </div>
+                
+                {/* Confirm Button */}
+                <Button 
+                  onClick={() => {
+                    if (!paymentScreenshot) {
+                      toast({
+                        title: "Screenshot Required",
+                        description: "Please upload a payment screenshot before continuing.",
+                        variant: "destructive"
+                      })
+                      return
+                    }
+                    setShowQRDialog(false)
+                  }} 
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-200" 
+                  size="lg"
+                  disabled={!paymentScreenshot}
+                >
+                  <CheckCircle className="w-5 h-5 mr-2" />
+                  Confirm Payment Completed
+                </Button>
               </div>
-              
-              <Button 
-                onClick={() => {
-                  if (!paymentScreenshot) {
-                    toast({
-                      title: "Screenshot Required",
-                      description: "Please upload a payment screenshot before continuing.",
-                      variant: "destructive"
-                    })
-                    return
-                  }
-                  setShowQRDialog(false)
-                }} 
-                className="w-full" 
-                variant="outline"
-                disabled={!paymentScreenshot}
-              >
-                Payment Completed
-              </Button>
             </div>
           </DialogContent>
         </Dialog>
